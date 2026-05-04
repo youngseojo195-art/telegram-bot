@@ -18,7 +18,7 @@ AFFILIATE_TEXT = """❤️카지노❤️
 [도파민제휴] 5️⃣ <a href="https://t.me/gamte59/49">블록체인바카라</a>
 [도파민제휴] 6️⃣ <a href="https://t.me/gamte59/60">우루스뱃</a>
 [도파민제휴] 7️⃣ <a href="https://t.me/gamte59/60">마닐라</a>
-[도파민제휴] 8️⃣ <a href="https://t.me/mmm_mmBB">미우카지노</a>
+[도파민제휴] 8️⃣ <a href="https://t.me/gamte59/70">미우카지노</a>
 
 ❤️급전❤️
 [도파민제휴] 1️⃣ <a href="https://t.me/gamte59/16">OR급전</a>
@@ -36,7 +36,7 @@ AFFILIATE_TEXT = """❤️카지노❤️
 [도파민제휴] 2️⃣ <a href="https://t.me/gamte59/64">대문팀</a>
 
 ❤️홀덤❤️
-[도파민제휴] 1️⃣ <a href="https://t.me/+RYg3wSChpptmYjI1">롱지홀덤</a>"""
+[도파민제휴] 1️⃣ <a href="https://t.me/gamte69/">롱지홀덤</a>"""
 
 
 # ==================== 운세 데이터 ====================
