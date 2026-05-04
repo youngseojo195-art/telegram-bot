@@ -1,5 +1,4 @@
-web: gunicorn app:apppyTelegramBotAPI
-psycopg2-binary
+pyTelegramBotAPI
 flask
+psycopg2-binary
 gunicorn
-Pillow
