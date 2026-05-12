@@ -19,13 +19,19 @@ AFFILIATE_TEXT = """❤️카지노❤️
 [도파민제휴] 6️⃣ <a href="https://t.me/gamte59/60">우루스뱃</a>
 [도파민제휴] 7️⃣ <a href="https://t.me/gamte59/60">마닐라</a>
 [도파민제휴] 8️⃣ <a href="https://t.me/gamte59/70">미우카지노</a>
+[도파민제휴] 9️⃣ <a href="https://t.me/gamte59/72">그랜드파리</a>
+[도파민제휴] 🔟 <a href="https://t.me/gamte59/74">룰라뱃</a>
+[도파민제휴] 1️⃣ <a href="https://t.me/gamte59/78">소울카지노</a>
+[도파민제휴] 2️⃣ <a href="https://t.me/gamte59/84">123GAME카지노</a>
 
 ❤️급전❤️
 [도파민제휴] 1️⃣ <a href="https://t.me/gamte59/16">OR급전</a>
-[도파민제휴] 2️⃣ <a href="https://t.me/gamte59/33">프리티켓</a>
+[도파민제휴] 2️⃣ <a href="https://t.me/gamte59/77">빅딜OTC</a>
 
 ❤️장집❤️
 [도파민제휴] 1️⃣ <a href="https://t.me/gamte59/37">미호 장집</a>
+[도파민제휴] 2️⃣ <a href="https://t.me/gamte59/76">빅딜 장집</a>
+
 
 ❤️반환팀❤️
 [도파민제휴] 1️⃣ <a href="https://t.me/gamte59/39">울프 반환팀</a>
