@@ -480,8 +480,6 @@ def handle_all(message):
                 f"💰 USDT 환율 계산\n\n"
                 f"📈 현재 환율: {rate:,.0f}원\n\n"
                 f"💵 {amount:,.0f} USDT: {base_amount:,.0f}원\n"
-                f"💸 수수료 (5%): {fee:,.0f}원\n"
-                f"💰 최종 금액: {total:,.0f}원"
             )
 
         # ==================== /출석 ====================
