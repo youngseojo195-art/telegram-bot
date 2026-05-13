@@ -1,7 +1,9 @@
 import os
+import re
 import random
 import telebot
 import psycopg2
+import requests
 import urllib.parse
 from datetime import datetime, timedelta
 from flask import Flask, request
@@ -32,20 +34,17 @@ AFFILIATE_TEXT = """❤️카지노❤️
 [도파민제휴] 1️⃣ <a href="https://t.me/gamte59/37">미호 장집</a>
 [도파민제휴] 2️⃣ <a href="https://t.me/gamte59/76">빅딜 장집</a>
 
-
 ❤️반환팀❤️
 [도파민제휴] 1️⃣ <a href="https://t.me/gamte59/39">울프 반환팀</a>
 
 ❤️충전 계좌매입❤️
 [평생제휴] 1️⃣ <a href="https://t.me/gamte59/42">저승사자</a>
-[도파민제휴] 2️⃣ ️<a href="https://t.me/gamte59/58">김여포</a>
+[도파민제휴] 2️⃣ <a href="https://t.me/gamte59/58">김여포</a>
 [도파민제휴] 2️⃣ <a href="https://t.me/gamte59/64">대문팀</a>
 
 ❤️홀덤❤️
 [도파민제휴] 1️⃣ <a href="https://t.me/gamte59/69">롱지홀덤</a>"""
 
-
-# ==================== 운세 데이터 ====================
 CARD_TITLES = [
     ("🌟", "천 운", "하늘이 당신을 선택한 날"),
     ("🌙", "월 운", "달빛이 당신을 감싸는 날"),
@@ -269,7 +268,7 @@ HEALTH_FORTUNES = [
     ("💪💪💪░░", "산책이 활력을 줄 거예요"),
     ("💪💪💪💪░", "오늘 몸과 마음이 가벼워요"),
     ("💪💪░░░", "충분한 수면이 필요한 날이에요"),
-    ("💪💪💰💪💪", "운동하면 기분이 좋아지는 날"),
+    ("💪💪💪💪💪", "운동하면 기분이 좋아지는 날"),
     ("💪💪💪░░", "건강한 음식을 먹는 날이에요"),
     ("💪💪💪💪░", "활기찬 하루가 될 거예요"),
 ]
@@ -384,7 +383,6 @@ def card_emoji(num):
 def generate_fortune(user_id, today):
     seed = int(str(user_id) + today.strftime('%Y%m%d'))
     rng = random.Random(seed)
-
     border = rng.choice(BORDER_EMOJIS)
     title_emoji, title, title_desc = rng.choice(CARD_TITLES)
     opening = rng.choice(OPENING_LINES)
@@ -392,7 +390,6 @@ def generate_fortune(user_id, today):
     money_star, money_text = rng.choice(MONEY_FORTUNES)
     love_star, love_text = rng.choice(LOVE_FORTUNES)
     health_star, health_text = rng.choice(HEALTH_FORTUNES)
-
     result = (
         f"{border} ━━━━━━━━━━━━━\n"
         f"   운명의 카드가 뽑혔어요\n"
@@ -409,6 +406,21 @@ def generate_fortune(user_id, today):
         f"{border} ━━━━━━━━━━━━━"
     )
     return result
+
+def get_usdt_rate():
+    try:
+        response = requests.get('https://api.upbit.com/v1/ticker?markets=KRW-USDT', timeout=5)
+        if response.status_code == 200:
+            return float(response.json()[0]['trade_price'])
+    except:
+        pass
+    try:
+        response = requests.get('https://api.binance.com/api/v3/ticker/price?symbol=USDTKRW', timeout=5)
+        if response.status_code == 200:
+            return float(response.json()['price'])
+    except:
+        pass
+    return None
 
 @bot.message_handler(func=lambda m: True)
 def handle_all(message):
@@ -448,6 +460,28 @@ def handle_all(message):
                 f"🔮 {first_name}님의 오늘의 운세\n"
                 f"📅 {today.strftime('%Y년 %m월 %d일')}\n\n"
                 f"{fortune}"
+            )
+
+        # ==================== 테더 환율 ====================
+        elif re.search(r'(\d+(\.\d+)?)\s*테더', text):
+            match = re.search(r'(\d+(\.\d+)?)\s*테더', text)
+            amount = float(match.group(1))
+            rate = get_usdt_rate()
+
+            if rate is None:
+                bot.reply_to(message, "⚠️ 환율 정보를 가져오지 못했어요. 잠시 후 다시 시도해주세요.")
+                return
+
+            base_amount = amount * rate
+            fee = base_amount * 0.05
+            total = base_amount + fee
+
+            bot.reply_to(message,
+                f"💰 USDT 환율 계산\n\n"
+                f"📈 현재 환율: {rate:,.0f}원\n\n"
+                f"💵 {amount:,.0f} USDT: {base_amount:,.0f}원\n"
+                f"💸 수수료 (5%): {fee:,.0f}원\n"
+                f"💰 최종 금액: {total:,.0f}원"
             )
 
         # ==================== /출석 ====================
@@ -537,7 +571,6 @@ def handle_all(message):
                 bot.reply_to(message, "⚠️ 선물은 그룹에서만 사용할 수 있어요!")
                 return
 
-            # 답장 대상 확인
             if not message.reply_to_message:
                 bot.reply_to(message,
                     "🎁 사용법: 선물할 상대의 메시지에 답장으로\n"
@@ -558,7 +591,6 @@ def handle_all(message):
                 return
 
             amount = int(parts[1])
-
             if amount < 10:
                 bot.reply_to(message, "⚠️ 최소 선물 포인트는 10포인트예요!")
                 return
@@ -567,17 +599,14 @@ def handle_all(message):
             target_id = target.id
             target_name = target.first_name or '상대방'
 
-            # 자기 자신에게 선물 방지
             if target_id == user_id:
                 bot.reply_to(message, "⚠️ 자기 자신에게는 선물할 수 없어요!")
                 return
 
-            # 봇에게 선물 방지
             if target.is_bot:
                 bot.reply_to(message, "⚠️ 봇에게는 선물할 수 없어요!")
                 return
 
-            # 보내는 사람 포인트 확인
             my_point = get_point(user_id, group_id)
             if my_point < amount:
                 bot.reply_to(message,
@@ -587,7 +616,6 @@ def handle_all(message):
                 )
                 return
 
-            # 포인트 이동
             update_point(user_id, group_id, first_name, username, -amount)
             update_point(target_id, group_id, target_name, target.username or '', amount)
 
@@ -647,7 +675,7 @@ def handle_all(message):
                 "🎮 게임 목록\n\n"
                 "🎰 /슬롯 [배팅] - 슬롯머신\n"
                 "🎡 /룰렛 [배팅] - 룰렛\n"
-                "✌️ /가위바위보 [가위/바위/보] - 가위바위보\n"
+                "✌️ /가위바위보 [가위/바위/보] - 가위바위보\n\n"
                 "⚠️ 최소 참가비: 20포인트"
             )
 
