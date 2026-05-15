@@ -5,12 +5,15 @@ import telebot
 import psycopg2
 import requests
 import urllib.parse
+import pytz
 from datetime import datetime, timedelta
 from flask import Flask, request
 
 BOT_TOKEN = '8046489365:AAHAFBz4Ca07KcjqI0EJl76aIAu-rlVHw-4'
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
+
+KST = pytz.timezone('Asia/Seoul')
 
 AFFILIATE_TEXT = """❤️카지노❤️
 [평생제휴] 1️⃣ <a href="https://t.me/gamte59/31">렛츠뱃</a>
@@ -334,6 +337,19 @@ def init_db():
             created_at TIMESTAMP DEFAULT NOW()
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS vote_list (
+            id SERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL,
+            group_id BIGINT NOT NULL,
+            first_name VARCHAR(255),
+            username VARCHAR(255),
+            vote_type VARCHAR(10) NOT NULL,
+            vote_date DATE NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(user_id, group_id, vote_date)
+        )
+    """)
     try:
         cursor.execute("""
             ALTER TABLE points
@@ -437,7 +453,9 @@ def handle_all(message):
         group_id = message.chat.id
         first_name = message.from_user.first_name or '사용자'
         username = message.from_user.username or ''
-        today = datetime.now().date()
+        
+        now_kst = datetime.now(KST)
+        today = now_kst.date()
 
         # ==================== /test ====================
         if '/test' in text:
@@ -883,6 +901,117 @@ def handle_all(message):
             result += f"  🗓 이번 달   {month_count}개\n"
             result += f"  💬 전체      {total_count}개\n\n"
             result += f"  🎀 오늘도 열심히 채팅했어요!\n"
+            result += "╚══════════════════╝"
+            bot.reply_to(message, result)
+
+        # ==================== /승 또는 /패 ====================
+        elif text.strip().startswith('/승') or text.strip().startswith('/패'):
+            if message.chat.type == 'private':
+                return
+
+            current_time = now_kst.time()
+            start_time = datetime.strptime("18:00", "%H:%M").time()
+            end_time   = datetime.strptime("18:30", "%H:%M").time()
+
+            if not (start_time <= current_time <= end_time):
+    bot.reply_to(message,
+        "🚫 지금은 참여 시간이 아닙니다.\n\n"
+        "⏰ PM 18:00 ~ 18:30 배팅 시간입니다."
+    )
+    return
+            vote_type = '승' if text.strip().startswith('/승') else '패'
+
+            db = get_db()
+            cursor = db.cursor()
+
+            cursor.execute("""
+                SELECT vote_type FROM vote_list
+                WHERE user_id=%s AND group_id=%s AND vote_date=%s
+            """, (user_id, group_id, today))
+            existing = cursor.fetchone()
+
+            if existing:
+                cursor.close()
+                db.close()
+                bot.reply_to(message,
+                    f"⚠️ 이미 오늘 [{existing[0]}] 으로 참여하셨어요!\n"
+                    f"하루에 한 번만 참여할 수 있어요."
+                )
+                return
+
+            cursor.execute("""
+                INSERT INTO vote_list (user_id, group_id, first_name, username, vote_type, vote_date)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (user_id, group_id, first_name, username, vote_type, today))
+            db.commit()
+
+            cursor.execute("""
+                SELECT COUNT(*) FROM vote_list
+                WHERE group_id=%s AND vote_date=%s AND vote_type='승'
+            """, (group_id, today))
+            win_count = cursor.fetchone()[0]
+
+            cursor.execute("""
+                SELECT COUNT(*) FROM vote_list
+                WHERE group_id=%s AND vote_date=%s AND vote_type='패'
+            """, (group_id, today))
+            lose_count = cursor.fetchone()[0]
+
+            cursor.close()
+            db.close()
+
+            emoji = '🏆' if vote_type == '승' else '💀'
+            bot.reply_to(message,
+                f"╔══ {emoji} 투표 완료 ══╗\n"
+                f"  👤 {first_name}님\n"
+                f"  선택: [{vote_type}]\n\n"
+                f"  🏆 승: {win_count}명\n"
+                f"  💀 패: {lose_count}명\n"
+                f"╚══════════════════╝"
+            )
+
+        # ==================== /리스트 ====================
+        elif text.strip().startswith('/리스트'):
+            if message.chat.type == 'private':
+                return
+
+            db = get_db()
+            cursor = db.cursor()
+
+            cursor.execute("""
+                SELECT first_name, username, vote_type
+                FROM vote_list
+                WHERE group_id=%s AND vote_date=%s
+                ORDER BY vote_type, created_at
+            """, (group_id, today))
+            rows = cursor.fetchall()
+            cursor.close()
+            db.close()
+
+            if not rows:
+                bot.reply_to(message, "📋 오늘 참여한 사람이 없어요!")
+                return
+
+            win_list  = [r[0] or r[1] or '익명' for r in rows if r[2] == '승']
+            lose_list = [r[0] or r[1] or '익명' for r in rows if r[2] == '패']
+
+            result = f"╔══ 📋 오늘의 투표 리스트 ══╗\n"
+            result += f"  📅 {today.strftime('%Y년 %m월 %d일')}\n\n"
+
+            result += f"  🏆 승 ({len(win_list)}명)\n"
+            if win_list:
+                for name in win_list:
+                    result += f"    • {name}\n"
+            else:
+                result += "    아직 없어요\n"
+
+            result += f"\n  💀 패 ({len(lose_list)}명)\n"
+            if lose_list:
+                for name in lose_list:
+                    result += f"    • {name}\n"
+            else:
+                result += "    아직 없어요\n"
+
             result += "╚══════════════════╝"
             bot.reply_to(message, result)
 
