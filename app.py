@@ -453,7 +453,7 @@ def handle_all(message):
         group_id = message.chat.id
         first_name = message.from_user.first_name or '사용자'
         username = message.from_user.username or ''
-        
+
         now_kst = datetime.now(KST)
         today = now_kst.date()
 
@@ -914,11 +914,12 @@ def handle_all(message):
             end_time   = datetime.strptime("18:30", "%H:%M").time()
 
             if not (start_time <= current_time <= end_time):
-    bot.reply_to(message,
-        "🚫 지금은 참여 시간이 아닙니다.\n\n"
-        "⏰ PM 18:00 ~ 18:30 배팅 시간입니다."
-    )
-    return
+                bot.reply_to(message,
+                    "🚫 지금은 참여 시간이 아닙니다.\n\n"
+                    "⏰ PM 18:00 ~ 18:30 배팅 시간입니다."
+                )
+                return
+
             vote_type = '승' if text.strip().startswith('/승') else '패'
 
             db = get_db()
