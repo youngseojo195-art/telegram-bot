@@ -22,7 +22,7 @@ KST = pytz.timezone('Asia/Seoul')
 # BASEBALL_GIF_FILE_ID : /getfileid 로 얻은 file_id 입력
 # AFFILIATE_GIF_URL    : 제휴 GIF URL
 # ─────────────────────────────────────────────────────────
-BASEBALL_GIF_FILE_ID = "CgACAgUAAxkBAAMzagl3svn3G8Jr7JDeNhdXbodfQnIAAi8dAAJux0hUOyDPUXIJtRs7BA"
+BASEBALL_GIF_FILE_ID = None   # ← /getfileid 커맨드로 얻은 file_id를 여기에 넣으세요
 AFFILIATE_GIF_URL    = None   # ← 제휴 GIF URL을 여기에 넣으세요
 
 def send_baseball_gif(chat_id):
@@ -107,7 +107,7 @@ KBO_TEAMS_DISPLAY = {
     '키움': '🟣 키움',
 }
 
-VOTE_START = "18:00"
+VOTE_START = "17:00"
 VOTE_END   = "18:30"
 
 # ─────────────────────────────────────────────────────────
@@ -233,6 +233,9 @@ def clear_pending(user_id, group_id):
     db.commit(); c.close(); db.close()
 
 def is_vote_time(now_kst):
+    # 화=1, 수=2, 목=3, 금=4 만 허용
+    if now_kst.weekday() not in [1, 2, 3, 4]:
+        return False
     cur = now_kst.time()
     return (datetime.strptime(VOTE_START, "%H:%M").time()
             <= cur <=
@@ -661,6 +664,7 @@ def handle_all(message):
                 f"📋 /리스트  — 오늘 참여 현황\n"
                 f"{'─' * 23}\n\n"
                 f"⏰ 참여 시간: PM {VOTE_START} ~ {VOTE_END}\n"
+                f"📅 참여 요일: 화 / 수 / 목 / 금\n"
                 f"📌 10개 팀 중 5개만 선택 가능\n"
                 f"📌 하루 1회 참여 (수정 가능)"
             )
@@ -670,8 +674,9 @@ def handle_all(message):
             if message.chat.type == 'private': return
             if not is_vote_time(now_kst):
                 bot.reply_to(message,
-                    f"🚫 지금은 참여 시간이 아닙니다.\n\n"
-                    f"⏰ PM {VOTE_START} ~ {VOTE_END} 사이에 참여해주세요."
+                    f"🚫 지금은 참여할 수 없어요.\n\n"
+                    f"📅 참여 가능 요일: 화 / 수 / 목 / 금\n"
+                    f"⏰ 참여 가능 시간: PM {VOTE_START} ~ {VOTE_END}"
                 ); return
 
             db = get_db(); c = db.cursor()
@@ -704,8 +709,9 @@ def handle_all(message):
             if message.chat.type == 'private': return
             if not is_vote_time(now_kst):
                 bot.reply_to(message,
-                    f"🚫 지금은 수정 시간이 아닙니다.\n\n"
-                    f"⏰ PM {VOTE_START} ~ {VOTE_END} 사이에 수정 가능합니다."
+                    f"🚫 지금은 수정할 수 없어요.\n\n"
+                    f"📅 참여 가능 요일: 화 / 수 / 목 / 금\n"
+                    f"⏰ 참여 가능 시간: PM {VOTE_START} ~ {VOTE_END}"
                 ); return
 
             db = get_db(); c = db.cursor()
