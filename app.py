@@ -22,7 +22,7 @@ KST = pytz.timezone('Asia/Seoul')
 # BASEBALL_GIF_FILE_ID : /getfileid 로 얻은 file_id 입력
 # AFFILIATE_GIF_URL    : 제휴 GIF URL
 # ─────────────────────────────────────────────────────────
-BASEBALL_GIF_FILE_ID = None   # ← /getfileid 커맨드로 얻은 file_id를 여기에 넣으세요
+BASEBALL_GIF_FILE_ID = "CgACAgUAAxkBAAMzagl3svn3G8Jr7JDeNhdXbodfQnIAAi8dAAJux0hUOyDPUXIJtRs7BA"
 AFFILIATE_GIF_URL    = None   # ← 제휴 GIF URL을 여기에 넣으세요
 
 def send_baseball_gif(chat_id):
@@ -107,7 +107,7 @@ KBO_TEAMS_DISPLAY = {
     '키움': '🟣 키움',
 }
 
-VOTE_START = "17:00"
+VOTE_START = "18:00"
 VOTE_END   = "18:30"
 
 # ─────────────────────────────────────────────────────────
@@ -234,7 +234,7 @@ def clear_pending(user_id, group_id):
 
 def is_vote_time(now_kst):
     # 화=1, 수=2, 목=3, 금=4 만 허용
-    if now_kst.weekday() not in [1, 2, 3, 4, 5, 6, 7]:
+    if now_kst.weekday() not in [1, 2, 3, 4]:
         return False
     cur = now_kst.time()
     return (datetime.strptime(VOTE_START, "%H:%M").time()
