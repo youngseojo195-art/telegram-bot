@@ -234,7 +234,7 @@ def clear_pending(user_id, group_id):
 
 def is_vote_time(now_kst):
     # 화=1, 수=2, 목=3, 금=4 만 허용
-    if now_kst.weekday() not in [1, 2, 3, 4]:
+    if now_kst.weekday() not in [1, 2, 3, 4, 5, 6, 7]:
         return False
     cur = now_kst.time()
     return (datetime.strptime(VOTE_START, "%H:%M").time()
