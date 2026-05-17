@@ -22,7 +22,7 @@ KST = pytz.timezone('Asia/Seoul')
 # BASEBALL_GIF_FILE_ID : /getfileid 로 얻은 file_id 입력
 # AFFILIATE_GIF_URL    : 제휴 GIF URL
 # ─────────────────────────────────────────────────────────
-BASEBALL_GIF_FILE_ID = CgACAgUAAxkBAAMzagl3svn3G8Jr7JDeNhdXbodfQnIAAi8dAAJux0hUOyDPUXIJtRs7BA ← /getfileid 커맨드로 얻은 file_id를 여기에 넣으세요
+BASEBALL_GIF_FILE_ID = "CgACAgUAAxkBAAMzagl3svn3G8Jr7JDeNhdXbodfQnIAAi8dAAJux0hUOyDPUXIJtRs7BA" ← /getfileid 커맨드로 얻은 file_id를 여기에 넣으세요
 AFFILIATE_GIF_URL    = None   # ← 제휴 GIF URL을 여기에 넣으세요
 
 def send_baseball_gif(chat_id):
