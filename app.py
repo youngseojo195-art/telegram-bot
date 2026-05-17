@@ -22,7 +22,7 @@ KST = pytz.timezone('Asia/Seoul')
 # BASEBALL_GIF_FILE_ID : /getfileid 로 얻은 file_id 입력
 # AFFILIATE_GIF_URL    : 제휴 GIF URL
 # ─────────────────────────────────────────────────────────
-BASEBALL_GIF_FILE_ID = "CgACAgUAAxkBAAMzagl3svn3G8Jr7JDeNhdXbodfQnIAAi8dAAJux0hUOyDPUXIJtRs7BA"
+BASEBALL_GIF_FILE_ID = None   # ← /getfileid 커맨드로 얻은 file_id를 여기에 넣으세요
 AFFILIATE_GIF_URL    = None   # ← 제휴 GIF URL을 여기에 넣으세요
 
 def send_baseball_gif(chat_id):
@@ -46,63 +46,49 @@ def send_affiliate_gif(chat_id):
 # ─────────────────────────────────────────────────────────
 # 제휴 텍스트
 # ─────────────────────────────────────────────────────────
-AFFILIATE_TEXT = """<b>┌─────────────────────┐</b>
-<b>         🎰 카 지 노</b>
-<b>└─────────────────────┘</b>
+AFFILIATE_TEXT = """🎰 <b>카지노</b>
+──────────────────
+<b>[평생]</b> · <a href="https://t.me/gamte59/31">렛츠뱃</a>
+<b>[평생]</b> · <a href="https://t.me/gamte59/28">예스뱃</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/44">지엑스뱃</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/46">케이비씨겜</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/49">블록체인바카라</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/60">우루스뱃</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/60">마닐라</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/70">미우카지노</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/72">그랜드파리</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/74">룰라뱃</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/78">소울카지노</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/84">123GAME카지노</a>
 
-✅ <b>[평생]</b> <a href="https://t.me/gamte59/31">렛츠뱃</a>
-✅ <b>[평생]</b> <a href="https://t.me/gamte59/28">예스뱃</a>
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/44">지엑스뱃</a>
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/46">케이비씨겜</a>
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/49">블록체인바카라</a>
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/60">우루스뱃</a>
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/60">마닐라</a>
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/70">미우카지노</a>
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/72">그랜드파리</a>
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/74">룰라뱃</a>
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/78">소울카지노</a>
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/84">123GAME카지노</a>
+💸 <b>급전</b>
+──────────────────
+<b>[도파민]</b> · <a href="https://t.me/gamte59/16">OR급전</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/77">빅딜OTC</a>
 
-<b>┌─────────────────────┐</b>
-<b>         💸 급 전</b>
-<b>└─────────────────────┘</b>
+🏠 <b>장집</b>
+──────────────────
+<b>[도파민]</b> · <a href="https://t.me/gamte59/37">미호 장집</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/76">빅딜 장집</a>
 
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/16">OR급전</a>
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/77">빅딜OTC</a>
+🔄 <b>반환팀</b>
+──────────────────
+<b>[도파민]</b> · <a href="https://t.me/gamte59/39">울프 반환팀</a>
 
-<b>┌─────────────────────┐</b>
-<b>         🏠 장 집</b>
-<b>└─────────────────────┘</b>
+💳 <b>충전 계좌매입</b>
+──────────────────
+<b>[평생]</b> · <a href="https://t.me/gamte59/42">저승사자</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/58">김여포</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/64">대문팀</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/92">관짝</a>
 
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/37">미호 장집</a>
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/76">빅딜 장집</a>
+♠️ <b>홀덤</b>
+──────────────────
+<b>[도파민]</b> · <a href="https://t.me/gamte59/69">룽지홀덤</a>
 
-<b>┌─────────────────────┐</b>
-<b>         🔄 반 환 팀</b>
-<b>└─────────────────────┘</b>
-
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/39">울프 반환팀</a>
-
-<b>┌─────────────────────┐</b>
-<b>      💳 충전 계좌매입</b>
-<b>└─────────────────────┘</b>
-
-✅ <b>[평생]</b> <a href="https://t.me/gamte59/42">저승사자</a>
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/58">김여포</a>
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/64">대문팀</a>
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/92">관짝</a>
-
-<b>┌─────────────────────┐</b>
-<b>         ♠️ 홀 덤</b>
-<b>└─────────────────────┘</b>
-
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/69">룽지홀덤</a>
-
-<b>┌─────────────────────┐</b>
-<b>       💼 이체 알바</b>
-<b>└─────────────────────┘</b>
-
-✅ <b>[도파민]</b> <a href="https://t.me/gamte59/87">창비팀 대면이체알바</a>"""
+💼 <b>이체 알바</b>
+──────────────────
+<b>[도파민]</b> · <a href="https://t.me/gamte59/87">창비팀 대면이체알바</a>"""
 
 # ─────────────────────────────────────────────────────────
 # KBO 팀 설정
