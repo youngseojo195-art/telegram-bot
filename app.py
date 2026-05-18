@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import time
 import random
 import telebot
 import psycopg2
@@ -19,14 +20,11 @@ KST = pytz.timezone('Asia/Seoul')
 
 # ─────────────────────────────────────────────────────────
 # GIF 설정
-# BASEBALL_GIF_FILE_ID : /getfileid 로 얻은 file_id 입력
-# AFFILIATE_GIF_URL    : 제휴 GIF URL
 # ─────────────────────────────────────────────────────────
 BASEBALL_GIF_FILE_ID = "CgACAgUAAxkBAAMzagl3svn3G8Jr7JDeNhdXbodfQnIAAi8dAAJux0hUOyDPUXIJtRs7BA"
 AFFILIATE_GIF_URL    = "CgACAgUAAxkBAAM4agmS7OD4fz1bxh5zNQPn8VNCpysAAmYdAAJux0hUYXAsQb02yzs7BA"
 
 def send_baseball_gif(chat_id):
-    """야구 GIF 전송. file_id 없으면 스킵."""
     if not BASEBALL_GIF_FILE_ID:
         return
     try:
@@ -35,7 +33,6 @@ def send_baseball_gif(chat_id):
         print(f"야구 GIF 전송 실패: {e}")
 
 def send_affiliate_gif(chat_id):
-    """제휴 GIF 전송. URL 없으면 스킵."""
     if not AFFILIATE_GIF_URL:
         return
     try:
@@ -108,7 +105,12 @@ VOTE_START = "18:00"
 VOTE_END   = "18:30"
 
 # ─────────────────────────────────────────────────────────
-# 인라인 키보드 빌더
+# 경주 게임 세션 (메모리)
+# ─────────────────────────────────────────────────────────
+race_sessions = {}
+
+# ─────────────────────────────────────────────────────────
+# KBO 인라인 키보드 빌더
 # ─────────────────────────────────────────────────────────
 def build_team_keyboard(selected: list) -> types.InlineKeyboardMarkup:
     markup = types.InlineKeyboardMarkup(row_width=3)
@@ -116,8 +118,7 @@ def build_team_keyboard(selected: list) -> types.InlineKeyboardMarkup:
     for team in KBO_TEAMS:
         label = f"✅ {team}" if team in selected else KBO_TEAMS_DISPLAY.get(team, team)
         buttons.append(types.InlineKeyboardButton(
-            text=label,
-            callback_data=f"kbo_toggle:{team}"
+            text=label, callback_data=f"kbo_toggle:{team}"
         ))
     markup.add(*buttons)
     count = len(selected)
@@ -147,14 +148,94 @@ def build_vote_message(selected: list) -> str:
     return "\n".join(lines)
 
 # ─────────────────────────────────────────────────────────
+# 경주 게임 빌더
+# 토끼 승률 60%, 거북이 승률 40%
+# ─────────────────────────────────────────────────────────
+def simulate_race():
+    """
+    토끼 60% : 거북이 40% 승률
+    토끼: 빠르지만 낮잠 확률 있음
+    거북이: 느리지만 꾸준함
+    """
+    rabbit_pos = 0
+    turtle_pos = 0
+    steps = []
+    rabbit_sleeping = False
+    sleep_turns = 0
+
+    for turn in range(1, 21):
+        # 토끼 이동 (기본 이동량 더 높게 + 낮잠 확률 10%로 낮춤 → 60% 승률)
+        if rabbit_sleeping:
+            sleep_turns -= 1
+            rabbit_move = 0
+            if sleep_turns <= 0:
+                rabbit_sleeping = False
+        else:
+            rabbit_move = random.randint(6, 16)
+            # 10% 확률 낮잠 (기존 15% → 10%로 낮춰 토끼 유리)
+            if random.random() < 0.10:
+                rabbit_sleeping = True
+                sleep_turns = random.randint(1, 3)
+                rabbit_move = 0
+
+        # 거북이 이동 (기본 이동량 낮게 → 40% 승률)
+        turtle_move = random.randint(2, 7)
+
+        rabbit_pos = min(rabbit_pos + rabbit_move, 100)
+        turtle_pos = min(turtle_pos + turtle_move, 100)
+
+        if turn % 5 == 0:
+            r_bar = '🐇' + '▬' * (rabbit_pos // 10)
+            t_bar = '🐢' + '▬' * (turtle_pos // 10)
+            sleeping_tag = ' 💤' if rabbit_sleeping else ''
+            steps.append(
+                f"[{turn}턴]\n"
+                f"  {r_bar}{sleeping_tag} ({rabbit_pos}%)\n"
+                f"  {t_bar} ({turtle_pos}%)"
+            )
+
+        if rabbit_pos >= 100 or turtle_pos >= 100:
+            break
+
+    winner = 'rabbit' if rabbit_pos >= turtle_pos else 'turtle'
+    return winner, steps
+
+def build_race_keyboard(bet_step='select_animal'):
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    if bet_step == 'select_animal':
+        markup.add(
+            types.InlineKeyboardButton("🐇 토끼 (1.5배)", callback_data="race_animal_rabbit"),
+            types.InlineKeyboardButton("🐢 거북이 (2.5배)", callback_data="race_animal_turtle"),
+        )
+        markup.add(types.InlineKeyboardButton("❌ 취소", callback_data="race_cancel"))
+    elif bet_step == 'select_bet':
+        markup.add(
+            types.InlineKeyboardButton("50P",    callback_data="race_bet_50"),
+            types.InlineKeyboardButton("100P",   callback_data="race_bet_100"),
+        )
+        markup.add(
+            types.InlineKeyboardButton("200P",   callback_data="race_bet_200"),
+            types.InlineKeyboardButton("500P",   callback_data="race_bet_500"),
+        )
+        markup.add(
+            types.InlineKeyboardButton("1,000P", callback_data="race_bet_1000"),
+            types.InlineKeyboardButton("2,000P", callback_data="race_bet_2000"),
+        )
+        markup.add(
+            types.InlineKeyboardButton("5,000P", callback_data="race_bet_5000"),
+            types.InlineKeyboardButton("전부",    callback_data="race_bet_all"),
+        )
+        markup.add(types.InlineKeyboardButton("⬅️ 뒤로", callback_data="race_back"))
+    return markup
+
+# ─────────────────────────────────────────────────────────
 # DB 헬퍼
 # ─────────────────────────────────────────────────────────
 def get_db():
     return psycopg2.connect(os.environ.get('DATABASE_URL'))
 
 def init_db():
-    db = get_db()
-    c = db.cursor()
+    db = get_db(); c = db.cursor()
     c.execute("""CREATE TABLE IF NOT EXISTS chat_logs (
         id SERIAL PRIMARY KEY, user_id BIGINT NOT NULL,
         username VARCHAR(255), first_name VARCHAR(255),
@@ -184,8 +265,7 @@ def init_db():
         db.commit()
     except:
         db.rollback()
-    db.commit()
-    c.close(); db.close()
+    db.commit(); c.close(); db.close()
 
 def get_point(user_id, group_id):
     db = get_db(); c = db.cursor()
@@ -252,7 +332,195 @@ def get_usdt_rate():
     return None
 
 # ─────────────────────────────────────────────────────────
-# 인라인 키보드 콜백 핸들러
+# 경주 콜백 핸들러
+# ─────────────────────────────────────────────────────────
+@bot.callback_query_handler(func=lambda call: call.data.startswith('race_'))
+def handle_race_callback(call):
+    try:
+        user_id    = call.from_user.id
+        group_id   = call.message.chat.id
+        first_name = call.from_user.first_name or '사용자'
+        username   = call.from_user.username or ''
+        key        = (user_id, group_id)
+        data       = call.data
+
+        # ── 취소 ──
+        if data == "race_cancel":
+            if key in race_sessions:
+                del race_sessions[key]
+            bot.edit_message_text("❌ 경주 게임을 취소했어요.", chat_id=group_id, message_id=call.message.message_id)
+            bot.answer_callback_query(call.id)
+            return
+
+        # ── 뒤로 ──
+        if data == "race_back":
+            if key in race_sessions:
+                race_sessions[key]['step']   = 'select_animal'
+                race_sessions[key]['choice'] = None
+            point = get_point(user_id, group_id)
+            bot.edit_message_text(
+                f"╔══ 🐇 토끼 vs 거북이 경주 ══╗\n\n"
+                f"  🏆 배당률\n"
+                f"  🐇 토끼    → 1.5배 (승률 높음)\n"
+                f"  🐢 거북이  → 2.5배 (역전 배당!)\n\n"
+                f"  💰 보유 포인트: {point:,}포인트\n\n"
+                f"  누구에게 배팅하시겠어요?\n"
+                f"╚══════════════════════════╝",
+                chat_id=group_id, message_id=call.message.message_id,
+                reply_markup=build_race_keyboard('select_animal')
+            )
+            bot.answer_callback_query(call.id)
+            return
+
+        # 세션 없으면
+        if key not in race_sessions:
+            bot.answer_callback_query(call.id, "⚠️ 먼저 /경주 를 입력해주세요!", show_alert=True)
+            return
+
+        session = race_sessions[key]
+
+        # ── 동물 선택 ──
+        if data.startswith("race_animal_"):
+            animal = data.replace("race_animal_", "")
+            session['choice'] = animal
+            session['step']   = 'select_bet'
+            animal_label = "🐇 토끼 (1.5배)" if animal == 'rabbit' else "🐢 거북이 (2.5배)"
+            point = get_point(user_id, group_id)
+            bot.edit_message_text(
+                f"╔══ 🐇 토끼 vs 거북이 경주 ══╗\n\n"
+                f"  ✅ 선택: {animal_label}\n\n"
+                f"  💰 보유 포인트: {point:,}포인트\n\n"
+                f"  배팅 포인트를 선택하세요!\n"
+                f"╚══════════════════════════╝",
+                chat_id=group_id, message_id=call.message.message_id,
+                reply_markup=build_race_keyboard('select_bet')
+            )
+            bot.answer_callback_query(call.id, f"{animal_label} 선택!")
+            return
+
+        # ── 배팅 금액 → 경주 시작 ──
+        if data.startswith("race_bet_"):
+            if session.get('step') != 'select_bet' or not session.get('choice'):
+                bot.answer_callback_query(call.id, "⚠️ 먼저 동물을 선택해주세요!")
+                return
+
+            point   = get_point(user_id, group_id)
+            bet_str = data.replace("race_bet_", "")
+            bet     = point if bet_str == 'all' else int(bet_str)
+
+            if bet < 50:
+                bot.answer_callback_query(call.id, "⚠️ 최소 배팅은 50포인트예요!")
+                return
+            if bet > point:
+                bot.answer_callback_query(call.id, f"💸 포인트 부족! 보유: {point:,}P", show_alert=True)
+                return
+
+            session['bet'] = bet
+            choice = session['choice']
+            animal_label = "🐇 토끼" if choice == 'rabbit' else "🐢 거북이"
+
+            bot.edit_message_text(
+                f"╔══ 🏁 경주 시작! ══╗\n\n"
+                f"  🎯 선택: {animal_label}\n"
+                f"  💰 배팅: {bet:,}포인트\n\n"
+                f"  출발선에 섰습니다...\n"
+                f"  🐇 ━━━━━━━━━━━━━ 🏁\n"
+                f"  🐢 ━━━━━━━━━━━━━ 🏁\n"
+                f"╚══════════════════╝",
+                chat_id=group_id, message_id=call.message.message_id
+            )
+            bot.answer_callback_query(call.id, "🏁 경주 시작!")
+
+            # 경주 시뮬레이션
+            winner, steps = simulate_race()
+
+            for i, step_text in enumerate(steps):
+                time.sleep(1.2)
+                status = "달리는 중..." if i < len(steps) - 1 else "막판 스퍼트!"
+                try:
+                    bot.edit_message_text(
+                        f"╔══ 🏁 경주 진행 중! ══╗\n\n"
+                        f"  🎯 내 선택: {animal_label}  |  배팅: {bet:,}P\n\n"
+                        f"{step_text}\n\n"
+                        f"  ⏳ {status}\n"
+                        f"╚══════════════════╝",
+                        chat_id=group_id, message_id=call.message.message_id
+                    )
+                except Exception:
+                    pass
+
+            time.sleep(1.5)
+
+            won        = (winner == choice)
+            multiplier = 1.5 if winner == 'rabbit' else 2.5
+
+            if won:
+                earn  = int(bet * multiplier)
+                delta = earn - bet
+            else:
+                earn  = 0
+                delta = -bet
+
+            update_point(user_id, group_id, first_name, username, delta)
+            new_point    = get_point(user_id, group_id)
+            winner_label = "🐇 토끼" if winner == 'rabbit' else "🐢 거북이"
+            result_emoji = "🎉" if won else "😢"
+            result_title = "배팅 성공!" if won else "아쉽게 패배..."
+            point_line   = f"획득: +{earn:,}포인트" if won else f"손실: -{bet:,}포인트"
+            r_finish = "━━━━━━━━━━🐇" if winner == 'rabbit' else "━━━━━━🐇━━━"
+            t_finish = "━━━━━━━━━━🐢" if winner == 'turtle' else "━━━━━━🐢━━━"
+
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton("🔄 다시 배팅", callback_data="race_retry"))
+
+            bot.edit_message_text(
+                f"╔══ {result_emoji} 경주 결과 ══╗\n\n"
+                f"  🏆 우승: {winner_label}\n\n"
+                f"  🐇 {r_finish} 🏁\n"
+                f"  🐢 {t_finish} 🏁\n\n"
+                f"  ─────────────────\n"
+                f"  {result_title}\n"
+                f"  🎯 선택: {animal_label}\n"
+                f"  💸 배팅: {bet:,}포인트\n"
+                f"  {'✅' if won else '❌'} {point_line}\n"
+                f"  💰 잔여: {new_point:,}포인트\n"
+                f"╚══════════════════╝",
+                chat_id=group_id, message_id=call.message.message_id,
+                reply_markup=markup
+            )
+
+            if key in race_sessions:
+                del race_sessions[key]
+            return
+
+        # ── 다시 배팅 ──
+        if data == "race_retry":
+            point = get_point(user_id, group_id)
+            if point < 50:
+                bot.answer_callback_query(call.id, f"💸 포인트 부족! 보유: {point:,}P", show_alert=True)
+                return
+            race_sessions[key] = {'step': 'select_animal', 'choice': None, 'bet': 0}
+            bot.edit_message_text(
+                f"╔══ 🐇 토끼 vs 거북이 경주 ══╗\n\n"
+                f"  🏆 배당률\n"
+                f"  🐇 토끼    → 1.5배 (승률 높음)\n"
+                f"  🐢 거북이  → 2.5배 (역전 배당!)\n\n"
+                f"  💰 보유 포인트: {point:,}포인트\n\n"
+                f"  누구에게 배팅하시겠어요?\n"
+                f"╚══════════════════════════╝",
+                chat_id=group_id, message_id=call.message.message_id,
+                reply_markup=build_race_keyboard('select_animal')
+            )
+            bot.answer_callback_query(call.id)
+            return
+
+    except Exception as e:
+        import traceback
+        print(f"race callback error: {e}\n{traceback.format_exc()}")
+        bot.answer_callback_query(call.id, "오류가 발생했어요. 다시 시도해주세요.")
+
+# ─────────────────────────────────────────────────────────
+# KBO 콜백 핸들러
 # ─────────────────────────────────────────────────────────
 @bot.callback_query_handler(func=lambda call: call.data.startswith('kbo_'))
 def handle_kbo_callback(call):
@@ -266,7 +534,8 @@ def handle_kbo_callback(call):
         action     = call.data
 
         if not is_vote_time(now_kst):
-            bot.answer_callback_query(call.id, f"⏰ {VOTE_START}~{VOTE_END} 사이에만 참여 가능해요!", show_alert=True)
+            bot.answer_callback_query(call.id,
+                f"⏰ 화~금 {VOTE_START}~{VOTE_END} 사이에만 참여 가능해요!", show_alert=True)
             return
 
         db = get_db(); c = db.cursor()
@@ -274,12 +543,8 @@ def handle_kbo_callback(call):
                   (user_id, group_id, today))
         already = c.fetchone(); c.close(); db.close()
 
-        if already and action not in ("kbo_submit", "kbo_reset", "kbo_noop") and not action.startswith("kbo_toggle"):
-            pass
-
         selected, msg_id = get_pending(user_id, group_id)
 
-        # 이미 제출한 사람이 팀 토글 / 제출 외 버튼 누를 때
         if already and action == "kbo_noop":
             bot.answer_callback_query(call.id, "이미 제출하셨어요! 수정하려면 /수정 을 사용하세요.")
             return
@@ -353,7 +618,7 @@ def handle_kbo_callback(call):
 
     except Exception as e:
         import traceback
-        print(f"callback error: {e}\n{traceback.format_exc()}")
+        print(f"kbo callback error: {e}\n{traceback.format_exc()}")
         bot.answer_callback_query(call.id, "오류가 발생했어요. 다시 시도해주세요.")
 
 # ─────────────────────────────────────────────────────────
@@ -371,61 +636,55 @@ def handle_all(message):
         now_kst    = datetime.now(KST)
         today      = now_kst.date()
 
-        # ── /test ──────────────────────────────────────
+        # ── /test ──
         if '/test' in text:
             bot.reply_to(message, "봇 작동 중! ✅")
 
-        # ── /getfileid (봇에 영상/GIF 보내면 file_id 반환) ──
+        # ── /getfileid ──
         elif '/getfileid' in text:
             if message.reply_to_message:
                 msg = message.reply_to_message
                 file_id = None
-                if msg.animation:
-                    file_id = msg.animation.file_id
-                elif msg.video:
-                    file_id = msg.video.file_id
-                elif msg.document:
-                    file_id = msg.document.file_id
+                if msg.animation:   file_id = msg.animation.file_id
+                elif msg.video:     file_id = msg.video.file_id
+                elif msg.document:  file_id = msg.document.file_id
                 if file_id:
                     bot.reply_to(message,
                         f"📋 file_id:\n\n<code>{file_id}</code>\n\n"
-                        f"위 값을 bot.py의 BASEBALL_GIF_FILE_ID 에 넣으세요!",
-                        parse_mode='HTML'
-                    )
+                        f"bot.py 상단 변수에 넣으세요!",
+                        parse_mode='HTML')
                 else:
-                    bot.reply_to(message, "⚠️ 영상/GIF 파일을 찾을 수 없어요. GIF나 영상 메시지에 답장해서 사용하세요.")
+                    bot.reply_to(message, "⚠️ GIF나 영상 메시지에 답장해서 사용하세요.")
             else:
-                bot.reply_to(message, "⚾ GIF/영상 메시지에 답장으로 /getfileid 를 입력하면 file_id를 알려드려요!")
+                bot.reply_to(message, "GIF/영상 메시지에 답장으로 /getfileid 를 입력하세요!")
 
-        # ── /노래 ──────────────────────────────────────
+        # ── /노래 ──
         elif '/노래' in text:
             query = text.replace('/노래', '').strip()
             if not query:
                 bot.reply_to(message, "🎵 검색어를 입력해주세요!\n예시: /노래 아이유 좋은날")
                 return
             encoded = urllib.parse.quote(query)
-            bot.reply_to(message, f"🎵 {query}\n\n🔗 유튜브 검색 결과:\nhttps://www.youtube.com/results?search_query={encoded}")
+            bot.reply_to(message, f"🎵 {query}\n\n🔗 유튜브:\nhttps://www.youtube.com/results?search_query={encoded}")
 
-        # ── /제휴 ──────────────────────────────────────
+        # ── /제휴 ──
         elif '/제휴' in text:
             send_affiliate_gif(group_id)
             bot.reply_to(message, AFFILIATE_TEXT, parse_mode='HTML', disable_web_page_preview=True)
 
-        # ── 테더 환율 ───────────────────────────────────
+        # ── 테더 환율 ──
         elif re.search(r'(\d+(\.\d+)?)\s*테더', text):
             match = re.search(r'(\d+(\.\d+)?)\s*테더', text)
             amount = float(match.group(1))
             rate = get_usdt_rate()
             if rate is None:
-                bot.reply_to(message, "⚠️ 환율 정보를 가져오지 못했어요. 잠시 후 다시 시도해주세요.")
-                return
+                bot.reply_to(message, "⚠️ 환율 정보를 가져오지 못했어요."); return
             bot.reply_to(message,
                 f"💰 USDT 환율 계산\n\n"
                 f"📈 현재 환율: {rate:,.0f}원\n"
-                f"💵 {amount:,.0f} USDT: {amount * rate:,.0f}원"
-            )
+                f"💵 {amount:,.0f} USDT: {amount * rate:,.0f}원")
 
-        # ── /출석 ──────────────────────────────────────
+        # ── /출석 ──
         elif '/출석' in text:
             if message.chat.type == 'private': return
             db = get_db(); c = db.cursor()
@@ -433,8 +692,7 @@ def handle_all(message):
             row = c.fetchone()
             if row and row[0] == today:
                 c.close(); db.close()
-                bot.reply_to(message, "⏰ 오늘 이미 출석했어요!\n자정(00:00)이 지나면 다시 출석할 수 있어요 😊")
-                return
+                bot.reply_to(message, "⏰ 오늘 이미 출석했어요!\n자정이 지나면 다시 출석할 수 있어요 😊"); return
             c.execute("""INSERT INTO points (user_id,group_id,first_name,username,point,last_attendance)
                 VALUES (%s,%s,%s,%s,100,%s) ON CONFLICT (user_id,group_id)
                 DO UPDATE SET point=points.point+100, last_attendance=%s, first_name=%s, username=%s""",
@@ -448,10 +706,9 @@ def handle_all(message):
                 f"  🎁 획득: 100포인트\n"
                 f"  💰 잔여: {total}포인트\n"
                 f"  🔄 리셋: 매일 자정 00:00\n"
-                f"╚══════════════════╝"
-            )
+                f"╚══════════════════╝")
 
-        # ── /리필 ──────────────────────────────────────
+        # ── /리필 ──
         elif '/리필' in text:
             if message.chat.type == 'private': return
             db = get_db(); c = db.cursor()
@@ -460,8 +717,7 @@ def handle_all(message):
             count = c.fetchone()[0]
             if count >= 5:
                 c.close(); db.close()
-                bot.reply_to(message, "⚠️ 오늘 리필을 5번 모두 사용했어요!\n자정(00:00)이 지나면 다시 사용할 수 있어요 😊")
-                return
+                bot.reply_to(message, "⚠️ 오늘 리필을 5번 모두 사용했어요!"); return
             c.execute("INSERT INTO refill_logs (user_id,group_id,first_name,username,refill_date) VALUES (%s,%s,%s,%s,%s)",
                       (user_id, group_id, first_name, username, today))
             db.commit(); c.close(); db.close()
@@ -473,15 +729,14 @@ def handle_all(message):
                 f"  💰 잔여: {get_point(user_id, group_id)}포인트\n"
                 f"  📊 오늘 남은 리필: {5 - count - 1}회\n"
                 f"  🔄 리셋: 매일 자정 00:00\n"
-                f"╚══════════════════╝"
-            )
+                f"╚══════════════════╝")
 
-        # ── /선물 ──────────────────────────────────────
+        # ── /선물 ──
         elif '/선물' in text:
             if message.chat.type == 'private':
                 bot.reply_to(message, "⚠️ 선물은 그룹에서만 사용할 수 있어요!"); return
             if not message.reply_to_message:
-                bot.reply_to(message, "🎁 선물할 상대의 메시지에 답장으로\n/선물 [포인트]\n\n예시: /선물 100\n\n⚠️ 최소: 10포인트"); return
+                bot.reply_to(message, "🎁 선물할 상대의 메시지에 답장으로\n/선물 [포인트]\n예시: /선물 100\n⚠️ 최소: 10포인트"); return
             parts = text.split()
             if len(parts) < 2 or not parts[1].isdigit():
                 bot.reply_to(message, "🎁 사용법: /선물 [포인트]\n예시: /선물 100"); return
@@ -505,10 +760,9 @@ def handle_all(message):
                 f"  🎀 선물: {amount}포인트\n\n"
                 f"  📤 {first_name} 잔여: {get_point(user_id, group_id)}포인트\n"
                 f"  📥 {target_name} 잔여: {get_point(target.id, group_id)}포인트\n"
-                f"╚══════════════════╝"
-            )
+                f"╚══════════════════╝")
 
-        # ── /포인트랭킹 ────────────────────────────────
+        # ── /포인트랭킹 ──
         elif '/포인트랭킹' in text:
             if message.chat.type == 'private': return
             db = get_db(); c = db.cursor()
@@ -521,26 +775,50 @@ def handle_all(message):
             result += "╚══════════════════╝"
             bot.reply_to(message, result)
 
-        # ── /포인트 ────────────────────────────────────
+        # ── /포인트 ──
         elif '/포인트' in text:
             if message.chat.type == 'private': return
             bot.reply_to(message,
                 f"╔══ 💰 포인트 ══╗\n"
                 f"  👤 {first_name}님\n\n"
                 f"  💰 잔여: {get_point(user_id, group_id)}포인트\n"
-                f"╚══════════════════╝"
-            )
+                f"╚══════════════════╝")
 
-        # ── /게임 ──────────────────────────────────────
+        # ── /게임 ──
         elif text.strip() in ['/게임', '/게임@dopamin_ranking_bot']:
             bot.reply_to(message,
                 "🎮 게임 목록\n\n"
                 "🎰 /슬롯 [배팅] - 슬롯머신\n"
-                "🎡 /룰렛 [배팅] - 룰렛\n\n"
-                "⚠️ 최소 배팅: 20포인트"
-            )
+                "🎡 /룰렛 [배팅] - 룰렛\n"
+                "🐇 /경주 - 토끼 vs 거북이\n\n"
+                "⚠️ 최소 배팅: 20포인트 (경주: 50포인트)")
 
-        # ── /슬롯 ──────────────────────────────────────
+        # ── /경주 ──
+        elif '/경주' in text:
+            if message.chat.type == 'private':
+                bot.reply_to(message, "⚠️ 경주 게임은 그룹에서만 사용할 수 있어요!"); return
+            key = (user_id, group_id)
+            if key in race_sessions:
+                del race_sessions[key]
+            point = get_point(user_id, group_id)
+            if point < 50:
+                bot.reply_to(message,
+                    f"💸 포인트가 부족해요!\n"
+                    f"  최소 배팅: 50포인트\n"
+                    f"  현재: {point}포인트"); return
+            race_sessions[key] = {'step': 'select_animal', 'choice': None, 'bet': 0}
+            sent = bot.reply_to(message,
+                f"╔══ 🐇 토끼 vs 거북이 경주 ══╗\n\n"
+                f"  🏆 배당률\n"
+                f"  🐇 토끼    → 1.5배 (승률 높음)\n"
+                f"  🐢 거북이  → 2.5배 (역전 배당!)\n\n"
+                f"  💰 보유 포인트: {point:,}포인트\n\n"
+                f"  누구에게 배팅하시겠어요?\n"
+                f"╚══════════════════════════╝",
+                reply_markup=build_race_keyboard('select_animal'))
+            race_sessions[key]['msg_id'] = sent.message_id
+
+        # ── /슬롯 ──
         elif '/슬롯' in text:
             if message.chat.type == 'private': return
             parts = text.split()
@@ -569,10 +847,9 @@ def handle_all(message):
                 f"  배팅: {bet}포인트\n"
                 f"  {'획득: +' if won>=0 else '손실: '}{won}포인트\n"
                 f"  잔여: {get_point(user_id, group_id)}포인트\n"
-                f"╚══════════════════╝"
-            )
+                f"╚══════════════════╝")
 
-        # ── /룰렛 ──────────────────────────────────────
+        # ── /룰렛 ──
         elif '/룰렛' in text:
             if message.chat.type == 'private': return
             parts = text.split()
@@ -593,10 +870,9 @@ def handle_all(message):
                 f"  배팅: {bet}포인트\n"
                 f"  {'획득: +' if won>=0 else '손실: '}{won}포인트\n"
                 f"  잔여: {get_point(user_id, group_id)}포인트\n"
-                f"╚══════════════════╝"
-            )
+                f"╚══════════════════╝")
 
-        # ── /채팅랭킹 ──────────────────────────────────
+        # ── /채팅랭킹 ──
         elif '/채팅랭킹' in text:
             if message.chat.type == 'private': return
             monday = today - timedelta(days=today.weekday())
@@ -606,8 +882,7 @@ def handle_all(message):
                 "SELECT first_name,username,COUNT(*) as cnt FROM chat_logs "
                 "WHERE group_id=%s AND message_date>=%s "
                 "GROUP BY user_id,first_name,username ORDER BY cnt DESC LIMIT 5",
-                (group_id, monday)
-            )
+                (group_id, monday))
             rows = c.fetchall(); c.close(); db.close()
             medals = ['🥇','🥈','🥉','4️⃣','5️⃣']
             result  = f"╔══ 🏆 주간 랭킹 ══╗\n"
@@ -620,7 +895,7 @@ def handle_all(message):
             result += "╚══════════════════╝"
             bot.reply_to(message, result)
 
-        # ── /채팅 ──────────────────────────────────────
+        # ── /채팅 ──
         elif '/채팅' in text:
             if message.chat.type == 'private': return
             monday = today - timedelta(days=today.weekday())
@@ -643,10 +918,9 @@ def handle_all(message):
                 f"  🗓 이번 달   {month_count}개\n"
                 f"  💬 전체      {total_count}개\n\n"
                 f"  🎀 오늘도 열심히 채팅했어요!\n"
-                f"╚══════════════════╝"
-            )
+                f"╚══════════════════╝")
 
-        # ── /야구 (안내 메시지) ────────────────────────
+        # ── /야구 ──
         elif text.strip().startswith('/야구'):
             if message.chat.type == 'private': return
             send_baseball_gif(group_id)
@@ -656,95 +930,71 @@ def handle_all(message):
                 f"{'─' * 23}\n\n"
                 f"📋 선택 가능 팀 (10개):\n{team_list}\n\n"
                 f"{'─' * 23}\n"
-                f"✅ /승        — 버튼으로 5개 팀 선택\n"
-                f"✏️  /수정     — 선택 변경\n"
-                f"📋 /리스트  — 오늘 참여 현황\n"
+                f"✅ /승       — 버튼으로 5개 팀 선택\n"
+                f"✏️  /수정    — 선택 변경\n"
+                f"📋 /리스트 — 오늘 참여 현황\n"
                 f"{'─' * 23}\n\n"
                 f"⏰ 참여 시간: PM {VOTE_START} ~ {VOTE_END}\n"
                 f"📅 참여 요일: 화 / 수 / 목 / 금\n"
                 f"📌 10개 팀 중 5개만 선택 가능\n"
-                f"📌 하루 1회 참여 (수정 가능)"
-            )
+                f"📌 하루 1회 참여 (수정 가능)")
 
-        # ── /승 (인라인 키보드 팀 선택) ───────────────
+        # ── /승 ──
         elif text.strip().startswith('/승'):
             if message.chat.type == 'private': return
             if not is_vote_time(now_kst):
                 bot.reply_to(message,
                     f"🚫 지금은 참여할 수 없어요.\n\n"
                     f"📅 참여 가능 요일: 화 / 수 / 목 / 금\n"
-                    f"⏰ 참여 가능 시간: PM {VOTE_START} ~ {VOTE_END}"
-                ); return
-
+                    f"⏰ 참여 가능 시간: PM {VOTE_START} ~ {VOTE_END}"); return
             db = get_db(); c = db.cursor()
             c.execute("SELECT teams FROM kbo_votes WHERE user_id=%s AND group_id=%s AND vote_date=%s",
                       (user_id, group_id, today))
             existing = c.fetchone(); c.close(); db.close()
-
             if existing:
                 existing_teams = existing[0].split(',')
                 team_str = "\n".join([f"  {i+1}. {KBO_TEAMS_DISPLAY.get(t,t)}" for i,t in enumerate(existing_teams)])
                 bot.reply_to(message,
                     f"⚠️ 이미 오늘 예측에 참여하셨어요!\n\n"
                     f"선택하신 팀:\n{team_str}\n\n"
-                    f"수정하려면 /수정 을 사용하세요."
-                ); return
-
-            # GIF 전송 후 키보드 표시
+                    f"수정하려면 /수정 을 사용하세요."); return
             send_baseball_gif(group_id)
             selected = []
             set_pending(user_id, group_id, selected)
-            sent = bot.send_message(
-                group_id,
-                build_vote_message(selected),
-                reply_markup=build_team_keyboard(selected)
-            )
+            sent = bot.send_message(group_id, build_vote_message(selected), reply_markup=build_team_keyboard(selected))
             set_pending(user_id, group_id, selected, sent.message_id)
 
-        # ── /수정 ──────────────────────────────────────
+        # ── /수정 ──
         elif text.strip().startswith('/수정'):
             if message.chat.type == 'private': return
             if not is_vote_time(now_kst):
                 bot.reply_to(message,
                     f"🚫 지금은 수정할 수 없어요.\n\n"
                     f"📅 참여 가능 요일: 화 / 수 / 목 / 금\n"
-                    f"⏰ 참여 가능 시간: PM {VOTE_START} ~ {VOTE_END}"
-                ); return
-
+                    f"⏰ 참여 가능 시간: PM {VOTE_START} ~ {VOTE_END}"); return
             db = get_db(); c = db.cursor()
             c.execute("SELECT teams FROM kbo_votes WHERE user_id=%s AND group_id=%s AND vote_date=%s",
                       (user_id, group_id, today))
             existing = c.fetchone(); c.close(); db.close()
-
             if not existing:
                 bot.reply_to(message,
                     "⚠️ 오늘 예측에 참여하지 않으셨어요!\n"
-                    "/승 명령어로 먼저 예측에 참여해주세요."
-                ); return
-
-            # 기존 선택 불러와서 키보드 재표시
+                    "/승 명령어로 먼저 예측에 참여해주세요."); return
             send_baseball_gif(group_id)
             current_teams = existing[0].split(',')
             set_pending(user_id, group_id, current_teams)
-            sent = bot.send_message(
-                group_id,
-                build_vote_message(current_teams),
-                reply_markup=build_team_keyboard(current_teams)
-            )
+            sent = bot.send_message(group_id, build_vote_message(current_teams), reply_markup=build_team_keyboard(current_teams))
             set_pending(user_id, group_id, current_teams, sent.message_id)
 
-        # ── /리스트 ────────────────────────────────────
+        # ── /리스트 ──
         elif text.strip().startswith('/리스트'):
             if message.chat.type == 'private': return
             db = get_db(); c = db.cursor()
-            c.execute("""SELECT first_name, username, teams FROM kbo_votes
-                WHERE group_id=%s AND vote_date=%s ORDER BY created_at""",
-                (group_id, today))
+            c.execute("SELECT first_name, username, teams FROM kbo_votes WHERE group_id=%s AND vote_date=%s ORDER BY created_at",
+                      (group_id, today))
             rows = c.fetchall(); c.close(); db.close()
-
             if not rows:
                 bot.reply_to(message, "📋 오늘 예측에 참여한 사람이 없어요!"); return
-
             send_baseball_gif(group_id)
             result  = f"╔══ ⚾ KBO 승 예측 리스트 ══╗\n"
             result += f"  📅 {today.strftime('%Y년 %m월 %d일')}\n"
@@ -758,7 +1008,7 @@ def handle_all(message):
             result += "╚══════════════════╝"
             bot.reply_to(message, result)
 
-        # ── 메시지 기록 ────────────────────────────────
+        # ── 메시지 기록 ──
         elif message.chat.type in ['group', 'supergroup']:
             save_message(user_id, username, first_name, group_id)
 
@@ -777,7 +1027,10 @@ def webhook():
         if update.message:
             handle_all(update.message)
         elif update.callback_query:
-            handle_kbo_callback(update.callback_query)
+            if update.callback_query.data.startswith('race_'):
+                handle_race_callback(update.callback_query)
+            elif update.callback_query.data.startswith('kbo_'):
+                handle_kbo_callback(update.callback_query)
         print("처리 완료!")
     except Exception as e:
         import traceback
