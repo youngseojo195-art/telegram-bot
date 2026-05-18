@@ -107,7 +107,9 @@ VOTE_END   = "18:30"
 # ─────────────────────────────────────────────────────────
 # 경주 게임 세션 (메모리)
 # ─────────────────────────────────────────────────────────
-race_sessions = {}
+# 웹앱 URL (Render 환경변수 WEBAPP_URL 로 설정하세요)
+# 예: https://your-app-name.onrender.com
+WEBAPP_BASE_URL = os.environ.get('WEBAPP_URL', 'https://your-app-name.onrender.com')
 
 # ─────────────────────────────────────────────────────────
 # KBO 인라인 키보드 빌더
@@ -151,82 +153,7 @@ def build_vote_message(selected: list) -> str:
 # 경주 게임 빌더
 # 토끼 승률 60%, 거북이 승률 40%
 # ─────────────────────────────────────────────────────────
-def simulate_race():
-    """
-    토끼 60% : 거북이 40% 승률
-    토끼: 빠르지만 낮잠 확률 있음
-    거북이: 느리지만 꾸준함
-    """
-    rabbit_pos = 0
-    turtle_pos = 0
-    steps = []
-    rabbit_sleeping = False
-    sleep_turns = 0
 
-    for turn in range(1, 21):
-        # 토끼 이동 (기본 이동량 더 높게 + 낮잠 확률 10%로 낮춤 → 60% 승률)
-        if rabbit_sleeping:
-            sleep_turns -= 1
-            rabbit_move = 0
-            if sleep_turns <= 0:
-                rabbit_sleeping = False
-        else:
-            rabbit_move = random.randint(6, 16)
-            # 10% 확률 낮잠 (기존 15% → 10%로 낮춰 토끼 유리)
-            if random.random() < 0.10:
-                rabbit_sleeping = True
-                sleep_turns = random.randint(1, 3)
-                rabbit_move = 0
-
-        # 거북이 이동 (기본 이동량 낮게 → 40% 승률)
-        turtle_move = random.randint(2, 7)
-
-        rabbit_pos = min(rabbit_pos + rabbit_move, 100)
-        turtle_pos = min(turtle_pos + turtle_move, 100)
-
-        if turn % 5 == 0:
-            r_bar = '🐇' + '▬' * (rabbit_pos // 10)
-            t_bar = '🐢' + '▬' * (turtle_pos // 10)
-            sleeping_tag = ' 💤' if rabbit_sleeping else ''
-            steps.append(
-                f"[{turn}턴]\n"
-                f"  {r_bar}{sleeping_tag} ({rabbit_pos}%)\n"
-                f"  {t_bar} ({turtle_pos}%)"
-            )
-
-        if rabbit_pos >= 100 or turtle_pos >= 100:
-            break
-
-    winner = 'rabbit' if rabbit_pos >= turtle_pos else 'turtle'
-    return winner, steps
-
-def build_race_keyboard(bet_step='select_animal'):
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    if bet_step == 'select_animal':
-        markup.add(
-            types.InlineKeyboardButton("🐇 토끼 (1.5배)", callback_data="race_animal_rabbit"),
-            types.InlineKeyboardButton("🐢 거북이 (2.5배)", callback_data="race_animal_turtle"),
-        )
-        markup.add(types.InlineKeyboardButton("❌ 취소", callback_data="race_cancel"))
-    elif bet_step == 'select_bet':
-        markup.add(
-            types.InlineKeyboardButton("50P",    callback_data="race_bet_50"),
-            types.InlineKeyboardButton("100P",   callback_data="race_bet_100"),
-        )
-        markup.add(
-            types.InlineKeyboardButton("200P",   callback_data="race_bet_200"),
-            types.InlineKeyboardButton("500P",   callback_data="race_bet_500"),
-        )
-        markup.add(
-            types.InlineKeyboardButton("1,000P", callback_data="race_bet_1000"),
-            types.InlineKeyboardButton("2,000P", callback_data="race_bet_2000"),
-        )
-        markup.add(
-            types.InlineKeyboardButton("5,000P", callback_data="race_bet_5000"),
-            types.InlineKeyboardButton("전부",    callback_data="race_bet_all"),
-        )
-        markup.add(types.InlineKeyboardButton("⬅️ 뒤로", callback_data="race_back"))
-    return markup
 
 # ─────────────────────────────────────────────────────────
 # DB 헬퍼
@@ -332,192 +259,47 @@ def get_usdt_rate():
     return None
 
 # ─────────────────────────────────────────────────────────
-# 경주 콜백 핸들러
+# 경주 웹앱 결과 수신 핸들러 (web_app_data)
 # ─────────────────────────────────────────────────────────
-@bot.callback_query_handler(func=lambda call: call.data.startswith('race_'))
-def handle_race_callback(call):
+@bot.message_handler(content_types=['web_app_data'])
+def handle_web_app_data(message):
     try:
-        user_id    = call.from_user.id
-        group_id   = call.message.chat.id
-        first_name = call.from_user.first_name or '사용자'
-        username   = call.from_user.username or ''
-        key        = (user_id, group_id)
-        data       = call.data
+        data       = json.loads(message.web_app_data.data)
+        user_id    = message.from_user.id
+        group_id   = int(data.get('groupId', message.chat.id))
+        first_name = message.from_user.first_name or '사용자'
+        username   = message.from_user.username or ''
 
-        # ── 취소 ──
-        if data == "race_cancel":
-            if key in race_sessions:
-                del race_sessions[key]
-            bot.edit_message_text("❌ 경주 게임을 취소했어요.", chat_id=group_id, message_id=call.message.message_id)
-            bot.answer_callback_query(call.id)
+        if data.get('type') != 'race_result':
             return
 
-        # ── 뒤로 ──
-        if data == "race_back":
-            if key in race_sessions:
-                race_sessions[key]['step']   = 'select_animal'
-                race_sessions[key]['choice'] = None
-            point = get_point(user_id, group_id)
-            bot.edit_message_text(
-                f"╔══ 🐇 토끼 vs 거북이 경주 ══╗\n\n"
-                f"  🏆 배당률\n"
-                f"  🐇 토끼    → 1.5배 (승률 높음)\n"
-                f"  🐢 거북이  → 2.5배 (역전 배당!)\n\n"
-                f"  💰 보유 포인트: {point:,}포인트\n\n"
-                f"  누구에게 배팅하시겠어요?\n"
-                f"╚══════════════════════════╝",
-                chat_id=group_id, message_id=call.message.message_id,
-                reply_markup=build_race_keyboard('select_animal')
-            )
-            bot.answer_callback_query(call.id)
-            return
+        delta   = int(data.get('delta', 0))
+        won     = bool(data.get('won', False))
+        winner  = data.get('winner', 'rabbit')
+        bet     = int(data.get('bet', 0))
+        earn    = int(data.get('earn', 0))
 
-        # 세션 없으면
-        if key not in race_sessions:
-            bot.answer_callback_query(call.id, "⚠️ 먼저 /경주 를 입력해주세요!", show_alert=True)
-            return
+        update_point(user_id, group_id, first_name, username, delta)
+        new_point    = get_point(user_id, group_id)
+        winner_label = "🐇 토끼" if winner == 'rabbit' else "🐢 거북이"
+        result_emoji = "🎉" if won else "😢"
+        result_title = "배팅 성공!" if won else "아쉽게 패배..."
+        point_line   = f"획득: +{earn:,}포인트" if won else f"손실: -{bet:,}포인트"
 
-        session = race_sessions[key]
-
-        # ── 동물 선택 ──
-        if data.startswith("race_animal_"):
-            animal = data.replace("race_animal_", "")
-            session['choice'] = animal
-            session['step']   = 'select_bet'
-            animal_label = "🐇 토끼 (1.5배)" if animal == 'rabbit' else "🐢 거북이 (2.5배)"
-            point = get_point(user_id, group_id)
-            bot.edit_message_text(
-                f"╔══ 🐇 토끼 vs 거북이 경주 ══╗\n\n"
-                f"  ✅ 선택: {animal_label}\n\n"
-                f"  💰 보유 포인트: {point:,}포인트\n\n"
-                f"  배팅 포인트를 선택하세요!\n"
-                f"╚══════════════════════════╝",
-                chat_id=group_id, message_id=call.message.message_id,
-                reply_markup=build_race_keyboard('select_bet')
-            )
-            bot.answer_callback_query(call.id, f"{animal_label} 선택!")
-            return
-
-        # ── 배팅 금액 → 경주 시작 ──
-        if data.startswith("race_bet_"):
-            if session.get('step') != 'select_bet' or not session.get('choice'):
-                bot.answer_callback_query(call.id, "⚠️ 먼저 동물을 선택해주세요!")
-                return
-
-            point   = get_point(user_id, group_id)
-            bet_str = data.replace("race_bet_", "")
-            bet     = point if bet_str == 'all' else int(bet_str)
-
-            if bet < 50:
-                bot.answer_callback_query(call.id, "⚠️ 최소 배팅은 50포인트예요!")
-                return
-            if bet > point:
-                bot.answer_callback_query(call.id, f"💸 포인트 부족! 보유: {point:,}P", show_alert=True)
-                return
-
-            session['bet'] = bet
-            choice = session['choice']
-            animal_label = "🐇 토끼" if choice == 'rabbit' else "🐢 거북이"
-
-            bot.edit_message_text(
-                f"╔══ 🏁 경주 시작! ══╗\n\n"
-                f"  🎯 선택: {animal_label}\n"
-                f"  💰 배팅: {bet:,}포인트\n\n"
-                f"  출발선에 섰습니다...\n"
-                f"  🐇 ━━━━━━━━━━━━━ 🏁\n"
-                f"  🐢 ━━━━━━━━━━━━━ 🏁\n"
-                f"╚══════════════════╝",
-                chat_id=group_id, message_id=call.message.message_id
-            )
-            bot.answer_callback_query(call.id, "🏁 경주 시작!")
-
-            # 경주 시뮬레이션
-            winner, steps = simulate_race()
-
-            for i, step_text in enumerate(steps):
-                time.sleep(1.2)
-                status = "달리는 중..." if i < len(steps) - 1 else "막판 스퍼트!"
-                try:
-                    bot.edit_message_text(
-                        f"╔══ 🏁 경주 진행 중! ══╗\n\n"
-                        f"  🎯 내 선택: {animal_label}  |  배팅: {bet:,}P\n\n"
-                        f"{step_text}\n\n"
-                        f"  ⏳ {status}\n"
-                        f"╚══════════════════╝",
-                        chat_id=group_id, message_id=call.message.message_id
-                    )
-                except Exception:
-                    pass
-
-            time.sleep(1.5)
-
-            won        = (winner == choice)
-            multiplier = 1.5 if winner == 'rabbit' else 2.5
-
-            if won:
-                earn  = int(bet * multiplier)
-                delta = earn - bet
-            else:
-                earn  = 0
-                delta = -bet
-
-            update_point(user_id, group_id, first_name, username, delta)
-            new_point    = get_point(user_id, group_id)
-            winner_label = "🐇 토끼" if winner == 'rabbit' else "🐢 거북이"
-            result_emoji = "🎉" if won else "😢"
-            result_title = "배팅 성공!" if won else "아쉽게 패배..."
-            point_line   = f"획득: +{earn:,}포인트" if won else f"손실: -{bet:,}포인트"
-            r_finish = "━━━━━━━━━━🐇" if winner == 'rabbit' else "━━━━━━🐇━━━"
-            t_finish = "━━━━━━━━━━🐢" if winner == 'turtle' else "━━━━━━🐢━━━"
-
-            markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("🔄 다시 배팅", callback_data="race_retry"))
-
-            bot.edit_message_text(
-                f"╔══ {result_emoji} 경주 결과 ══╗\n\n"
-                f"  🏆 우승: {winner_label}\n\n"
-                f"  🐇 {r_finish} 🏁\n"
-                f"  🐢 {t_finish} 🏁\n\n"
-                f"  ─────────────────\n"
-                f"  {result_title}\n"
-                f"  🎯 선택: {animal_label}\n"
-                f"  💸 배팅: {bet:,}포인트\n"
-                f"  {'✅' if won else '❌'} {point_line}\n"
-                f"  💰 잔여: {new_point:,}포인트\n"
-                f"╚══════════════════╝",
-                chat_id=group_id, message_id=call.message.message_id,
-                reply_markup=markup
-            )
-
-            if key in race_sessions:
-                del race_sessions[key]
-            return
-
-        # ── 다시 배팅 ──
-        if data == "race_retry":
-            point = get_point(user_id, group_id)
-            if point < 50:
-                bot.answer_callback_query(call.id, f"💸 포인트 부족! 보유: {point:,}P", show_alert=True)
-                return
-            race_sessions[key] = {'step': 'select_animal', 'choice': None, 'bet': 0}
-            bot.edit_message_text(
-                f"╔══ 🐇 토끼 vs 거북이 경주 ══╗\n\n"
-                f"  🏆 배당률\n"
-                f"  🐇 토끼    → 1.5배 (승률 높음)\n"
-                f"  🐢 거북이  → 2.5배 (역전 배당!)\n\n"
-                f"  💰 보유 포인트: {point:,}포인트\n\n"
-                f"  누구에게 배팅하시겠어요?\n"
-                f"╚══════════════════════════╝",
-                chat_id=group_id, message_id=call.message.message_id,
-                reply_markup=build_race_keyboard('select_animal')
-            )
-            bot.answer_callback_query(call.id)
-            return
-
+        bot.send_message(
+            group_id,
+            f"╔══ {result_emoji} 경주 결과 ══╗\n\n"
+            f"  👤 {first_name}님\n"
+            f"  🏆 우승: {winner_label}\n\n"
+            f"  {result_title}\n"
+            f"  💸 배팅: {bet:,}포인트\n"
+            f"  {'✅' if won else '❌'} {point_line}\n"
+            f"  💰 잔여: {new_point:,}포인트\n"
+            f"╚══════════════════╝"
+        )
     except Exception as e:
         import traceback
-        print(f"race callback error: {e}\n{traceback.format_exc()}")
-        bot.answer_callback_query(call.id, "오류가 발생했어요. 다시 시도해주세요.")
+        print(f"web_app_data error: {e}\n{traceback.format_exc()}")
 
 # ─────────────────────────────────────────────────────────
 # KBO 콜백 핸들러
@@ -797,26 +579,26 @@ def handle_all(message):
         elif '/경주' in text:
             if message.chat.type == 'private':
                 bot.reply_to(message, "⚠️ 경주 게임은 그룹에서만 사용할 수 있어요!"); return
-            key = (user_id, group_id)
-            if key in race_sessions:
-                del race_sessions[key]
             point = get_point(user_id, group_id)
             if point < 50:
                 bot.reply_to(message,
                     f"💸 포인트가 부족해요!\n"
                     f"  최소 배팅: 50포인트\n"
                     f"  현재: {point}포인트"); return
-            race_sessions[key] = {'step': 'select_animal', 'choice': None, 'bet': 0}
-            sent = bot.reply_to(message,
-                f"╔══ 🐇 토끼 vs 거북이 경주 ══╗\n\n"
-                f"  🏆 배당률\n"
-                f"  🐇 토끼    → 1.5배 (승률 높음)\n"
-                f"  🐢 거북이  → 2.5배 (역전 배당!)\n\n"
-                f"  💰 보유 포인트: {point:,}포인트\n\n"
-                f"  누구에게 배팅하시겠어요?\n"
-                f"╚══════════════════════════╝",
-                reply_markup=build_race_keyboard('select_animal'))
-            race_sessions[key]['msg_id'] = sent.message_id
+            # 웹앱 버튼 — start_param 에 userId_groupId_point 전달
+            param = f"{user_id}_{group_id}_{point}"
+            webapp_url = f"{WEBAPP_BASE_URL}/race?start={param}"
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton(
+                "🏁 경주 게임 시작!",
+                web_app=types.WebAppInfo(url=webapp_url)
+            ))
+            bot.reply_to(message,
+                f"🐇 토끼 vs 거북이 경주\n\n"
+                f"  💰 보유 포인트: {point:,}P\n"
+                f"  🐇 토끼 → 1.5배  |  🐢 거북이 → 2.5배\n\n"
+                f"  아래 버튼을 눌러 경주를 시작하세요!",
+                reply_markup=markup)
 
         # ── /슬롯 ──
         elif '/슬롯' in text:
@@ -1019,6 +801,13 @@ def handle_all(message):
 # ─────────────────────────────────────────────────────────
 # Flask 라우트
 # ─────────────────────────────────────────────────────────
+from flask import send_from_directory
+
+@app.route('/race')
+def serve_race():
+    """경주 웹앱 HTML 서빙"""
+    return send_from_directory('.', 'race.html')
+
 @app.route('/' + BOT_TOKEN, methods=['POST'])
 def webhook():
     try:
@@ -1027,9 +816,7 @@ def webhook():
         if update.message:
             handle_all(update.message)
         elif update.callback_query:
-            if update.callback_query.data.startswith('race_'):
-                handle_race_callback(update.callback_query)
-            elif update.callback_query.data.startswith('kbo_'):
+            if update.callback_query.data.startswith('kbo_'):
                 handle_kbo_callback(update.callback_query)
         print("처리 완료!")
     except Exception as e:
