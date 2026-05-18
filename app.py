@@ -1,7 +1,6 @@
 import os
 import re
 import json
-import time
 import random
 import telebot
 import psycopg2
@@ -17,6 +16,11 @@ bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
 
 KST = pytz.timezone('Asia/Seoul')
+
+# ─────────────────────────────────────────────────────────
+# 관리자 설정 (텔레그램 user_id 입력)
+# ─────────────────────────────────────────────────────────
+ADMIN_IDS = []  # ← 여기에 본인 텔레그램 user_id 넣으세요. 예: [123456789]
 
 # ─────────────────────────────────────────────────────────
 # GIF 설정
@@ -104,12 +108,6 @@ KBO_TEAMS_DISPLAY = {
 VOTE_START = "18:00"
 VOTE_END   = "18:30"
 
-# ─────────────────────────────────────────────────────────
-# 경주 게임 세션 (메모리)
-# ─────────────────────────────────────────────────────────
-# 웹앱 URL (Render 환경변수 WEBAPP_URL 로 설정하세요)
-# 예: https://your-app-name.onrender.com
-WEBAPP_BASE_URL = os.environ.get('WEBAPP_URL', 'https://your-app-name.onrender.com')
 
 # ─────────────────────────────────────────────────────────
 # KBO 인라인 키보드 빌더
@@ -258,48 +256,6 @@ def get_usdt_rate():
     except: pass
     return None
 
-# ─────────────────────────────────────────────────────────
-# 경주 웹앱 결과 수신 핸들러 (web_app_data)
-# ─────────────────────────────────────────────────────────
-@bot.message_handler(content_types=['web_app_data'])
-def handle_web_app_data(message):
-    try:
-        data       = json.loads(message.web_app_data.data)
-        user_id    = message.from_user.id
-        group_id   = int(data.get('groupId', message.chat.id))
-        first_name = message.from_user.first_name or '사용자'
-        username   = message.from_user.username or ''
-
-        if data.get('type') != 'race_result':
-            return
-
-        delta   = int(data.get('delta', 0))
-        won     = bool(data.get('won', False))
-        winner  = data.get('winner', 'rabbit')
-        bet     = int(data.get('bet', 0))
-        earn    = int(data.get('earn', 0))
-
-        update_point(user_id, group_id, first_name, username, delta)
-        new_point    = get_point(user_id, group_id)
-        winner_label = "🐇 토끼" if winner == 'rabbit' else "🐢 거북이"
-        result_emoji = "🎉" if won else "😢"
-        result_title = "배팅 성공!" if won else "아쉽게 패배..."
-        point_line   = f"획득: +{earn:,}포인트" if won else f"손실: -{bet:,}포인트"
-
-        bot.send_message(
-            group_id,
-            f"╔══ {result_emoji} 경주 결과 ══╗\n\n"
-            f"  👤 {first_name}님\n"
-            f"  🏆 우승: {winner_label}\n\n"
-            f"  {result_title}\n"
-            f"  💸 배팅: {bet:,}포인트\n"
-            f"  {'✅' if won else '❌'} {point_line}\n"
-            f"  💰 잔여: {new_point:,}포인트\n"
-            f"╚══════════════════╝"
-        )
-    except Exception as e:
-        import traceback
-        print(f"web_app_data error: {e}\n{traceback.format_exc()}")
 
 # ─────────────────────────────────────────────────────────
 # KBO 콜백 핸들러
@@ -572,32 +528,8 @@ def handle_all(message):
                 "🎮 게임 목록\n\n"
                 "🎰 /슬롯 [배팅] - 슬롯머신\n"
                 "🎡 /룰렛 [배팅] - 룰렛\n"
-                "🐇 /경주 - 토끼 vs 거북이\n\n"
-                "⚠️ 최소 배팅: 20포인트 (경주: 50포인트)")
+                "⚠️ 최소 배팅: 20포인트")
 
-        # ── /경주 ──
-        elif '/경주' in text:
-            if message.chat.type == 'private':
-                bot.reply_to(message, "⚠️ 경주 게임은 그룹에서만 사용할 수 있어요!"); return
-            point = get_point(user_id, group_id)
-            if point < 50:
-                bot.reply_to(message,
-                    f"💸 포인트가 부족해요!\n"
-                    f"  최소 배팅: 50포인트\n"
-                    f"  현재: {point}포인트"); return
-            param = f"{user_id}_{group_id}_{point}"
-            webapp_url = f"{WEBAPP_BASE_URL}/race?start={param}"
-            markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton(
-                "🏁 경주 게임 시작!",
-                url=webapp_url
-            ))
-            bot.reply_to(message,
-                f"🐇 토끼 vs 거북이 경주\n\n"
-                f"  💰 보유 포인트: {point:,}P\n"
-                f"  🐇 토끼 → 1.5배  |  🐢 거북이 → 2.5배\n\n"
-                f"  아래 버튼을 눌러 경주를 시작하세요!",
-                reply_markup=markup)
 
         # ── /슬롯 ──
         elif '/슬롯' in text:
@@ -800,55 +732,7 @@ def handle_all(message):
 # ─────────────────────────────────────────────────────────
 # Flask 라우트
 # ─────────────────────────────────────────────────────────
-from flask import send_from_directory
 
-@app.route('/race')
-def serve_race():
-    """경주 웹앱 HTML 서빙"""
-    return send_from_directory('.', 'race.html')
-
-@app.route('/race/result', methods=['POST'])
-def race_result():
-    """경주 결과 수신 → 포인트 반영 + 그룹 메시지 전송"""
-    try:
-        data       = request.get_json()
-        user_id    = int(data.get('userId'))
-        group_id   = int(data.get('groupId'))
-        delta      = int(data.get('delta', 0))
-        won        = bool(data.get('won', False))
-        winner     = data.get('winner', 'rabbit')
-        bet        = int(data.get('bet', 0))
-        earn       = int(data.get('earn', 0))
-
-        db = get_db(); c = db.cursor()
-        c.execute("SELECT first_name, username FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
-        row = c.fetchone(); c.close(); db.close()
-        first_name = row[0] if row else '사용자'
-        username   = row[1] if row else ''
-
-        update_point(user_id, group_id, first_name, username, delta)
-        new_point    = get_point(user_id, group_id)
-        winner_label = "🐇 토끼" if winner == 'rabbit' else "🐢 거북이"
-        result_emoji = "🎉" if won else "😢"
-        result_title = "배팅 성공!" if won else "아쉽게 패배..."
-        point_line   = f"획득: +{earn:,}포인트" if won else f"손실: -{bet:,}포인트"
-
-        bot.send_message(
-            group_id,
-            f"╔══ {result_emoji} 경주 결과 ══╗\n"
-            f"  👤 {first_name}님\n"
-            f"  🏆 우승: {winner_label}\n\n"
-            f"  {result_title}\n"
-            f"  💸 배팅: {bet:,}포인트\n"
-            f"  {'✅' if won else '❌'} {point_line}\n"
-            f"  💰 잔여: {new_point:,}포인트\n"
-            f"╚══════════════════╝"
-        )
-        return {'ok': True}, 200
-    except Exception as e:
-        import traceback
-        print(f"race_result error: {e}\n{traceback.format_exc()}")
-        return {'ok': False}, 500
 
 @app.route('/' + BOT_TOKEN, methods=['POST'])
 def webhook():
