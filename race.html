@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>토끼 vs 거북이 경주</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0a0a1a;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* 상단 바 */
+  .topbar {
+    background: #12122a;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #1e1e3a;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .back-btn {
+    position: absolute;
+    left: 16px;
+    color: #4a9eff;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 8px;
+    display: none;
+  }
+  .topbar-title { font-size: 16px; font-weight: 600; }
+
+  /* 콘텐츠 */
+  .content {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+  }
+
+  /* 포인트 바 */
+  .point-bar {
+    background: #12122a;
+    border: 1px solid #1e1e3a;
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .point-label { color: #8888bb; font-size: 12px; }
+  .point-value { color: #4a9eff; font-size: 15px; font-weight: 600; }
+
+  /* 섹션 레이블 */
+  .sec-label {
+    color: #8888bb;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+
+  /* 동물 선택 카드 */
+  .animal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .animal-card {
+    background: #12122a;
+    border: 2px solid #1e1e3a;
+    border-radius: 14px;
+    padding: 14px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .animal-card:active { transform: scale(0.97); }
+  .animal-card.sel-r { border-color: #ff8c42; background: #1a120a; }
+  .animal-card.sel-t { border-color: #42c8a0; background: #0a1a14; }
+  .animal-emoji { font-size: 38px; margin-bottom: 6px; }
+  .animal-name { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+  .animal-odd { font-size: 12px; font-weight: 600; }
+  .odd-r { color: #ff8c42; }
+  .odd-t { color: #42c8a0; }
+  .animal-desc { font-size: 10px; color: #666688; margin-top: 3px; }
+
+  /* 배팅 버튼 */
+  .bet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .bet-btn {
+    background: #12122a;
+    border: 1.5px solid #1e1e3a;
+    border-radius: 10px;
+    padding: 11px 6px;
+    text-align: center;
+    cursor: pointer;
+    color: #8888bb;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .bet-btn:active { transform: scale(0.96); }
+  .bet-btn.sel-bet { border-color: #4a9eff; background: #0a0a2a; color: #4a9eff; }
+  .bet-all {
+    grid-column: span 3;
+    background: #120a20;
+    border-color: #a060ff55;
+    color: #a060ff;
+  }
+  .bet-all.sel-bet { border-color: #a060ff; background: #180a28; }
+
+  /* 요약 박스 */
+  .summary {
+    background: #12122a;
+    border: 1px solid #1e1e3a;
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-around;
+  }
+  .sum-item { text-align: center; }
+  .sum-lbl { color: #666688; font-size: 10px; margin-bottom: 4px; }
+  .sum-val { font-size: 14px; font-weight: 600; color: #fff; }
+  .sum-val.empty { color: #2a2a4a; }
+
+  /* 경주 시작 버튼 - 크고 눈에 띄게 */
+  .btn-start {
+    width: 100%;
+    padding: 16px;
+    border-radius: 14px;
+    border: none;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    background: #4a9eff;
+    color: #fff;
+    transition: all 0.15s;
+    letter-spacing: 0.02em;
+    box-shadow: 0 4px 20px #4a9eff44;
+  }
+  .btn-start:disabled {
+    background: #1e1e3a;
+    color: #444466;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .btn-start:not(:disabled):active { transform: scale(0.98); }
+
+  /* ──────── 경주 화면 ──────── */
+  .track-section {
+    background: #12122a;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #1e1e3a;
+  }
+  .sky {
+    height: 60px;
+    background: #060618;
+    position: relative;
+    overflow: hidden;
+  }
+  .star {
+    position: absolute;
+    width: 2px; height: 2px;
+    background: #fff;
+    border-radius: 50%;
+  }
+  .ground { height: 16px; background: #2d4a1e; border-top: 2px solid #3a6028; }
+  .grass  { height: 6px;  background: #4a8a2e; }
+
+  .lane {
+    position: relative;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+  }
+  .lane-divider { height: 1px; background: #1e1e3a; margin: 0; }
+  .lane-track {
+    position: absolute;
+    left: 14px; right: 14px;
+    top: 50%; height: 1px;
+    background: #1e1e3a;
+  }
+  .finish {
+    position: absolute;
+    right: 14px; top: 0; bottom: 0;
+    width: 4px;
+    background: repeating-linear-gradient(180deg,#fff 0,#fff 5px,#111 5px,#111 10px);
+    z-index: 2;
+  }
+  .flag-icon {
+    position: absolute;
+    right: 18px; top: 4px;
+    font-size: 14px;
+  }
+  .runner {
+    position: absolute;
+    font-size: 30px;
+    z-index: 3;
+    transition: left 0.38s cubic-bezier(0.4,0,0.2,1);
+    line-height: 1;
+  }
+  .runner.hop  { animation: hop  0.32s ease infinite alternate; }
+  .runner.slow { animation: slow 0.55s ease infinite alternate; }
+  .runner.zzz  { animation: none; }
+  @keyframes hop  { to { transform: translateY(-6px) scaleX(1.08); } }
+  @keyframes slow { to { transform: translateY(-3px); } }
+
+  .pct-tag {
+    position: absolute;
+    top: 6px;
+    font-size: 10px;
+    color: #8888bb;
+    transition: left 0.38s cubic-bezier(0.4,0,0.2,1);
+    white-space: nowrap;
+    z-index: 4;
+  }
+
+  /* 상태 박스 */
+  .status-box {
+    background: #12122a;
+    border: 1px solid #1e1e3a;
+    border-radius: 10px;
+    padding: 10px 14px;
+    text-align: center;
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .status-txt { color: #8888bb; font-size: 13px; line-height: 1.4; }
+  .em { color: #4a9eff; font-weight: 600; }
+
+  /* 결과 박스 */
+  .result-box {
+    background: #12122a;
+    border: 1px solid #1e1e3a;
+    border-radius: 14px;
+    padding: 16px;
+    display: none;
+  }
+  .res-center { text-align: center; margin-bottom: 12px; }
+  .res-trophy { font-size: 32px; margin-bottom: 4px; }
+  .res-winner { font-size: 16px; font-weight: 700; color: #ffd700; }
+  .res-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 6px 0;
+    border-top: 1px solid #1a1a2e;
+  }
+  .res-lbl { color: #666688; }
+  .c-win  { color: #2ecc71; font-weight: 600; }
+  .c-lose { color: #e74c3c; font-weight: 600; }
+
+  /* 하단 버튼 2개 */
+  .btns2 { display: flex; gap: 10px; }
+  .btn2 {
+    flex: 1; padding: 13px;
+    border-radius: 12px;
+    border: none;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn2:active { transform: scale(0.97); }
+  .btn-go  { background: #4a9eff; color: #fff; box-shadow: 0 4px 16px #4a9eff44; }
+  .btn-back { background: #1e1e3a; color: #8888bb; }
+  .btn2:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+
+  /* 페이지 전환 */
+  .page { display: none; flex-direction: column; gap: 12px; }
+  .page.active { display: flex; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="back-btn" id="back-btn" onclick="goBack()">← 뒤로</span>
+  <span class="topbar-title" id="top-title">🏁 경주 게임</span>
+</div>
+
+<div class="content">
+
+  <div class="point-bar">
+    <span class="point-label">보유 포인트</span>
+    <span class="point-value" id="my-point">로딩 중...</span>
+  </div>
+
+  <!-- ───── 페이지 1: 배팅 선택 ───── -->
+  <div class="page active" id="page1">
+
+    <div>
+      <div class="sec-label">STEP 1 — 어느 팀에 배팅할까요?</div>
+      <div class="animal-grid">
+        <div class="animal-card" id="card-r" onclick="selectAnimal('rabbit')">
+          <div class="animal-emoji">🐇</div>
+          <div class="animal-name">토끼</div>
+          <div class="animal-odd odd-r">1.5배 배당</div>
+          <div class="animal-desc">빠르지만 낮잠 위험</div>
+        </div>
+        <div class="animal-card" id="card-t" onclick="selectAnimal('turtle')">
+          <div class="animal-emoji">🐢</div>
+          <div class="animal-name">거북이</div>
+          <div class="animal-odd odd-t">2.5배 배당</div>
+          <div class="animal-desc">느리지만 역전 가능!</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-label">STEP 2 — 배팅 금액을 선택하세요</div>
+      <div class="bet-grid">
+        <div class="bet-btn" onclick="selectBet(50,  this)">50P</div>
+        <div class="bet-btn" onclick="selectBet(100, this)">100P</div>
+        <div class="bet-btn" onclick="selectBet(200, this)">200P</div>
+        <div class="bet-btn" onclick="selectBet(500, this)">500P</div>
+        <div class="bet-btn" onclick="selectBet(1000,this)">1,000P</div>
+        <div class="bet-btn" onclick="selectBet(2000,this)">2,000P</div>
+        <div class="bet-btn bet-all" onclick="selectBet('all', this)">💰 전부 배팅</div>
+      </div>
+    </div>
+
+    <div class="summary">
+      <div class="sum-item">
+        <div class="sum-lbl">선택</div>
+        <div class="sum-val empty" id="sum-animal">—</div>
+      </div>
+      <div class="sum-item">
+        <div class="sum-lbl">배팅</div>
+        <div class="sum-val empty" id="sum-bet">—</div>
+      </div>
+      <div class="sum-item">
+        <div class="sum-lbl">예상 획득</div>
+        <div class="sum-val empty" id="sum-earn" style="color:#2ecc71">—</div>
+      </div>
+    </div>
+
+    <button class="btn-start" id="btn-start" disabled onclick="goRace()">
+      🏁 경주 시작!
+    </button>
+
+  </div>
+
+  <!-- ───── 페이지 2: 경주 ───── -->
+  <div class="page" id="page2">
+
+    <div class="track-section">
+      <div class="sky" id="sky"></div>
+      <div class="ground"></div>
+      <div class="grass"></div>
+      <div class="lane">
+        <div class="lane-track"></div>
+        <div class="finish"></div>
+        <span class="flag-icon">🚩</span>
+        <div class="runner hop" id="runner-r" style="left:14px">🐇</div>
+        <span class="pct-tag" id="pct-r" style="left:14px">0%</span>
+      </div>
+      <div class="lane-divider"></div>
+      <div class="lane">
+        <div class="lane-track"></div>
+        <div class="finish"></div>
+        <span class="flag-icon">🚩</span>
+        <div class="runner slow" id="runner-t" style="left:14px">🐢</div>
+        <span class="pct-tag" id="pct-t" style="left:14px">0%</span>
+      </div>
+    </div>
+
+    <div class="status-box">
+      <span class="status-txt" id="status-txt">출발 버튼을 눌러주세요!</span>
+    </div>
+
+    <div class="result-box" id="result-box">
+      <div class="res-center">
+        <div class="res-trophy" id="trophy">🏆</div>
+        <div class="res-winner" id="winner-txt">🐇 토끼 우승!</div>
+      </div>
+      <div class="res-row"><span class="res-lbl">내 선택</span><span id="r-choice" style="color:#fff">—</span></div>
+      <div class="res-row"><span class="res-lbl">배팅</span><span id="r-bet" style="color:#fff">—</span></div>
+      <div class="res-row"><span class="res-lbl">결과</span><span id="r-result">—</span></div>
+      <div class="res-row"><span class="res-lbl">잔여 포인트</span><span id="r-balance" style="color:#fff">—</span></div>
+    </div>
+
+    <div class="btns2">
+      <button class="btn2 btn-back" id="btn-back" onclick="goBack()">← 다시 배팅</button>
+      <button class="btn2 btn-go"  id="btn-go"   onclick="startRace()">🏁 출발!</button>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
+
+// ── 텔레그램에서 넘어온 데이터 파싱 ──
+// bot.py 에서 start_param 으로 "userId_groupId_point" 형태로 전달
+let myPoint   = 1000;   // 기본값 (파싱 실패 시)
+let userId    = null;
+let groupId   = null;
+
+try {
+  const raw = tg.initDataUnsafe;
+  if (raw && raw.start_param) {
+    const parts = raw.start_param.split('_');
+    userId  = parts[0] || null;
+    groupId = parts[1] || null;
+    myPoint = parseInt(parts[2]) || 1000;
+  }
+} catch(e) { console.log('init parse error', e); }
+
+document.getElementById('my-point').textContent = myPoint.toLocaleString() + 'P';
+
+// 별 생성
+const sky = document.getElementById('sky');
+for (let i = 0; i < 14; i++) {
+  const s = document.createElement('span');
+  s.className = 'star';
+  s.style.left = Math.random() * 100 + '%';
+  s.style.top  = Math.random() * 100 + '%';
+  s.style.opacity = (0.3 + Math.random() * 0.7).toFixed(2);
+  sky.appendChild(s);
+}
+
+// ── 상태 변수 ──
+let selAnimal  = null;
+let selBet     = null;
+let running    = false;
+let rPos = 0, tPos = 0;
+let sleeping   = false, sleepLeft = 0;
+
+// ── 동물 선택 ──
+function selectAnimal(a) {
+  selAnimal = a;
+  document.getElementById('card-r').className = 'animal-card' + (a === 'rabbit' ? ' sel-r' : '');
+  document.getElementById('card-t').className = 'animal-card' + (a === 'turtle' ? ' sel-t' : '');
+  updateSummary();
+}
+
+// ── 배팅 선택 ──
+function selectBet(val, el) {
+  selBet = val === 'all' ? myPoint : Math.min(val, myPoint);
+  document.querySelectorAll('.bet-btn').forEach(b => b.classList.remove('sel-bet'));
+  el.classList.add('sel-bet');
+  updateSummary();
+}
+
+// ── 요약 업데이트 ──
+function updateSummary() {
+  const sa = document.getElementById('sum-animal');
+  const sb = document.getElementById('sum-bet');
+  const se = document.getElementById('sum-earn');
+  sa.className = 'sum-val' + (selAnimal ? '' : ' empty');
+  sb.className = 'sum-val' + (selBet ? '' : ' empty');
+  se.className = 'sum-val' + (selBet ? '' : ' empty');
+  sa.textContent = selAnimal ? (selAnimal === 'rabbit' ? '🐇 토끼' : '🐢 거북이') : '—';
+  sb.textContent = selBet ? selBet.toLocaleString() + 'P' : '—';
+  if (selAnimal && selBet) {
+    const odd = selAnimal === 'rabbit' ? 1.5 : 2.5;
+    se.textContent = '+' + Math.round(selBet * (odd - 1)).toLocaleString() + 'P';
+    se.style.color = '#2ecc71';
+  } else {
+    se.textContent = '—';
+    se.style.color = '';
+  }
+  const ok = selAnimal && selBet && selBet > 0 && selBet <= myPoint;
+  document.getElementById('btn-start').disabled = !ok;
+}
+
+// ── 페이지 전환: 배팅 → 경주 ──
+function goRace() {
+  document.getElementById('page1').className = 'page';
+  document.getElementById('page2').className = 'page active';
+  document.getElementById('back-btn').style.display = 'block';
+  document.getElementById('top-title').textContent = '🏁 경주 진행 중';
+  document.getElementById('result-box').style.display = 'none';
+  document.getElementById('btn-go').disabled = false;
+  document.getElementById('btn-back').disabled = false;
+  rPos = 0; tPos = 0; sleeping = false;
+  updatePos();
+  setStatus('출발 버튼을 눌러주세요!');
+}
+
+// ── 뒤로 가기 ──
+function goBack() {
+  if (running) return;
+  document.getElementById('page2').className = 'page';
+  document.getElementById('page1').className = 'page active';
+  document.getElementById('back-btn').style.display = 'none';
+  document.getElementById('top-title').textContent = '🏁 경주 게임';
+}
+
+// ── 상태 텍스트 ──
+function setStatus(html) {
+  document.getElementById('status-txt').innerHTML = html;
+}
+
+// ── 위치 업데이트 ──
+function updatePos() {
+  const laneEl = document.querySelector('.lane');
+  const laneW  = laneEl ? laneEl.offsetWidth - 28 : 280; // 14px 패딩 양쪽
+  const maxPx  = laneW - 36; // 결승선 여백
+
+  const rPx = 14 + (rPos / 100) * maxPx;
+  const tPx = 14 + (tPos / 100) * maxPx;
+
+  const rr = document.getElementById('runner-r');
+  const rt = document.getElementById('runner-t');
+  rr.style.left = rPx + 'px';
+  rt.style.left = tPx + 'px';
+  document.getElementById('pct-r').style.left = rPx + 'px';
+  document.getElementById('pct-t').style.left = tPx + 'px';
+  document.getElementById('pct-r').textContent = Math.round(rPos) + '%';
+  document.getElementById('pct-t').textContent = Math.round(tPos) + '%';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── 경주 시작 ──
+async function startRace() {
+  if (running) return;
+  running = true;
+  document.getElementById('btn-go').disabled   = true;
+  document.getElementById('btn-back').disabled = true;
+
+  // 카운트다운
+  for (let i = 3; i >= 1; i--) {
+    setStatus('<span class="em">' + i + '...</span>');
+    await sleep(600);
+  }
+  setStatus('<span class="em">🏁 출발!</span>');
+  await sleep(300);
+
+  let turn = 0;
+  while (rPos < 100 && tPos < 100 && turn < 40) {
+    turn++;
+    await sleep(450);
+
+    let rm = 0;
+    if (sleeping) {
+      sleepLeft--;
+      if (sleepLeft <= 0) {
+        sleeping = false;
+        document.getElementById('runner-r').className = 'runner hop';
+        document.getElementById('runner-r').textContent = '🐇';
+      }
+      setStatus('💤 토끼 낮잠 중... <span class="em">거북이가 쫓아온다!</span>');
+    } else {
+      rm = 6 + Math.floor(Math.random() * 11);
+      if (Math.random() < 0.10) {
+        sleeping = true;
+        sleepLeft = 1 + Math.floor(Math.random() * 3);
+        rm = 0;
+        document.getElementById('runner-r').className = 'runner zzz';
+        document.getElementById('runner-r').textContent = '😴';
+        setStatus('😴 <span class="em">토끼가 낮잠을 잡니다!</span>');
+      }
+    }
+
+    const tm = 2 + Math.floor(Math.random() * 6);
+    rPos = Math.min(rPos + rm, 100);
+    tPos = Math.min(tPos + tm, 100);
+    updatePos();
+
+    if (!sleeping) {
+      if      (rPos > tPos + 20) setStatus('🐇 <span class="em">토끼 독주! 크게 앞서고 있어요!</span>');
+      else if (tPos > rPos + 10) setStatus('🐢 <span class="em">거북이 역전! 믿을 수 없다!</span>');
+      else if (Math.abs(rPos - tPos) < 8) setStatus('⚡ <span class="em">막상막하! 승부를 알 수 없다!</span>');
+      else setStatus('🏃 열심히 달리는 중... (' + turn + '턴)');
+    }
+  }
+
+  await sleep(350);
+
+  // ── 결과 계산 ──
+  const winner = rPos >= tPos ? 'rabbit' : 'turtle';
+  const won    = winner === selAnimal;
+  const odd    = winner === 'rabbit' ? 1.5 : 2.5;
+  const earn   = won ? Math.round(selBet * odd) : 0;
+  const delta  = won ? earn - selBet : -selBet;
+  myPoint      = Math.max(0, myPoint + delta);
+
+  // 러너 복원
+  document.getElementById('runner-r').className  = 'runner';
+  document.getElementById('runner-r').textContent = '🐇';
+  document.getElementById('runner-t').className  = 'runner';
+
+  // 결과 UI
+  document.getElementById('result-box').style.display = 'block';
+  document.getElementById('trophy').textContent     = won ? '🏆' : '😢';
+  document.getElementById('winner-txt').textContent = winner === 'rabbit' ? '🐇 토끼 우승!' : '🐢 거북이 우승!';
+  document.getElementById('r-choice').textContent   = selAnimal === 'rabbit' ? '🐇 토끼' : '🐢 거북이';
+  document.getElementById('r-bet').textContent      = selBet.toLocaleString() + 'P';
+  document.getElementById('r-balance').textContent  = myPoint.toLocaleString() + 'P';
+  document.getElementById('my-point').textContent   = myPoint.toLocaleString() + 'P';
+
+  const rResult = document.getElementById('r-result');
+  if (won) {
+    rResult.textContent = '+' + delta.toLocaleString() + 'P 획득!';
+    rResult.className = 'c-win';
+    setStatus('🎉 <span class="em">배팅 성공! ' + earn.toLocaleString() + 'P 획득!</span>');
+  } else {
+    rResult.textContent = '-' + selBet.toLocaleString() + 'P 손실';
+    rResult.className = 'c-lose';
+    setStatus('😢 <span class="em">아쉽게 패배... 다시 도전해보세요!</span>');
+  }
+
+  // ── 텔레그램으로 결과 전송 ──
+  try {
+    tg.sendData(JSON.stringify({
+      type:   'race_result',
+      userId: userId,
+      groupId: groupId,
+      delta:  delta,
+      won:    won,
+      winner: winner,
+      bet:    selBet,
+      earn:   earn
+    }));
+  } catch(e) { console.log('sendData error', e); }
+
+  running = false;
+  document.getElementById('btn-back').disabled = false;
+  document.getElementById('btn-go').disabled   = true;
+}
+</script>
+</body>
+</html>
