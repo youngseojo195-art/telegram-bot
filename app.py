@@ -585,13 +585,12 @@ def handle_all(message):
                     f"💸 포인트가 부족해요!\n"
                     f"  최소 배팅: 50포인트\n"
                     f"  현재: {point}포인트"); return
-            # 웹앱 버튼 — start_param 에 userId_groupId_point 전달
             param = f"{user_id}_{group_id}_{point}"
             webapp_url = f"{WEBAPP_BASE_URL}/race?start={param}"
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton(
                 "🏁 경주 게임 시작!",
-                web_app=types.WebAppInfo(url=webapp_url)
+                url=webapp_url
             ))
             bot.reply_to(message,
                 f"🐇 토끼 vs 거북이 경주\n\n"
@@ -807,6 +806,49 @@ from flask import send_from_directory
 def serve_race():
     """경주 웹앱 HTML 서빙"""
     return send_from_directory('.', 'race.html')
+
+@app.route('/race/result', methods=['POST'])
+def race_result():
+    """경주 결과 수신 → 포인트 반영 + 그룹 메시지 전송"""
+    try:
+        data       = request.get_json()
+        user_id    = int(data.get('userId'))
+        group_id   = int(data.get('groupId'))
+        delta      = int(data.get('delta', 0))
+        won        = bool(data.get('won', False))
+        winner     = data.get('winner', 'rabbit')
+        bet        = int(data.get('bet', 0))
+        earn       = int(data.get('earn', 0))
+
+        db = get_db(); c = db.cursor()
+        c.execute("SELECT first_name, username FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
+        row = c.fetchone(); c.close(); db.close()
+        first_name = row[0] if row else '사용자'
+        username   = row[1] if row else ''
+
+        update_point(user_id, group_id, first_name, username, delta)
+        new_point    = get_point(user_id, group_id)
+        winner_label = "🐇 토끼" if winner == 'rabbit' else "🐢 거북이"
+        result_emoji = "🎉" if won else "😢"
+        result_title = "배팅 성공!" if won else "아쉽게 패배..."
+        point_line   = f"획득: +{earn:,}포인트" if won else f"손실: -{bet:,}포인트"
+
+        bot.send_message(
+            group_id,
+            f"╔══ {result_emoji} 경주 결과 ══╗\n"
+            f"  👤 {first_name}님\n"
+            f"  🏆 우승: {winner_label}\n\n"
+            f"  {result_title}\n"
+            f"  💸 배팅: {bet:,}포인트\n"
+            f"  {'✅' if won else '❌'} {point_line}\n"
+            f"  💰 잔여: {new_point:,}포인트\n"
+            f"╚══════════════════╝"
+        )
+        return {'ok': True}, 200
+    except Exception as e:
+        import traceback
+        print(f"race_result error: {e}\n{traceback.format_exc()}")
+        return {'ok': False}, 500
 
 @app.route('/' + BOT_TOKEN, methods=['POST'])
 def webhook():
