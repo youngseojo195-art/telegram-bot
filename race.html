@@ -405,15 +405,16 @@ tg.ready();
 tg.expand();
 
 // ── 텔레그램에서 넘어온 데이터 파싱 ──
-// bot.py 에서 start_param 으로 "userId_groupId_point" 형태로 전달
-let myPoint   = 1000;   // 기본값 (파싱 실패 시)
-let userId    = null;
-let groupId   = null;
+// URL 쿼리스트링에서 start 파라미터 파싱 (?start=userId_groupId_point)
+let myPoint = 1000;
+let userId  = null;
+let groupId = null;
 
 try {
-  const raw = tg.initDataUnsafe;
-  if (raw && raw.start_param) {
-    const parts = raw.start_param.split('_');
+  const params = new URLSearchParams(window.location.search);
+  const start  = params.get('start');
+  if (start) {
+    const parts = start.split('_');
     userId  = parts[0] || null;
     groupId = parts[1] || null;
     myPoint = parseInt(parts[2]) || 1000;
@@ -616,19 +617,22 @@ async function startRace() {
     setStatus('😢 <span class="em">아쉽게 패배... 다시 도전해보세요!</span>');
   }
 
-  // ── 텔레그램으로 결과 전송 ──
+  // ── 서버로 결과 전송 → 봇이 그룹에 결과 메시지 전송 ──
   try {
-    tg.sendData(JSON.stringify({
-      type:   'race_result',
-      userId: userId,
-      groupId: groupId,
-      delta:  delta,
-      won:    won,
-      winner: winner,
-      bet:    selBet,
-      earn:   earn
-    }));
-  } catch(e) { console.log('sendData error', e); }
+    await fetch('/race/result', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId:  userId,
+        groupId: groupId,
+        delta:   delta,
+        won:     won,
+        winner:  winner,
+        bet:     selBet,
+        earn:    earn
+      })
+    });
+  } catch(e) { console.log('result send error', e); }
 
   running = false;
   document.getElementById('btn-back').disabled = false;
