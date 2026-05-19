@@ -816,10 +816,8 @@ def handle_all(message):
                 uname = row[2] or ''
                 teams_picked = row[3].split(',')
                 team_icons = "  ".join([KBO_TEAMS_DISPLAY.get(t, t) for t in teams_picked])
-                # 한글/영문 글자가 있으면 이름 사용, 이모티콘만 있으면 @username 또는 id 표시
-                import unicodedata
-                has_text = any(unicodedata.category(ch).startswith('L') for ch in first)
-                if has_text:
+                # first_name 있으면 그대로(이모티콘 포함), 없으면 @username, 둘 다 없으면 id
+                if first:
                     name = first
                 elif uname:
                     name = f"@{uname}"
