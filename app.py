@@ -220,6 +220,18 @@ def get_pending(user_id, group_id):
         return ([t for t in row[0].split(',') if t], row[1])
     return ([], None)
 
+def get_pending_with_group(user_id):
+    """DM 콜백용 — user_id만으로 group_id + selected + message_id 반환"""
+    db = get_db(); c = db.cursor()
+    c.execute("SELECT group_id, selected, message_id FROM kbo_pending WHERE user_id=%s LIMIT 1", (user_id,))
+    row = c.fetchone(); c.close(); db.close()
+    if row:
+        group_id = row[0]
+        selected = [t for t in row[1].split(',') if t]
+        msg_id   = row[2]
+        return (group_id, selected), msg_id
+    return None, None
+
 def set_pending(user_id, group_id, selected: list, message_id=None):
     db = get_db(); c = db.cursor()
     s = ','.join(selected)
@@ -264,7 +276,6 @@ def get_usdt_rate():
 def handle_kbo_callback(call):
     try:
         user_id    = call.from_user.id
-        group_id   = call.message.chat.id
         first_name = call.from_user.first_name or '사용자'
         username   = call.from_user.username or ''
         now_kst    = datetime.now(KST)
@@ -276,12 +287,18 @@ def handle_kbo_callback(call):
                 f"⏰ 화~금 {VOTE_START}~{VOTE_END} 사이에만 참여 가능해요!", show_alert=True)
             return
 
+        # DM에서 콜백이 오므로 pending 에서 실제 group_id 가져오기
+        selected, msg_id = get_pending_with_group(user_id)
+        if selected is None:
+            bot.answer_callback_query(call.id, "⚠️ 세션이 만료됐어요. 그룹에서 /승 을 다시 입력해주세요.", show_alert=True)
+            return
+        group_id = selected[0]
+        selected = selected[1]
+
         db = get_db(); c = db.cursor()
         c.execute("SELECT teams FROM kbo_votes WHERE user_id=%s AND group_id=%s AND vote_date=%s",
                   (user_id, group_id, today))
         already = c.fetchone(); c.close(); db.close()
-
-        selected, msg_id = get_pending(user_id, group_id)
 
         if already and action == "kbo_noop":
             bot.answer_callback_query(call.id, "이미 제출하셨어요! 수정하려면 /수정 을 사용하세요.")
@@ -295,7 +312,7 @@ def handle_kbo_callback(call):
             selected = []
             set_pending(user_id, group_id, selected, call.message.message_id)
             bot.edit_message_text(
-                chat_id=group_id, message_id=call.message.message_id,
+                chat_id=user_id, message_id=call.message.message_id,
                 text=build_vote_message(selected),
                 reply_markup=build_team_keyboard(selected)
             )
@@ -314,7 +331,7 @@ def handle_kbo_callback(call):
                 bot.answer_callback_query(call.id, f"{KBO_TEAMS_DISPLAY.get(team, team)} 선택! ({len(selected)}/5)")
             set_pending(user_id, group_id, selected, call.message.message_id)
             bot.edit_message_text(
-                chat_id=group_id, message_id=call.message.message_id,
+                chat_id=user_id, message_id=call.message.message_id,
                 text=build_vote_message(selected),
                 reply_markup=build_team_keyboard(selected)
             )
@@ -783,7 +800,7 @@ def handle_all(message):
         elif text.strip().startswith('/리스트'):
             if message.chat.type == 'private': return
             db = get_db(); c = db.cursor()
-            c.execute("SELECT first_name, username, teams FROM kbo_votes WHERE group_id=%s AND vote_date=%s ORDER BY created_at",
+            c.execute("SELECT user_id, first_name, username, teams FROM kbo_votes WHERE group_id=%s AND vote_date=%s ORDER BY created_at",
                       (group_id, today))
             rows = c.fetchall(); c.close(); db.close()
             if not rows:
@@ -794,9 +811,20 @@ def handle_all(message):
             result += f"  👥 참여자: {len(rows)}명\n"
             result += f"  {'─' * 21}\n"
             for row in rows:
-                name = row[0] or row[1] or '익명'
-                teams_picked = row[2].split(',')
+                uid   = row[0]
+                first = row[1] or ''
+                uname = row[2] or ''
+                teams_picked = row[3].split(',')
                 team_icons = "  ".join([KBO_TEAMS_DISPLAY.get(t, t) for t in teams_picked])
+                # 한글/영문 글자가 있으면 이름 사용, 이모티콘만 있으면 @username 또는 id 표시
+                import unicodedata
+                has_text = any(unicodedata.category(ch).startswith('L') for ch in first)
+                if has_text:
+                    name = first
+                elif uname:
+                    name = f"@{uname}"
+                else:
+                    name = f"id:{uid}"
                 result += f"  👤 {name}\n  {team_icons}\n  {'─' * 21}\n"
             result += "╚══════════════════╝"
             bot.reply_to(message, result)
