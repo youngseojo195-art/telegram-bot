@@ -340,14 +340,15 @@ def handle_kbo_callback(call):
             db.commit(); c.close(); db.close()
             clear_pending(user_id, group_id)
             team_display = "\n".join([f"  {i+1}. {KBO_TEAMS_DISPLAY.get(t,t)}" for i,t in enumerate(selected)])
+            # DM 메시지 수정 (본인만 볼 수 있음)
             bot.edit_message_text(
-                chat_id=group_id, message_id=call.message.message_id,
+                chat_id=user_id, message_id=call.message.message_id,
                 text=(
                     f"╔══ ⚾ KBO 승 {action_label} ══╗\n"
                     f"  👤 {first_name}님\n\n"
                     f"  선택한 팀 (5개):\n{team_display}\n\n"
                     f"  👥 오늘 참여자: {total}명\n"
-                    f"  ✏️ 수정: /수정 명령어 사용\n"
+                    f"  ✏️ 수정: 그룹에서 /수정 입력\n"
                     f"╚══════════════════╝"
                 ),
                 reply_markup=None
@@ -377,6 +378,55 @@ def handle_all(message):
         # ── /test ──
         if '/test' in text:
             bot.reply_to(message, "봇 작동 중! ✅")
+
+        # ── /포인트복구 (관리자 전용) ──
+        elif '/포인트복구' in text:
+            if user_id not in ADMIN_IDS:
+                bot.reply_to(message, "⚠️ 관리자만 사용할 수 있어요!"); return
+            db = get_db(); c = db.cursor()
+            c.execute("SELECT user_id, first_name, username, point FROM points WHERE group_id=%s ORDER BY point DESC", (group_id,))
+            rows = c.fetchall(); c.close(); db.close()
+            if not rows:
+                bot.reply_to(message, "포인트 기록이 없어요."); return
+            result  = "\u2554\u2550\u2550 \U0001f527 \ud3ec\uc778\ud2b8 \ud604\ud669 \u2550\u2550\u2557\n\n"
+            for row in rows:
+                name = row[1] or row[2] or "\uc775\uba85"
+                result += f"  \u2022 {name} (id:{row[0]}): {row[3]:,}P\n"
+            result += "\n  \u2702\ufe0f \ud3ec\uc778\ud2b8 \uc124\uc815:\n"
+            result += "  /\ud3ec\uc778\ud2b8\uc124\uc815 [\uc774\ub984] [\ud3ec\uc778\ud2b8]\n"
+            result += "  /\uc804\uccb4\ud3ec\uc778\ud2b8\ucd08\uae30\ud654 \ud655\uc778\n"
+            result += "\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d"
+            bot.reply_to(message, result)
+
+        # ── /포인트설정 (관리자 전용) ──
+        elif '/포인트설정' in text:
+            if user_id not in ADMIN_IDS:
+                bot.reply_to(message, "⚠️ 관리자만 사용할 수 있어요!"); return
+            parts = text.split()
+            if len(parts) < 3 or not parts[2].isdigit():
+                bot.reply_to(message, "\U0001f527 \uc0ac\uc6a9\ubc95: /\ud3ec\uc778\ud2b8\uc124\uc815 [\uc774\ub984] [\ud3ec\uc778\ud2b8]\n\uc608: /\ud3ec\uc778\ud2b8\uc124\uc815 \ud64d\uae38\ub3d9 500"); return
+            target_name = parts[1]
+            new_pt = int(parts[2])
+            db = get_db(); c = db.cursor()
+            c.execute("UPDATE points SET point=%s WHERE first_name=%s AND group_id=%s", (new_pt, target_name, group_id))
+            affected = c.rowcount
+            db.commit(); c.close(); db.close()
+            if affected > 0:
+                bot.reply_to(message, f"\u2705 {target_name}\ub2d8 \ud3ec\uc778\ud2b8\ub97c {new_pt:,}P\ub85c \uc124\uc815\ud588\uc5b4\uc694!")
+            else:
+                bot.reply_to(message, f"\u26a0\ufe0f {target_name}\ub2d8\uc744 \ucc3e\uc744 \uc218 \uc5c6\uc5b4\uc694!")
+
+        # ── /전체포인트초기화 (관리자 전용) ──
+        elif '/전체포인트초기화' in text:
+            if user_id not in ADMIN_IDS:
+                bot.reply_to(message, "⚠️ 관리자만 사용할 수 있어요!"); return
+            if '확인' not in text:
+                bot.reply_to(message, "\u26a0\ufe0f \uc815\ub9d0 \uc804\uccb4 \ud3ec\uc778\ud2b8\ub97c \ucd08\uae30\ud654\ud558\ub824\uba74\n/\uc804\uccb4\ud3ec\uc778\ud2b8\ucd08\uae30\ud654 \ud655\uc778\n\uc774\ub77c\uace0 \uc785\ub825\ud558\uc138\uc694!"); return
+            db = get_db(); c = db.cursor()
+            c.execute("UPDATE points SET point=0 WHERE group_id=%s", (group_id,))
+            affected = c.rowcount
+            db.commit(); c.close(); db.close()
+            bot.reply_to(message, f"\u2705 {affected}\uba85\uc758 \ud3ec\uc778\ud2b8\ub97c \uc804\uccb4 \ucd08\uae30\ud654\ud588\uc5b4\uc694!")
 
         # ── /getfileid ──
         elif '/getfileid' in text:
@@ -665,17 +715,36 @@ def handle_all(message):
                       (user_id, group_id, today))
             existing = c.fetchone(); c.close(); db.close()
             if existing:
+                # 이미 참여한 경우 본인에게만 DM으로 알림
                 existing_teams = existing[0].split(',')
                 team_str = "\n".join([f"  {i+1}. {KBO_TEAMS_DISPLAY.get(t,t)}" for i,t in enumerate(existing_teams)])
+                try:
+                    bot.send_message(user_id,
+                        f"⚠️ 이미 오늘 예측에 참여하셨어요!\n\n"
+                        f"선택하신 팀:\n{team_str}\n\n"
+                        f"수정하려면 /수정 을 사용하세요.")
+                except:
+                    bot.reply_to(message, "⚠️ 이미 오늘 예측에 참여하셨어요! DM으로 확인해주세요.")
+                return
+            # GIF + 키보드를 그룹이 아닌 DM으로 전송
+            try:
+                send_baseball_gif(user_id)
+                selected = []
+                set_pending(user_id, group_id, selected)
+                sent = bot.send_message(
+                    user_id,
+                    build_vote_message(selected),
+                    reply_markup=build_team_keyboard(selected)
+                )
+                set_pending(user_id, group_id, selected, sent.message_id)
+                # 그룹에는 DM 확인 안내만 표시
+                bot.reply_to(message, f"📩 {first_name}님, DM으로 팀 선택 메시지를 보내드렸어요!")
+            except Exception as e:
+                # DM이 안 되는 경우 (봇을 DM으로 시작 안 한 경우)
                 bot.reply_to(message,
-                    f"⚠️ 이미 오늘 예측에 참여하셨어요!\n\n"
-                    f"선택하신 팀:\n{team_str}\n\n"
-                    f"수정하려면 /수정 을 사용하세요."); return
-            send_baseball_gif(group_id)
-            selected = []
-            set_pending(user_id, group_id, selected)
-            sent = bot.send_message(group_id, build_vote_message(selected), reply_markup=build_team_keyboard(selected))
-            set_pending(user_id, group_id, selected, sent.message_id)
+                    f"⚠️ DM을 보낼 수 없어요!\n"
+                    f"봇과 DM을 먼저 시작해주세요 👇\n"
+                    f"@dopamin_ranking_bot 을 눌러 START 버튼을 눌러주세요!")
 
         # ── /수정 ──
         elif text.strip().startswith('/수정'):
@@ -693,11 +762,22 @@ def handle_all(message):
                 bot.reply_to(message,
                     "⚠️ 오늘 예측에 참여하지 않으셨어요!\n"
                     "/승 명령어로 먼저 예측에 참여해주세요."); return
-            send_baseball_gif(group_id)
-            current_teams = existing[0].split(',')
-            set_pending(user_id, group_id, current_teams)
-            sent = bot.send_message(group_id, build_vote_message(current_teams), reply_markup=build_team_keyboard(current_teams))
-            set_pending(user_id, group_id, current_teams, sent.message_id)
+            # 수정도 DM으로 전송
+            try:
+                send_baseball_gif(user_id)
+                current_teams = existing[0].split(',')
+                set_pending(user_id, group_id, current_teams)
+                sent = bot.send_message(
+                    user_id,
+                    build_vote_message(current_teams),
+                    reply_markup=build_team_keyboard(current_teams)
+                )
+                set_pending(user_id, group_id, current_teams, sent.message_id)
+                bot.reply_to(message, f"📩 {first_name}님, DM으로 수정 메시지를 보내드렸어요!")
+            except Exception as e:
+                bot.reply_to(message,
+                    f"⚠️ DM을 보낼 수 없어요!\n"
+                    f"@dopamin_ranking_bot 을 눌러 START 버튼을 눌러주세요!")
 
         # ── /리스트 ──
         elif text.strip().startswith('/리스트'):
