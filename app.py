@@ -403,7 +403,7 @@ def handle_all(message):
 
         # ── /test ──
         if '/test' in text:
-            bot.reply_to(message, "봇 작동 중! ✅")
+            bot.reply_to(message, f"봇 작동 중! ✅\n내 user_id: {user_id}")
 
         # ── /포인트복구 (관리자 전용) ──
         elif '/포인트복구' in text:
