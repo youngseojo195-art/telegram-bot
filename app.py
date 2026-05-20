@@ -20,7 +20,7 @@ KST = pytz.timezone('Asia/Seoul')
 # ─────────────────────────────────────────────────────────
 # 관리자 설정 (텔레그램 user_id 입력)
 # ─────────────────────────────────────────────────────────
-ADMIN_IDS = [8698678650, 8236798970]  # 관리자 user_id
+ADMIN_IDS = [8698678650]  # 관리자 user_id
 
 # ─────────────────────────────────────────────────────────
 # GIF 설정
@@ -295,6 +295,62 @@ def get_usdt_rate():
     except: pass
     return None
 
+
+# ─────────────────────────────────────────────────────────
+# 내전 서든 모드 선택 콜백
+# ─────────────────────────────────────────────────────────
+@bot.callback_query_handler(func=lambda call: call.data.startswith('nj_open:'))
+def handle_nj_open(call):
+    try:
+        user_id   = call.from_user.id
+        group_id  = call.message.chat.id
+        first_name = call.from_user.first_name or '관리자'
+
+        if user_id not in ADMIN_IDS:
+            bot.answer_callback_query(call.id, "⚠️ 관리자만 사용할 수 있어요!", show_alert=True)
+            return
+
+        parts      = call.data.split(':', 2)
+        game_type  = parts[1]
+        extra_text = parts[2] if len(parts) > 2 else ''
+
+        game_names = {'sa5': '서든어택 5v5', 'sa6': '서든어택 6v6'}
+        display_name = game_names.get(game_type, '서든어택')
+
+        # 이미 열려있는지 확인
+        db = get_db(); c = db.cursor()
+        c.execute("SELECT room_id FROM naejeon_rooms WHERE group_id=%s AND game_type=%s AND status='open'",
+                  (group_id, game_type))
+        existing = c.fetchone()
+        if existing:
+            c.close(); db.close()
+            bot.answer_callback_query(call.id, "⚠️ 이미 진행 중인 내전이 있어요!", show_alert=True)
+            return
+
+        import uuid, json as json_lib
+        room_id = str(uuid.uuid4())[:8]
+        c.execute("INSERT INTO naejeon_rooms (room_id, group_id, game_type, slots) VALUES (%s,%s,%s,%s)",
+                  (room_id, group_id, game_type, '{}'))
+        db.commit(); c.close(); db.close()
+
+        param  = f"{user_id}_{group_id}_{game_type}_{room_id}"
+        nj_url = f"{WEBAPP_BASE_URL}/naejeon?start={param}"
+
+        group_msg = f"⚔️ {display_name} 내전 모집!"
+        if extra_text:
+            group_msg += f"\n{extra_text}"
+        group_msg += f"\n\n아래 버튼을 눌러 참여하세요!\n⚠️ 처음 참여하시는 분은 @dopamin_ranking_bot 을 눌러 START 를 먼저 눌러주세요!"
+
+        send_naejeon_gif(group_id)
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("⚔️ 내전 참여하기", url=nj_url))
+        bot.edit_message_text(group_msg, chat_id=group_id, message_id=call.message.message_id, reply_markup=markup)
+        bot.answer_callback_query(call.id, f"✅ {display_name} 내전 시작!")
+
+    except Exception as e:
+        import traceback
+        print(f"nj_open error: {e}\n{traceback.format_exc()}")
+        bot.answer_callback_query(call.id, "오류가 발생했어요.")
 
 # ─────────────────────────────────────────────────────────
 # KBO 콜백 핸들러
@@ -870,33 +926,65 @@ def handle_all(message):
             bot.reply_to(message, result)
 
         # ── /내전 ──
+        elif text.strip().startswith('/내전취소'):
+            if message.chat.type == 'private': return
+            if user_id not in ADMIN_IDS:
+                bot.reply_to(message, "⚠️ 관리자만 내전을 취소할 수 있어요!"); return
+
+            parts = text.strip().split()
+            game_arg = parts[1] if len(parts) > 1 else ''
+            game_map = {'롤': 'lol', '서든': 'sa', 'lol': 'lol', 'sa': 'sa', 'sa5': 'sa5', 'sa6': 'sa6'}
+            game_type = game_map.get(game_arg)
+
+            if not game_type:
+                bot.reply_to(message, "⚔️ 사용법: /내전취소 롤  또는  /내전취소 서든"); return
+
+            db = get_db(); c = db.cursor()
+            if game_type == 'sa':
+                c.execute("UPDATE naejeon_rooms SET status='cancelled' WHERE group_id=%s AND game_type IN ('sa5','sa6') AND status='open'", (group_id,))
+            else:
+                c.execute("UPDATE naejeon_rooms SET status='cancelled' WHERE group_id=%s AND game_type=%s AND status='open'", (group_id, game_type))
+            affected = c.rowcount
+            db.commit(); c.close(); db.close()
+
+            if affected > 0:
+                game_names = {'롤': '리그오브레전드', '서든': '서든어택'}
+                gname = game_names.get(game_arg, game_arg)
+                bot.reply_to(message, f"✅ {gname} 내전이 취소됐어요!")
+            else:
+                bot.reply_to(message, "⚠️ 진행 중인 내전이 없어요!")
+
         elif text.strip().startswith('/내전'):
             if message.chat.type == 'private': return
             if user_id not in ADMIN_IDS:
                 bot.reply_to(message, "⚠️ 관리자만 내전을 열 수 있어요!"); return
 
             parts = text.strip().split()
-            game_map = {'롤': 'lol', '서든5': 'sa5', '서든6': 'sa6',
-                       'lol': 'lol', 'sa5': 'sa5', 'sa6': 'sa6'}
-            game_arg  = parts[1] if len(parts) > 1 else ''
-            game_type = game_map.get(game_arg)
+            game_arg = parts[1] if len(parts) > 1 else ''
 
-            # 게임 표시명 변환
-            game_display = {'롤': '리그오브레전드', '서든5': '서든어택', '서든6': '서든어택',
-                           'lol': '리그오브레전드', 'sa5': '서든어택', 'sa6': '서든어택'}
-
-            if not game_type:
+            # /내전 롤 또는 /내전 서든 만 허용
+            if game_arg not in ['롤', '서든']:
                 bot.reply_to(message,
                     "⚔️ 내전 사용법\n\n"
-                    "/내전 롤 [부가텍스트]   — 리그오브레전드 5v5\n"
-                    "/내전 서든5 [부가텍스트] — 서든어택 5v5\n"
-                    "/내전 서든6 [부가텍스트] — 서든어택 6v6\n\n"
-                    "예시: /내전 롤 10만원 찬조"
+                    "/내전 롤 — 리그오브레전드 5v5\n"
+                    "/내전 서든 — 서든어택 (5v5 / 6v6)\n\n"
                 ); return
 
-            # 부가 텍스트 (게임 타입 뒤 나머지)
-            extra_text = ' '.join(parts[2:]) if len(parts) > 2 else ''
-            display_name = game_display.get(game_arg, '내전')
+            # 서든은 5v5/6v6 선택 버튼
+            if game_arg == '서든':
+                extra_text = ' '.join(parts[2:]) if len(parts) > 2 else ''
+                markup = types.InlineKeyboardMarkup(row_width=2)
+                markup.add(
+                    types.InlineKeyboardButton("⚔️ 서든 5v5", callback_data=f"nj_open:sa5:{extra_text}"),
+                    types.InlineKeyboardButton("⚔️ 서든 6v6", callback_data=f"nj_open:sa6:{extra_text}"),
+                )
+                bot.reply_to(message, "⚔️ 서든어택 인원을 선택하세요!", reply_markup=markup)
+                return
+
+            # 롤은 바로 오픈
+            game_type    = 'lol'
+            display_name = '리그오브레전드'
+            extra_text   = ' '.join(parts[2:]) if len(parts) > 2 else ''
 
             # 같은 게임 타입 이미 열려있는지 확인
             db = get_db(); c = db.cursor()
@@ -1196,6 +1284,8 @@ def webhook():
         elif update.callback_query:
             if update.callback_query.data.startswith('kbo_'):
                 handle_kbo_callback(update.callback_query)
+            elif update.callback_query.data.startswith('nj_open:'):
+                handle_nj_open(update.callback_query)
         print("처리 완료!")
     except Exception as e:
         import traceback
