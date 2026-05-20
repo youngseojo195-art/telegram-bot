@@ -118,7 +118,6 @@ KBO_TEAMS_DISPLAY = {
 }
 
 WEBAPP_BASE_URL = os.environ.get('WEBAPP_URL', 'https://telegram-bot-14vg.onrender.com')
-
 VOTE_START = "18:00"
 VOTE_END   = "18:30"
 
