@@ -571,17 +571,17 @@ function renderRoom() {
 
   document.getElementById('admin-banner').style.display = isAdmin ? 'flex' : 'none';
 
-// 사비/찬조 배너
+  // 사비/찬조 배너
   const fundBanner = document.getElementById('fund-banner');
   if (roomData.fundType && roomData.fundAmount) {
     fundBanner.style.display = 'flex';
     const badge = document.getElementById('fund-badge');
     badge.textContent = roomData.fundType === '사비' ? '💸 사비' : '🎁 찬조';
     
-    // ── 자바스크립트 금액 천 단위 콤마 처리 ──
+    // ── 금액 천 단위 콤마 + '원' 포맷팅 처리 ──
     let amt = roomData.fundAmount;
     if (!isNaN(amt) && amt.trim() !== '') {
-      amt = Number(amt).toLocaleString(); // 👈 숫자인 경우 자동으로 콤마(,) 추가
+      amt = Number(amt).toLocaleString() + "원"; // 👈 숫자인 경우 콤마와 '원' 자동 삽입
     }
     
     document.getElementById('fund-amount-text').textContent = amt;
