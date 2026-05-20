@@ -1,3 +1,4 @@
+cat > /mnt/user-data/outputs/bot.py << 'PYEOF'
 import os
 import re
 import json
@@ -9,7 +10,7 @@ import urllib.parse
 import pytz
 from telebot import types
 from datetime import datetime, timedelta
-from flask import Flask, request
+from flask import Flask, request, send_from_directory
 
 BOT_TOKEN = '8046489365:AAHAFBz4Ca07KcjqI0EJl76aIAu-rlVHw-4'
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -18,9 +19,9 @@ app = Flask(__name__)
 KST = pytz.timezone('Asia/Seoul')
 
 # ─────────────────────────────────────────────────────────
-# 관리자 설정 (텔레그램 user_id 입력)
+# 관리자 설정
 # ─────────────────────────────────────────────────────────
-ADMIN_IDS = [8698678650]  # 관리자 user_id
+ADMIN_IDS = [8698678650, 8236798970]
 
 # ─────────────────────────────────────────────────────────
 # GIF 설정
@@ -158,20 +159,17 @@ def build_vote_message(selected: list) -> str:
         lines.append(f"  • {KBO_TEAMS_DISPLAY.get(t, t)}")
     return "\n".join(lines)
 
-# ─────────────────────────────────────────────────────────
-# 경주 게임 빌더
-# 토끼 승률 60%, 거북이 승률 40%
-# ─────────────────────────────────────────────────────────
-
 
 # ─────────────────────────────────────────────────────────
 # DB 헬퍼
 # ─────────────────────────────────────────────────────────
 def clean_name(name):
-    """특수 공백 문자(ㅤ 등) 제거 후 진짜 이름인지 확인"""
     if not name:
         return ''
-    cleaned = name.strip().replace('\u3164', '').replace('\u200b', '').replace('\u200c', '').replace('\u200d', '').replace('\ufeff', '').strip()
+    cleaned = (name.strip()
+               .replace('\u3164', '').replace('\u200b', '')
+               .replace('\u200c', '').replace('\u200d', '')
+               .replace('\ufeff', '').strip())
     return cleaned
 
 def get_db():
@@ -214,13 +212,24 @@ def init_db():
         pos_a JSONB DEFAULT '[]',
         pos_b JSONB DEFAULT '[]',
         started BOOLEAN DEFAULT FALSE,
+        fund_type VARCHAR(10) DEFAULT '',
+        fund_amount TEXT DEFAULT '',
         created_at TIMESTAMP DEFAULT NOW()
     )""")
-    for col in [("extra_text","TEXT DEFAULT ''"),("pos_a","JSONB DEFAULT '[]'"),("pos_b","JSONB DEFAULT '[]'"),("started","BOOLEAN DEFAULT FALSE")]:
+    # 컬럼 없으면 추가 (기존 DB 호환)
+    for col in [
+        ("extra_text",  "TEXT DEFAULT ''"),
+        ("pos_a",       "JSONB DEFAULT '[]'"),
+        ("pos_b",       "JSONB DEFAULT '[]'"),
+        ("started",     "BOOLEAN DEFAULT FALSE"),
+        ("fund_type",   "VARCHAR(10) DEFAULT ''"),
+        ("fund_amount", "TEXT DEFAULT ''"),
+    ]:
         try:
             c.execute(f"ALTER TABLE naejeon_rooms ADD COLUMN IF NOT EXISTS {col[0]} {col[1]}")
             db.commit()
-        except: db.rollback()
+        except:
+            db.rollback()
     try:
         c.execute("ALTER TABLE points ALTER COLUMN last_attendance TYPE DATE USING last_attendance::DATE")
         db.commit()
@@ -257,7 +266,6 @@ def get_pending(user_id, group_id):
     return ([], None)
 
 def get_pending_with_group(user_id):
-    """DM 콜백용 — user_id만으로 group_id + selected + message_id 반환"""
     db = get_db(); c = db.cursor()
     c.execute("SELECT group_id, selected, message_id FROM kbo_pending WHERE user_id=%s LIMIT 1", (user_id,))
     row = c.fetchone(); c.close(); db.close()
@@ -283,7 +291,6 @@ def clear_pending(user_id, group_id):
     db.commit(); c.close(); db.close()
 
 def is_vote_time(now_kst):
-    # 화=1, 수=2, 목=3, 금=4 만 허용
     if now_kst.weekday() not in [1, 2, 3, 4]:
         return False
     cur = now_kst.time()
@@ -296,12 +303,14 @@ def get_usdt_rate():
         r = requests.get('https://api.upbit.com/v1/ticker?markets=KRW-USDT', timeout=5)
         if r.status_code == 200:
             return float(r.json()[0]['trade_price'])
-    except: pass
+    except:
+        pass
     try:
         r = requests.get('https://api.binance.com/api/v3/ticker/price?symbol=USDTKRW', timeout=5)
         if r.status_code == 200:
             return float(r.json()['price'])
-    except: pass
+    except:
+        pass
     return None
 
 
@@ -311,8 +320,8 @@ def get_usdt_rate():
 @bot.callback_query_handler(func=lambda call: call.data.startswith('nj_open:'))
 def handle_nj_open(call):
     try:
-        user_id   = call.from_user.id
-        group_id  = call.message.chat.id
+        user_id    = call.from_user.id
+        group_id   = call.message.chat.id
         first_name = call.from_user.first_name or '관리자'
 
         if user_id not in ADMIN_IDS:
@@ -323,10 +332,9 @@ def handle_nj_open(call):
         game_type  = parts[1]
         extra_text = parts[2] if len(parts) > 2 else ''
 
-        game_names = {'sa5': '서든어택 5v5', 'sa6': '서든어택 6v6'}
+        game_names   = {'sa5': '서든어택 5v5', 'sa6': '서든어택 6v6'}
         display_name = game_names.get(game_type, '서든어택')
 
-        # 이미 열려있는지 확인
         db = get_db(); c = db.cursor()
         c.execute("SELECT room_id FROM naejeon_rooms WHERE group_id=%s AND game_type=%s AND status='open'",
                   (group_id, game_type))
@@ -336,7 +344,7 @@ def handle_nj_open(call):
             bot.answer_callback_query(call.id, "⚠️ 이미 진행 중인 내전이 있어요!", show_alert=True)
             return
 
-        import uuid, json as json_lib
+        import uuid
         room_id = str(uuid.uuid4())[:8]
         c.execute("INSERT INTO naejeon_rooms (room_id, group_id, game_type, slots) VALUES (%s,%s,%s,%s)",
                   (room_id, group_id, game_type, '{}'))
@@ -361,6 +369,7 @@ def handle_nj_open(call):
         print(f"nj_open error: {e}\n{traceback.format_exc()}")
         bot.answer_callback_query(call.id, "오류가 발생했어요.")
 
+
 # ─────────────────────────────────────────────────────────
 # KBO 콜백 핸들러
 # ─────────────────────────────────────────────────────────
@@ -379,7 +388,6 @@ def handle_kbo_callback(call):
                 f"⏰ 화~금 {VOTE_START}~{VOTE_END} 사이에만 참여 가능해요!", show_alert=True)
             return
 
-        # DM에서 콜백이 오므로 pending 에서 실제 group_id 가져오기
         selected, msg_id = get_pending_with_group(user_id)
         if selected is None:
             bot.answer_callback_query(call.id, "⚠️ 세션이 만료됐어요. 그룹에서 /승 을 다시 입력해주세요.", show_alert=True)
@@ -392,12 +400,11 @@ def handle_kbo_callback(call):
                   (user_id, group_id, today))
         already = c.fetchone(); c.close(); db.close()
 
-        if already and action == "kbo_noop":
-            bot.answer_callback_query(call.id, "이미 제출하셨어요! 수정하려면 /수정 을 사용하세요.")
-            return
-
         if action == "kbo_noop":
-            bot.answer_callback_query(call.id, f"5개를 선택해야 제출할 수 있어요! (현재 {len(selected)}개)")
+            if already:
+                bot.answer_callback_query(call.id, "이미 제출하셨어요! 수정하려면 /수정 을 사용하세요.")
+            else:
+                bot.answer_callback_query(call.id, f"5개를 선택해야 제출할 수 있어요! (현재 {len(selected)}개)")
             return
 
         elif action == "kbo_reset":
@@ -448,8 +455,7 @@ def handle_kbo_callback(call):
             total = c.fetchone()[0]
             db.commit(); c.close(); db.close()
             clear_pending(user_id, group_id)
-            team_display = "\n".join([f"  {i+1}. {KBO_TEAMS_DISPLAY.get(t,t)}" for i,t in enumerate(selected)])
-            # DM 메시지 수정 (본인만 볼 수 있음)
+            team_display = "\n".join([f"  {i+1}. {KBO_TEAMS_DISPLAY.get(t,t)}" for i, t in enumerate(selected)])
             bot.edit_message_text(
                 chat_id=user_id, message_id=call.message.message_id,
                 text=(
@@ -468,6 +474,7 @@ def handle_kbo_callback(call):
         import traceback
         print(f"kbo callback error: {e}\n{traceback.format_exc()}")
         bot.answer_callback_query(call.id, "오류가 발생했어요. 다시 시도해주세요.")
+
 
 # ─────────────────────────────────────────────────────────
 # 메시지 핸들러
@@ -488,7 +495,7 @@ def handle_all(message):
         if '/test' in text:
             bot.reply_to(message, f"봇 작동 중! ✅\n내 user_id: {user_id}")
 
-        # ── /포인트복구 (관리자 전용) ──
+        # ── /포인트복구 (관리자) ──
         elif '/포인트복구' in text:
             if user_id not in ADMIN_IDS:
                 bot.reply_to(message, "⚠️ 관리자만 사용할 수 있어요!"); return
@@ -497,23 +504,23 @@ def handle_all(message):
             rows = c.fetchall(); c.close(); db.close()
             if not rows:
                 bot.reply_to(message, "포인트 기록이 없어요."); return
-            result  = "\u2554\u2550\u2550 \U0001f527 \ud3ec\uc778\ud2b8 \ud604\ud669 \u2550\u2550\u2557\n\n"
+            result = "╔══ 🔧 포인트 현황 ══╗\n\n"
             for row in rows:
-                name = row[1] or row[2] or "\uc775\uba85"
-                result += f"  \u2022 {name} (id:{row[0]}): {row[3]:,}P\n"
-            result += "\n  \u2702\ufe0f \ud3ec\uc778\ud2b8 \uc124\uc815:\n"
-            result += "  /\ud3ec\uc778\ud2b8\uc124\uc815 [\uc774\ub984] [\ud3ec\uc778\ud2b8]\n"
-            result += "  /\uc804\uccb4\ud3ec\uc778\ud2b8\ucd08\uae30\ud654 \ud655\uc778\n"
-            result += "\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d"
+                name = row[1] or row[2] or "익명"
+                result += f"  • {name} (id:{row[0]}): {row[3]:,}P\n"
+            result += "\n  ✂️ 포인트 설정:\n"
+            result += "  /포인트설정 [이름] [포인트]\n"
+            result += "  /전체포인트초기화 확인\n"
+            result += "╚══════════════════╝"
             bot.reply_to(message, result)
 
-        # ── /포인트설정 (관리자 전용) ──
+        # ── /포인트설정 (관리자) ──
         elif '/포인트설정' in text:
             if user_id not in ADMIN_IDS:
                 bot.reply_to(message, "⚠️ 관리자만 사용할 수 있어요!"); return
             parts = text.split()
             if len(parts) < 3 or not parts[2].isdigit():
-                bot.reply_to(message, "\U0001f527 \uc0ac\uc6a9\ubc95: /\ud3ec\uc778\ud2b8\uc124\uc815 [\uc774\ub984] [\ud3ec\uc778\ud2b8]\n\uc608: /\ud3ec\uc778\ud2b8\uc124\uc815 \ud64d\uae38\ub3d9 500"); return
+                bot.reply_to(message, "🔧 사용법: /포인트설정 [이름] [포인트]\n예: /포인트설정 홍길동 500"); return
             target_name = parts[1]
             new_pt = int(parts[2])
             db = get_db(); c = db.cursor()
@@ -521,34 +528,33 @@ def handle_all(message):
             affected = c.rowcount
             db.commit(); c.close(); db.close()
             if affected > 0:
-                bot.reply_to(message, f"\u2705 {target_name}\ub2d8 \ud3ec\uc778\ud2b8\ub97c {new_pt:,}P\ub85c \uc124\uc815\ud588\uc5b4\uc694!")
+                bot.reply_to(message, f"✅ {target_name}님 포인트를 {new_pt:,}P로 설정했어요!")
             else:
-                bot.reply_to(message, f"\u26a0\ufe0f {target_name}\ub2d8\uc744 \ucc3e\uc744 \uc218 \uc5c6\uc5b4\uc694!")
+                bot.reply_to(message, f"⚠️ {target_name}님을 찾을 수 없어요!")
 
-        # ── /전체포인트초기화 (관리자 전용) ──
+        # ── /전체포인트초기화 (관리자) ──
         elif '/전체포인트초기화' in text:
             if user_id not in ADMIN_IDS:
                 bot.reply_to(message, "⚠️ 관리자만 사용할 수 있어요!"); return
             if '확인' not in text:
-                bot.reply_to(message, "\u26a0\ufe0f \uc815\ub9d0 \uc804\uccb4 \ud3ec\uc778\ud2b8\ub97c \ucd08\uae30\ud654\ud558\ub824\uba74\n/\uc804\uccb4\ud3ec\uc778\ud2b8\ucd08\uae30\ud654 \ud655\uc778\n\uc774\ub77c\uace0 \uc785\ub825\ud558\uc138\uc694!"); return
+                bot.reply_to(message, "⚠️ 정말 전체 포인트를 초기화하려면\n/전체포인트초기화 확인\n이라고 입력하세요!"); return
             db = get_db(); c = db.cursor()
             c.execute("UPDATE points SET point=0 WHERE group_id=%s", (group_id,))
             affected = c.rowcount
             db.commit(); c.close(); db.close()
-            bot.reply_to(message, f"\u2705 {affected}\uba85\uc758 \ud3ec\uc778\ud2b8\ub97c \uc804\uccb4 \ucd08\uae30\ud654\ud588\uc5b4\uc694!")
+            bot.reply_to(message, f"✅ {affected}명의 포인트를 전체 초기화했어요!")
 
         # ── /getfileid ──
         elif '/getfileid' in text:
             if message.reply_to_message:
                 msg = message.reply_to_message
                 file_id = None
-                if msg.animation:   file_id = msg.animation.file_id
-                elif msg.video:     file_id = msg.video.file_id
-                elif msg.document:  file_id = msg.document.file_id
+                if msg.animation:  file_id = msg.animation.file_id
+                elif msg.video:    file_id = msg.video.file_id
+                elif msg.document: file_id = msg.document.file_id
                 if file_id:
                     bot.reply_to(message,
-                        f"📋 file_id:\n\n<code>{file_id}</code>\n\n"
-                        f"bot.py 상단 변수에 넣으세요!",
+                        f"📋 file_id:\n\n<code>{file_id}</code>\n\nbot.py 상단 변수에 넣으세요!",
                         parse_mode='HTML')
                 else:
                     bot.reply_to(message, "⚠️ GIF나 영상 메시지에 답장해서 사용하세요.")
@@ -559,8 +565,7 @@ def handle_all(message):
         elif '/노래' in text:
             query = text.replace('/노래', '').strip()
             if not query:
-                bot.reply_to(message, "🎵 검색어를 입력해주세요!\n예시: /노래 아이유 좋은날")
-                return
+                bot.reply_to(message, "🎵 검색어를 입력해주세요!\n예시: /노래 아이유 좋은날"); return
             encoded = urllib.parse.quote(query)
             bot.reply_to(message, f"🎵 {query}\n\n🔗 유튜브:\nhttps://www.youtube.com/results?search_query={encoded}")
 
@@ -689,7 +694,6 @@ def handle_all(message):
                 "🎡 /룰렛 [배팅] - 룰렛\n"
                 "⚠️ 최소 배팅: 20포인트")
 
-
         # ── /슬롯 ──
         elif '/슬롯' in text:
             if message.chat.type == 'private': return
@@ -795,7 +799,6 @@ def handle_all(message):
         # ── /야구 ──
         elif text.strip().startswith('/야구'):
             if message.chat.type == 'private': return
-            # 그룹에는 GIF + 안내 문구만
             send_baseball_gif(group_id)
             bot.reply_to(message,
                 f"⚾ KBO 승 예측 안내\n"
@@ -805,15 +808,11 @@ def handle_all(message):
                 f"📌 10개 팀 중 5개 선택\n"
                 f"📌 하루 1회 참여 (수정 가능)\n\n"
                 f"📩 참여 링크를 DM으로 전달드렸습니다!")
-            # 본인 DM으로만 버튼 전송
             try:
                 param   = f"{user_id}_{group_id}"
                 kbo_url = f"{WEBAPP_BASE_URL}/kbo?start={param}"
                 markup  = types.InlineKeyboardMarkup()
-                markup.add(types.InlineKeyboardButton(
-                    "⚾ KBO 승 예측 참여하기",
-                    url=kbo_url
-                ))
+                markup.add(types.InlineKeyboardButton("⚾ KBO 승 예측 참여하기", url=kbo_url))
                 bot.send_message(user_id,
                     f"⚾ KBO 승 예측 참여 링크\n\n"
                     f"📅 참여 요일: 화 / 수 / 목 / 금\n"
@@ -839,7 +838,6 @@ def handle_all(message):
                       (user_id, group_id, today))
             existing = c.fetchone(); c.close(); db.close()
             if existing:
-                # 이미 참여한 경우 본인에게만 DM으로 알림
                 existing_teams = existing[0].split(',')
                 team_str = "\n".join([f"  {i+1}. {KBO_TEAMS_DISPLAY.get(t,t)}" for i,t in enumerate(existing_teams)])
                 try:
@@ -850,7 +848,6 @@ def handle_all(message):
                 except:
                     bot.reply_to(message, "⚠️ 이미 오늘 예측에 참여하셨어요! DM으로 확인해주세요.")
                 return
-            # GIF + 키보드를 그룹이 아닌 DM으로 전송
             try:
                 send_baseball_gif(user_id)
                 selected = []
@@ -861,10 +858,8 @@ def handle_all(message):
                     reply_markup=build_team_keyboard(selected)
                 )
                 set_pending(user_id, group_id, selected, sent.message_id)
-                # 그룹에는 DM 확인 안내만 표시
                 bot.reply_to(message, f"📩 {first_name}님, DM으로 팀 선택 메시지를 보내드렸어요!")
             except Exception as e:
-                # DM이 안 되는 경우 (봇을 DM으로 시작 안 한 경우)
                 bot.reply_to(message,
                     f"⚠️ DM을 보낼 수 없어요!\n"
                     f"봇과 DM을 먼저 시작해주세요 👇\n"
@@ -886,7 +881,6 @@ def handle_all(message):
                 bot.reply_to(message,
                     "⚠️ 오늘 예측에 참여하지 않으셨어요!\n"
                     "/승 명령어로 먼저 예측에 참여해주세요."); return
-            # 수정도 DM으로 전송
             try:
                 send_baseball_gif(user_id)
                 current_teams = existing[0].split(',')
@@ -923,7 +917,6 @@ def handle_all(message):
                 uname = row[2] or ''
                 teams_picked = row[3].split(',')
                 team_icons = "  ".join([KBO_TEAMS_DISPLAY.get(t, t) for t in teams_picked])
-                # first_name 있으면 그대로(이모티콘 포함), 없으면 @username, 둘 다 없으면 id
                 if first:
                     name = first
                 elif uname:
@@ -934,20 +927,17 @@ def handle_all(message):
             result += "╚══════════════════╝"
             bot.reply_to(message, result)
 
-        # ── /내전 ──
+        # ── /내전취소 ──
         elif text.strip().startswith('/내전취소'):
             if message.chat.type == 'private': return
             if user_id not in ADMIN_IDS:
                 bot.reply_to(message, "⚠️ 관리자만 내전을 취소할 수 있어요!"); return
-
-            parts = text.strip().split()
+            parts    = text.strip().split()
             game_arg = parts[1] if len(parts) > 1 else ''
-            game_map = {'롤': 'lol', '서든': 'sa', 'lol': 'lol', 'sa': 'sa', 'sa5': 'sa5', 'sa6': 'sa6'}
+            game_map = {'롤':'lol','서든':'sa','lol':'lol','sa':'sa','sa5':'sa5','sa6':'sa6'}
             game_type = game_map.get(game_arg)
-
             if not game_type:
                 bot.reply_to(message, "⚔️ 사용법: /내전취소 롤  또는  /내전취소 서든"); return
-
             db = get_db(); c = db.cursor()
             if game_type == 'sa':
                 c.execute("UPDATE naejeon_rooms SET status='cancelled' WHERE group_id=%s AND game_type IN ('sa5','sa6') AND status='open'", (group_id,))
@@ -955,33 +945,28 @@ def handle_all(message):
                 c.execute("UPDATE naejeon_rooms SET status='cancelled' WHERE group_id=%s AND game_type=%s AND status='open'", (group_id, game_type))
             affected = c.rowcount
             db.commit(); c.close(); db.close()
-
             if affected > 0:
-                game_names = {'롤': '리그오브레전드', '서든': '서든어택'}
+                game_names = {'롤':'리그오브레전드','서든':'서든어택'}
                 gname = game_names.get(game_arg, game_arg)
                 bot.reply_to(message, f"✅ {gname} 내전이 취소됐어요!")
             else:
                 bot.reply_to(message, "⚠️ 진행 중인 내전이 없어요!")
 
+        # ── /내전 ──
         elif text.strip().startswith('/내전'):
             if message.chat.type == 'private': return
             if user_id not in ADMIN_IDS:
                 bot.reply_to(message, "⚠️ 관리자만 내전을 열 수 있어요!"); return
-
-            parts = text.strip().split()
+            parts    = text.strip().split()
             game_arg = parts[1] if len(parts) > 1 else ''
-
-            # /내전 롤 또는 /내전 서든 만 허용
             if game_arg not in ['롤', '서든']:
                 bot.reply_to(message,
                     "⚔️ 내전 사용법\n\n"
                     "/내전 롤 [부가텍스트]  — 리그오브레전드 5v5\n"
                     "/내전 서든 [부가텍스트] — 서든어택 (5v5 / 6v6 선택)\n\n"
                     "예시: /내전 롤 10만원 찬조\n"
-                    "예시: /내전 서든 승리 시 3만원"
-                ); return
+                    "예시: /내전 서든 승리 시 3만원"); return
 
-            # 서든은 5v5/6v6 선택 버튼
             if game_arg == '서든':
                 extra_text = ' '.join(parts[2:]) if len(parts) > 2 else ''
                 markup = types.InlineKeyboardMarkup(row_width=2)
@@ -992,12 +977,11 @@ def handle_all(message):
                 bot.reply_to(message, "⚔️ 서든어택 인원을 선택하세요!", reply_markup=markup)
                 return
 
-            # 롤은 바로 오픈
+            # 롤 바로 오픈
             game_type    = 'lol'
-            display_name = '리그오브레전드'
+            display_name = '리그오브레전드 5v5'
             extra_text   = ' '.join(parts[2:]) if len(parts) > 2 else ''
 
-            # 같은 게임 타입 이미 열려있는지 확인
             db = get_db(); c = db.cursor()
             c.execute("SELECT room_id FROM naejeon_rooms WHERE group_id=%s AND game_type=%s AND status='open'",
                       (group_id, game_type))
@@ -1006,43 +990,23 @@ def handle_all(message):
                 c.close(); db.close()
                 bot.reply_to(message, "⚠️ 이미 진행 중인 내전이 있어요!"); return
 
-            # 방 생성
             import uuid
-            room_id   = str(uuid.uuid4())[:8]
-            game_names = {'lol': '리그오브레전드 5v5', 'sa5': '서든어택 5v5', 'sa6': '서든어택 6v6'}
-            game_name  = game_names[game_type]
-
+            room_id = str(uuid.uuid4())[:8]
             c.execute("INSERT INTO naejeon_rooms (room_id, group_id, game_type, slots) VALUES (%s,%s,%s,%s)",
                       (room_id, group_id, game_type, '{}'))
             db.commit(); c.close(); db.close()
 
-            # DM으로 링크 전송 시도
-            param     = f"{user_id}_{group_id}_{game_type}_{room_id}"
-            nj_url    = f"{WEBAPP_BASE_URL}/naejeon?start={param}"
-            markup    = types.InlineKeyboardMarkup()
+            param  = f"{user_id}_{group_id}_{game_type}_{room_id}"
+            nj_url = f"{WEBAPP_BASE_URL}/naejeon?start={param}"
+            markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("⚔️ 내전 참여하기", url=nj_url))
 
-            bot.reply_to(message,
-                f"⚔️ {game_name} 내전 모집 시작!\n\n"
-                f"📩 참여 링크를 DM으로 전달드렸습니다!\n"
-                f"📌 봇 DM에서 /start 를 먼저 눌러주세요.")
-
-            # 그룹 멤버들에게 DM 전송은 불가 (텔레그램 정책)
-            # 방장한테만 DM 전송
-            try:
-                bot.send_message(user_id,
-                    f"⚔️ {game_name} 내전 모집 시작!\n\n"
-                    f"아래 버튼을 눌러 참여 링크를 공유하거나 직접 참여하세요!",
-                    reply_markup=markup)
-            except: pass
-
-            # 그룹에 참여 링크 버튼도 표시
-            markup2 = types.InlineKeyboardMarkup()
-            markup2.add(types.InlineKeyboardButton("⚔️ 내전 참여하기", url=nj_url))
-            bot.send_message(group_id,
-                f"⚔️ {game_name} 내전 모집!\n\n"
-                f"아래 버튼을 눌러 참여하세요!",
-                reply_markup=markup2)
+            send_naejeon_gif(group_id)
+            msg = f"⚔️ {display_name} 내전 모집!"
+            if extra_text:
+                msg += f"\n{extra_text}"
+            msg += "\n\n아래 버튼을 눌러 참여하세요!\n⚠️ 처음 참여하시는 분은 @dopamin_ranking_bot 을 눌러 START 를 먼저 눌러주세요!"
+            bot.send_message(group_id, msg, reply_markup=markup)
 
         # ── 메시지 기록 ──
         elif message.chat.type in ['group', 'supergroup']:
@@ -1052,11 +1016,10 @@ def handle_all(message):
         import traceback
         print(f"handle_all error: {e}\n{traceback.format_exc()}")
 
-# ─────────────────────────────────────────────────────────
-# Flask 라우트
-# ─────────────────────────────────────────────────────────
-from flask import send_from_directory
 
+# ─────────────────────────────────────────────────────────
+# Flask 라우트 — KBO
+# ─────────────────────────────────────────────────────────
 @app.route('/kbo')
 def serve_kbo():
     return send_from_directory('.', 'kbo.html')
@@ -1119,16 +1082,11 @@ def kbo_list():
             uid   = row[0]
             first = clean_name(row[1] or '')
             uname = row[2] or ''
-            if first:
-                name = first
-            elif uname:
-                name = '@' + uname
-            else:
-                name = 'id:' + str(uid)
+            name  = first if first else (('@' + uname) if uname else ('id:' + str(uid)))
             teams = row[3].split(',')
             result.append({'name': name, 'teams': teams})
         return result, 200
-    except Exception as e:
+    except:
         return [], 500
 
 @app.route('/kbo/hot')
@@ -1144,40 +1102,52 @@ def kbo_hot():
         for row in rows:
             for team in row[0].split(','):
                 cnt[team] += 1
-        result = [{'team': t, 'count': c} for t, c in cnt.most_common(3)]
+        result = [{'team': t, 'count': v} for t, v in cnt.most_common(3)]
         return result, 200
-    except Exception as e:
+    except:
         return [], 500
 
+
+# ─────────────────────────────────────────────────────────
+# Flask 라우트 — 내전
+# ─────────────────────────────────────────────────────────
 @app.route('/naejeon')
 def serve_naejeon():
     return send_from_directory('.', 'naejeon.html')
 
-def _send_naejeon_result(group_id, game_type, slots, pos_a, pos_b):
-    game_names = {'lol':'리그오브레전드 5v5','sa5':'서든어택 5v5','sa6':'서든어택 6v6'}
-    per = {'lol':5,'sa5':5,'sa6':6}.get(game_type,5)
-    result = f"\u2694\ufe0f {game_names.get(game_type,'')} \ub0b4\uc804 \uc2dc\uc791!\n\n"
-    for team_id, label, positions in [('A','\U0001f7e3 1\ud300',pos_a),('B','\U0001f7e2 2\ud300',pos_b)]:
-        result += f"{label}\n"
-        for i, pos in enumerate(positions[:per]):
-            slot = slots.get(f"{team_id}_{i}")
-            uname = slot['name'] if slot and slot.get('userId') else '?'
-            result += f"  [{pos}] {uname}\n"
-        result += "\n"
-    try: bot.send_message(group_id, result)
-    except: pass
+@app.route('/naejeon/check_admin')
+def naejeon_check_admin():
+    """클라이언트에서 관리자 여부를 확인하는 엔드포인트"""
+    try:
+        user_id = int(request.args.get('userId', 0))
+        return {'isAdmin': user_id in ADMIN_IDS}, 200
+    except:
+        return {'isAdmin': False}, 200
 
 @app.route('/naejeon/room')
 def naejeon_room():
     try:
         room_id = request.args.get('roomId')
         db = get_db(); c = db.cursor()
-        c.execute("SELECT game_type, slots, status, extra_text, pos_a, pos_b, started FROM naejeon_rooms WHERE room_id=%s", (room_id,))
+        c.execute("""
+            SELECT game_type, slots, status, extra_text,
+                   pos_a, pos_b, started, fund_type, fund_amount
+            FROM naejeon_rooms WHERE room_id=%s
+        """, (room_id,))
         row = c.fetchone(); c.close(); db.close()
         if not row:
             return {'error': '내전 방을 찾을 수 없어요.'}, 404
-        return {'gameType':row[0],'slots':row[1] or {},'status':row[2],
-                'extraText':row[3] or '','posA':row[4] or [],'posB':row[5] or [],'started':bool(row[6])}, 200
+        return {
+            'gameType':   row[0],
+            'slots':      row[1] or {},
+            'status':     row[2],
+            'extraText':  row[3] or '',
+            'posA':       row[4] or [],
+            'posB':       row[5] or [],
+            'started':    bool(row[6]),
+            'fundType':   row[7] or '',
+            'fundAmount': row[8] or '',
+        }, 200
     except Exception as e:
         return {'error': str(e)}, 500
 
@@ -1185,87 +1155,215 @@ def naejeon_room():
 def naejeon_setup():
     try:
         import json as jl
-        data = request.get_json()
-        room_id = data.get('roomId')
-        user_id = int(data.get('userId'))
-        group_id = int(data.get('groupId'))
-        game_type = data.get('gameType')
-        extra_text = data.get('extraText','')
-        pos_a = data.get('posA',[])
-        pos_b = data.get('posB',[])
+        data        = request.get_json()
+        room_id     = data.get('roomId')
+        user_id     = int(data.get('userId'))
+        group_id    = int(data.get('groupId'))
+        game_type   = data.get('gameType')
+        extra_text  = data.get('extraText', '')
+        pos_a       = data.get('posA', [])
+        pos_b       = data.get('posB', [])
+        fund_type   = data.get('fundType', '')
+        fund_amount = data.get('fundAmount', '')
+
         if user_id not in ADMIN_IDS:
-            return {'ok':False,'error':'관리자만 사용할 수 있어요.'}, 403
+            return {'ok': False, 'error': '관리자만 사용할 수 있어요.'}, 403
+
         db = get_db(); c = db.cursor()
-        c.execute("UPDATE naejeon_rooms SET extra_text=%s, pos_a=%s, pos_b=%s, started=TRUE WHERE room_id=%s",
-                  (extra_text, jl.dumps(pos_a), jl.dumps(pos_b), room_id))
+        c.execute("""
+            UPDATE naejeon_rooms
+            SET extra_text=%s, pos_a=%s, pos_b=%s, started=TRUE,
+                fund_type=%s, fund_amount=%s
+            WHERE room_id=%s
+        """, (extra_text, jl.dumps(pos_a), jl.dumps(pos_b), fund_type, fund_amount, room_id))
         db.commit()
+
         game_names = {'lol':'리그오브레전드 5v5','sa5':'서든어택 5v5','sa6':'서든어택 6v6'}
-        gname = game_names.get(game_type,'내전')
-        param = f"{user_id}_{group_id}_{game_type}_{room_id}"
+        gname  = game_names.get(game_type, '내전')
+        param  = f"{user_id}_{group_id}_{game_type}_{room_id}"
         nj_url = f"{WEBAPP_BASE_URL}/naejeon?start={param}"
+
         send_naejeon_gif(group_id)
-        msg = f"\u2694\ufe0f {gname} \ub0b4\uc804 \ubaa8\uc9d1!"
-        if extra_text: msg += f"\n{extra_text}"
-        msg += "\n\n\uc544\ub798 \ubc84\ud2bc\uc744 \ub20c\ub7ec \ucc38\uc5ec\ud558\uc138\uc694!\n\u26a0\ufe0f \uccab \ucc38\uc5ec\uc2dc \ubd07 DM\uc5d0\uc11c /start \uba3c\uc800 \ub20c\ub7ec\uc8fc\uc138\uc694!"
+        msg = f"⚔️ {gname} 내전 모집!"
+        if extra_text:
+            msg += f"\n{extra_text}"
+        if fund_type and fund_amount:
+            msg += f"\n💰 {fund_type}: {fund_amount}"
+        msg += "\n\n아래 버튼을 눌러 참여하세요!\n⚠️ 처음 참여하시는 분은 @dopamin_ranking_bot 을 눌러 START 를 먼저 눌러주세요!"
+
         markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("\u2694\ufe0f \ub0b4\uc804 \ucc38\uc5ec\ud558\uae30", url=nj_url))
+        markup.add(types.InlineKeyboardButton("⚔️ 내전 참여하기", url=nj_url))
         bot.send_message(group_id, msg, reply_markup=markup)
-        c.execute("SELECT game_type,slots,status,extra_text,pos_a,pos_b,started FROM naejeon_rooms WHERE room_id=%s",(room_id,))
+
+        c.execute("""
+            SELECT game_type, slots, status, extra_text,
+                   pos_a, pos_b, started, fund_type, fund_amount
+            FROM naejeon_rooms WHERE room_id=%s
+        """, (room_id,))
         row = c.fetchone(); c.close(); db.close()
-        return {'ok':True,'room':{'gameType':row[0],'slots':row[1] or {},'status':row[2],
-                'extraText':row[3] or '','posA':row[4] or [],'posB':row[5] or [],'started':bool(row[6])}}, 200
+        return {
+            'ok': True,
+            'room': {
+                'gameType':   row[0],
+                'slots':      row[1] or {},
+                'status':     row[2],
+                'extraText':  row[3] or '',
+                'posA':       row[4] or [],
+                'posB':       row[5] or [],
+                'started':    bool(row[6]),
+                'fundType':   row[7] or '',
+                'fundAmount': row[8] or '',
+            }
+        }, 200
     except Exception as e:
-        import traceback; print(f"setup error: {e}\n{traceback.format_exc()}")
-        return {'ok':False,'error':str(e)}, 500
+        import traceback
+        print(f"setup error: {e}\n{traceback.format_exc()}")
+        return {'ok': False, 'error': str(e)}, 500
+
+@app.route('/naejeon/cancel', methods=['POST'])
+def naejeon_cancel():
+    try:
+        data     = request.get_json()
+        room_id  = data.get('roomId')
+        user_id  = int(data.get('userId', 0))
+        group_id = int(data.get('groupId', 0))
+
+        if user_id not in ADMIN_IDS:
+            return {'ok': False, 'error': '관리자만 사용할 수 있어요.'}, 403
+
+        db = get_db(); c = db.cursor()
+        c.execute("UPDATE naejeon_rooms SET status='cancelled' WHERE room_id=%s AND group_id=%s",
+                  (room_id, group_id))
+        affected = c.rowcount
+        db.commit(); c.close(); db.close()
+
+        if affected > 0:
+            try:
+                bot.send_message(group_id, "⚔️ 내전이 관리자에 의해 취소됐어요.")
+            except:
+                pass
+            return {'ok': True}, 200
+        else:
+            return {'ok': False, 'error': '내전을 찾을 수 없어요.'}, 404
+    except Exception as e:
+        import traceback
+        print(f"naejeon_cancel error: {e}\n{traceback.format_exc()}")
+        return {'ok': False, 'error': str(e)}, 500
 
 @app.route('/naejeon/admin_add', methods=['POST'])
 def naejeon_admin_add():
     try:
         import json as jl
-        data = request.get_json()
-        room_id = data.get('roomId'); user_id = int(data.get('userId'))
-        group_id = int(data.get('groupId')); slot_key = data.get('slotKey')
-        name = data.get('name','').strip()
-        if user_id not in ADMIN_IDS: return {'ok':False,'error':'관리자만 사용할 수 있어요.'}, 403
-        if not name: return {'ok':False,'error':'이름을 입력해주세요.'}, 400
+        data     = request.get_json()
+        room_id  = data.get('roomId')
+        user_id  = int(data.get('userId'))
+        group_id = int(data.get('groupId'))
+        slot_key = data.get('slotKey')
+        name     = data.get('name', '').strip()
+
+        if user_id not in ADMIN_IDS:
+            return {'ok': False, 'error': '관리자만 사용할 수 있어요.'}, 403
+        if not name:
+            return {'ok': False, 'error': '이름을 입력해주세요.'}, 400
+
         db = get_db(); c = db.cursor()
-        c.execute("SELECT game_type,slots,status,extra_text,pos_a,pos_b,started FROM naejeon_rooms WHERE room_id=%s FOR UPDATE",(room_id,))
+        c.execute("""
+            SELECT game_type, slots, status, extra_text, pos_a, pos_b, started, fund_type, fund_amount
+            FROM naejeon_rooms WHERE room_id=%s FOR UPDATE
+        """, (room_id,))
         row = c.fetchone()
-        if not row: c.close(); db.close(); return {'ok':False,'error':'방을 찾을 수 없어요.'}, 404
+        if not row:
+            c.close(); db.close()
+            return {'ok': False, 'error': '방을 찾을 수 없어요.'}, 404
+
         slots = row[1] if row[1] else {}
         slots[slot_key] = {'userId': f'admin_{slot_key}', 'name': name, 'team': slot_key.split('_')[0]}
-        total = {'lol':10,'sa5':10,'sa6':12}.get(row[0],10)
+
+        total  = {'lol':10,'sa5':10,'sa6':12}.get(row[0], 10)
         filled = len([v for v in slots.values() if v and v.get('userId')])
         status = 'closed' if filled >= total else 'open'
-        c.execute("UPDATE naejeon_rooms SET slots=%s, status=%s WHERE room_id=%s",(jl.dumps(slots),status,room_id))
+
+        c.execute("UPDATE naejeon_rooms SET slots=%s, status=%s WHERE room_id=%s",
+                  (jl.dumps(slots), status, room_id))
         db.commit()
-        if status == 'closed': _send_naejeon_result(group_id, row[0], slots, row[4] or [], row[5] or [])
-        c.execute("SELECT game_type,slots,status,extra_text,pos_a,pos_b,started FROM naejeon_rooms WHERE room_id=%s",(room_id,))
+
+        if status == 'closed':
+            _send_naejeon_result(group_id, row[0], slots, row[4] or [], row[5] or [])
+
+        c.execute("""
+            SELECT game_type, slots, status, extra_text, pos_a, pos_b, started, fund_type, fund_amount
+            FROM naejeon_rooms WHERE room_id=%s
+        """, (room_id,))
         row2 = c.fetchone(); c.close(); db.close()
-        return {'ok':True,'room':{'gameType':row2[0],'slots':row2[1] or {},'status':row2[2],
-                'extraText':row2[3] or '','posA':row2[4] or [],'posB':row2[5] or [],'started':bool(row2[6])}}, 200
-    except Exception as e: return {'ok':False,'error':str(e)}, 500
+        return {
+            'ok': True,
+            'room': {
+                'gameType':   row2[0],
+                'slots':      row2[1] or {},
+                'status':     row2[2],
+                'extraText':  row2[3] or '',
+                'posA':       row2[4] or [],
+                'posB':       row2[5] or [],
+                'started':    bool(row2[6]),
+                'fundType':   row2[7] or '',
+                'fundAmount': row2[8] or '',
+            }
+        }, 200
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}, 500
 
 @app.route('/naejeon/admin_remove', methods=['POST'])
 def naejeon_admin_remove():
     try:
         import json as jl
-        data = request.get_json()
-        room_id = data.get('roomId'); user_id = int(data.get('userId')); slot_key = data.get('slotKey')
-        if user_id not in ADMIN_IDS: return {'ok':False,'error':'관리자만 사용할 수 있어요.'}, 403
+        data     = request.get_json()
+        room_id  = data.get('roomId')
+        user_id  = int(data.get('userId'))
+        group_id = int(data.get('groupId'))
+        slot_key = data.get('slotKey')
+
+        if user_id not in ADMIN_IDS:
+            return {'ok': False, 'error': '관리자만 사용할 수 있어요.'}, 403
+
         db = get_db(); c = db.cursor()
-        c.execute("SELECT game_type,slots,status,extra_text,pos_a,pos_b,started FROM naejeon_rooms WHERE room_id=%s FOR UPDATE",(room_id,))
+        c.execute("""
+            SELECT game_type, slots, status, extra_text, pos_a, pos_b, started, fund_type, fund_amount
+            FROM naejeon_rooms WHERE room_id=%s FOR UPDATE
+        """, (room_id,))
         row = c.fetchone()
-        if not row: c.close(); db.close(); return {'ok':False,'error':'방을 찾을 수 없어요.'}, 404
+        if not row:
+            c.close(); db.close()
+            return {'ok': False, 'error': '방을 찾을 수 없어요.'}, 404
+
         slots = row[1] if row[1] else {}
-        if slot_key in slots: slots[slot_key] = None
-        c.execute("UPDATE naejeon_rooms SET slots=%s, status='open' WHERE room_id=%s",(jl.dumps(slots),room_id))
+        if slot_key in slots:
+            slots[slot_key] = None
+
+        c.execute("UPDATE naejeon_rooms SET slots=%s, status='open' WHERE room_id=%s",
+                  (jl.dumps(slots), room_id))
         db.commit()
-        c.execute("SELECT game_type,slots,status,extra_text,pos_a,pos_b,started FROM naejeon_rooms WHERE room_id=%s",(room_id,))
+
+        c.execute("""
+            SELECT game_type, slots, status, extra_text, pos_a, pos_b, started, fund_type, fund_amount
+            FROM naejeon_rooms WHERE room_id=%s
+        """, (room_id,))
         row2 = c.fetchone(); c.close(); db.close()
-        return {'ok':True,'room':{'gameType':row2[0],'slots':row2[1] or {},'status':row2[2],
-                'extraText':row2[3] or '','posA':row2[4] or [],'posB':row2[5] or [],'started':bool(row2[6])}}, 200
-    except Exception as e: return {'ok':False,'error':str(e)}, 500
+        return {
+            'ok': True,
+            'room': {
+                'gameType':   row2[0],
+                'slots':      row2[1] or {},
+                'status':     row2[2],
+                'extraText':  row2[3] or '',
+                'posA':       row2[4] or [],
+                'posB':       row2[5] or [],
+                'started':    bool(row2[6]),
+                'fundType':   row2[7] or '',
+                'fundAmount': row2[8] or '',
+            }
+        }, 200
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}, 500
 
 @app.route('/naejeon/join', methods=['POST'])
 def naejeon_join():
@@ -1291,29 +1389,24 @@ def naejeon_join():
 
         slots     = row[1] if row[1] else {}
         game_type = row[0]
-        pos_idx   = int(data.get('posIdx', 0))
-        slot_key  = f"{team}_{pos_idx}"
+        slot_key  = f"{team}_{pos_id}"
 
-        # 이미 참여중인지
         for k, v in slots.items():
             if v and str(v.get('userId')) == str(user_id):
                 c.close(); db.close()
                 return {'ok': False, 'error': '이미 참여하셨어요!'}, 400
 
-        # 슬롯 이미 차있는지
         if slots.get(slot_key):
             c.close(); db.close()
             return {'ok': False, 'error': '이미 선택된 포지션이에요!'}, 400
 
-        # 유저 이름 가져오기
         c.execute("SELECT first_name, username FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
-        ur = c.fetchone()
+        ur   = c.fetchone()
         name = clean_name(ur[0]) if ur and ur[0] else (f"@{ur[1]}" if ur and ur[1] else f"id:{user_id}")
 
         slots[slot_key] = {'userId': user_id, 'name': name, 'posLabel': pos_label, 'team': team}
 
-        # 총 슬롯 수 계산
-        total_map = {'lol': 10, 'sa5': 10, 'sa6': 12}
+        total_map = {'lol':10,'sa5':10,'sa6':12}
         total     = total_map.get(game_type, 10)
         filled    = len([v for v in slots.values() if v])
         status    = 'closed' if filled >= total else 'open'
@@ -1322,13 +1415,12 @@ def naejeon_join():
                   (json_lib.dumps(slots), status, room_id))
         db.commit(); c.close(); db.close()
 
-        # 마감되면 그룹에 결과 전송
         if status == 'closed':
-            game_names = {'lol': '리그오브레전드 5v5', 'sa5': '서든어택 5v5', 'sa6': '서든어택 6v6'}
+            game_names = {'lol':'리그오브레전드 5v5','sa5':'서든어택 5v5','sa6':'서든어택 6v6'}
             pos_order  = {
-                'lol':  ['top','jg','mid','adc','sup'],
-                'sa5':  ['sna','rfl1','rfl2','rfl3','rfl4'],
-                'sa6':  ['sna1','sna2','rfl1','rfl2','rfl3','rfl4'],
+                'lol': ['top','jg','mid','adc','sup'],
+                'sa5': ['sna','rfl1','rfl2','rfl3','rfl4'],
+                'sa6': ['sna1','sna2','rfl1','rfl2','rfl3','rfl4'],
             }
             pos_labels = {
                 'top':'탑','jg':'정글','mid':'미드','adc':'원딜','sup':'서폿',
@@ -1339,7 +1431,7 @@ def naejeon_join():
             for team_id, label in [('A','🟣 1팀'), ('B','🟢 2팀')]:
                 result += f"{label}\n"
                 for pos in pos_order.get(game_type, []):
-                    slot = slots.get(f"{team_id}_{pos}")
+                    slot  = slots.get(f"{team_id}_{pos}")
                     pname = pos_labels.get(pos, pos)
                     uname = slot['name'] if slot else '?'
                     result += f"  [{pname}] {uname}\n"
@@ -1356,9 +1448,9 @@ def naejeon_join():
 def naejeon_leave():
     try:
         import json as json_lib
-        data     = request.get_json()
-        room_id  = data.get('roomId')
-        user_id  = int(data.get('userId'))
+        data    = request.get_json()
+        room_id = data.get('roomId')
+        user_id = int(data.get('userId'))
 
         db = get_db(); c = db.cursor()
         c.execute("SELECT game_type, slots, status FROM naejeon_rooms WHERE room_id=%s FOR UPDATE", (room_id,))
@@ -1367,12 +1459,12 @@ def naejeon_leave():
             c.close(); db.close()
             return {'ok': False, 'error': '방을 찾을 수 없어요.'}, 404
 
-        slots = row[1] if row[1] else {}
+        slots   = row[1] if row[1] else {}
         updated = False
         for k, v in list(slots.items()):
             if v and str(v.get('userId')) == str(user_id):
                 slots[k] = None
-                updated = True
+                updated  = True
                 break
 
         if not updated:
@@ -1386,11 +1478,31 @@ def naejeon_leave():
     except Exception as e:
         return {'ok': False, 'error': str(e)}, 500
 
+def _send_naejeon_result(group_id, game_type, slots, pos_a, pos_b):
+    game_names = {'lol':'리그오브레전드 5v5','sa5':'서든어택 5v5','sa6':'서든어택 6v6'}
+    per = {'lol':5,'sa5':5,'sa6':6}.get(game_type, 5)
+    result = f"⚔️ {game_names.get(game_type,'')} 내전 시작!\n\n"
+    for team_id, label, positions in [('A','🟣 1팀',pos_a),('B','🟢 2팀',pos_b)]:
+        result += f"{label}\n"
+        for i, pos in enumerate(positions[:per]):
+            slot  = slots.get(f"{team_id}_{i}")
+            uname = slot['name'] if slot and slot.get('userId') else '?'
+            result += f"  [{pos}] {uname}\n"
+        result += "\n"
+    try:
+        bot.send_message(group_id, result)
+    except:
+        pass
+
+
+# ─────────────────────────────────────────────────────────
+# Webhook
+# ─────────────────────────────────────────────────────────
 @app.route('/' + BOT_TOKEN, methods=['POST'])
 def webhook():
     try:
         json_str = request.stream.read().decode('utf-8')
-        update = telebot.types.Update.de_json(json_str)
+        update   = telebot.types.Update.de_json(json_str)
         if update.message:
             handle_all(update.message)
         elif update.callback_query:
@@ -1408,6 +1520,10 @@ def webhook():
 def index():
     return 'Bot is running!', 200
 
+
+# ─────────────────────────────────────────────────────────
+# 시작
+# ─────────────────────────────────────────────────────────
 try:
     init_db()
     print("DB 초기화 성공!")
@@ -1416,3 +1532,8 @@ except Exception as e:
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+PYEOF
+echo "Done: $(wc -l < /mnt/user-data/outputs/bot.py) lines"
+출력
+
+Done: 1533 lines
