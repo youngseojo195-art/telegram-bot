@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>내전 모집</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0a0a1a;
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.topbar {
+  background: #12122a;
+  padding: 14px 16px 10px;
+  text-align: center;
+  border-bottom: 1px solid #1e1e3a;
+  flex-shrink: 0;
+}
+.top-title { font-size: 16px; font-weight: 700; color: #fff; }
+.top-sub   { font-size: 11px; color: #8888bb; margin-top: 3px; }
+
+.content {
+  flex: 1;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 90px;
+  overflow-y: auto;
+}
+
+/* 상태 바 */
+.status-bar {
+  background: #12122a;
+  border: 1px solid #1e1e3a;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.st-label { color: #8888bb; font-size: 12px; }
+.st-val   { color: #4a9eff; font-size: 14px; font-weight: 700; }
+.st-full  { color: #1d9e75; }
+
+/* 팀 레이아웃 */
+.teams-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.team-box {
+  background: #12122a;
+  border: 1px solid #1e1e3a;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.team-header {
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.team-a .team-header { background: #1a1030; color: #aa66ff; }
+.team-b .team-header { background: #0a1a10; color: #44cc88; }
+
+.slot {
+  padding: 9px 10px;
+  border-top: 1px solid #1e1e3a;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: background 0.15s;
+  min-height: 40px;
+}
+.slot:active { background: #1e1e3a; }
+.slot.filled { cursor: default; }
+.slot.filled:active { background: transparent; }
+.slot.mine { background: #0d1a10; }
+
+.pos-badge {
+  font-size: 9px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-weight: 700;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.pos-top { background: #2a1a3a; color: #aa77ff; }
+.pos-jg  { background: #1a2a1a; color: #44bb44; }
+.pos-mid { background: #2a2210; color: #ddaa33; }
+.pos-adc { background: #2a1010; color: #ee5555; }
+.pos-sup { background: #102030; color: #4488ee; }
+.pos-sna { background: #2a1010; color: #ff7777; }
+.pos-rfl { background: #102010; color: #77cc77; }
+
+.slot-name  { font-size: 12px; color: #fff; flex: 1; }
+.slot-empty { font-size: 11px; color: #44446688; flex: 1; font-style: italic; }
+.slot-mine-badge {
+  font-size: 9px;
+  color: #44cc88;
+  background: #0a2010;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.slot-cancel {
+  font-size: 10px;
+  color: #cc4444;
+  background: #200a0a;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  border: 1px solid #3a1010;
+}
+
+/* 참여 버튼 */
+.btn-wrap {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  padding: 12px 14px 24px;
+  background: #0a0a1a;
+  border-top: 1px solid #1e1e3a;
+}
+.btn-join {
+  width: 100%;
+  padding: 15px;
+  border-radius: 14px;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+.btn-join.active   { background: #4a9eff; color: #fff; box-shadow: 0 0 20px #4a9eff44; }
+.btn-join.inactive { background: #1e1e3a; color: #444466; cursor: not-allowed; }
+.btn-join.cancel   { background: #cc3333; color: #fff; }
+.btn-join.full     { background: #1d9e75; color: #fff; cursor: not-allowed; }
+
+/* 포지션 선택 모달 */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #12122a;
+  border-radius: 20px 20px 0 0;
+  padding: 20px 16px 32px;
+  width: 100%;
+  max-width: 480px;
+}
+.modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  margin-bottom: 16px;
+}
+.modal-sub {
+  font-size: 12px;
+  color: #8888bb;
+  text-align: center;
+  margin-bottom: 16px;
+  margin-top: -10px;
+}
+.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.modal-btn {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1.5px solid #1e1e3a;
+  background: #0a0a1a;
+  color: #ccc;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+.modal-btn:active { transform: scale(0.97); }
+.modal-btn.disabled { opacity: 0.35; cursor: not-allowed; }
+.modal-btn.sel-team-a { border-color: #aa66ff; background: #1a1030; color: #aa66ff; }
+.modal-btn.sel-team-b { border-color: #44cc88; background: #0a1a10; color: #44cc88; }
+.modal-cancel {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #1e1e3a;
+  background: transparent;
+  color: #8888bb;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+/* 완료 화면 */
+.done-screen {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+  padding: 14px;
+}
+.done-header {
+  background: #12122a;
+  border: 1px solid #1e1e3a;
+  border-radius: 14px;
+  padding: 24px;
+  text-align: center;
+}
+.done-icon  { font-size: 40px; margin-bottom: 8px; }
+.done-title { font-size: 18px; font-weight: 700; color: #fff; }
+.done-sub   { font-size: 12px; color: #8888bb; margin-top: 4px; }
+
+.sec-label { color: #8888bb; font-size: 10px; margin-bottom: 5px; letter-spacing: 0.04em; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="top-title" id="top-title">⚔️ 내전 모집</div>
+  <div class="top-sub" id="top-sub">포지션을 선택해서 참여하세요</div>
+</div>
+
+<div class="content" id="main-content">
+  <div class="status-bar">
+    <span class="st-label">참여 현황</span>
+    <span class="st-val" id="status-val">로딩 중...</span>
+  </div>
+
+  <div>
+    <div class="sec-label" id="teams-label">팀 구성</div>
+    <div class="teams-wrap" id="teams-wrap"></div>
+  </div>
+</div>
+
+<!-- 완료 화면 -->
+<div class="done-screen" id="done-screen">
+  <div class="done-header">
+    <div class="done-icon">⚔️</div>
+    <div class="done-title">내전 시작!</div>
+    <div class="done-sub">모든 슬롯이 채워졌어요. 그룹 채팅을 확인하세요!</div>
+  </div>
+</div>
+
+<div class="btn-wrap" id="btn-wrap">
+  <button class="btn-join inactive" id="btn-join" onclick="handleJoin()">
+    슬롯을 선택해서 참여하세요
+  </button>
+</div>
+
+<!-- 포지션 선택 모달 -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">포지션 & 팀 선택</div>
+    <div class="modal-sub" id="modal-sub"></div>
+
+    <div class="sec-label">팀 선택</div>
+    <div class="modal-grid" style="grid-template-columns:1fr 1fr; margin-bottom:14px">
+      <div class="modal-btn" id="m-team-a" onclick="selectTeam('A')">🟣 1팀</div>
+      <div class="modal-btn" id="m-team-b" onclick="selectTeam('B')">🟢 2팀</div>
+    </div>
+
+    <div class="sec-label">포지션 선택</div>
+    <div class="modal-grid" id="modal-pos-grid"></div>
+
+    <button class="modal-cancel" onclick="closeModal()">취소</button>
+  </div>
+</div>
+
+<script>
+// ── 파라미터 파싱 ──
+let userId  = null;
+let groupId = null;
+let gameType = null;
+let roomId   = null;
+
+try {
+  const params = new URLSearchParams(window.location.search);
+  const start  = params.get('start');
+  if (start) {
+    const parts = start.split('_');
+    userId   = parts[0] || null;
+    groupId  = parts[1] || null;
+    gameType = parts[2] || null; // lol / sa5 / sa6
+    roomId   = parts[3] || null;
+  }
+} catch(e) {}
+
+// ── 게임 설정 ──
+const GAME_CONFIG = {
+  lol: {
+    name: '리그오브레전드 5v5',
+    total: 10,
+    perTeam: 5,
+    positions: [
+      { id: 'top', label: '탑',  cls: 'pos-top' },
+      { id: 'jg',  label: '정글', cls: 'pos-jg'  },
+      { id: 'mid', label: '미드', cls: 'pos-mid' },
+      { id: 'adc', label: '원딜', cls: 'pos-adc' },
+      { id: 'sup', label: '서폿', cls: 'pos-sup' },
+    ]
+  },
+  sa5: {
+    name: '서든어택 5v5',
+    total: 10,
+    perTeam: 5,
+    positions: [
+      { id: 'sna', label: '스나', cls: 'pos-sna' },
+      { id: 'rfl1', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl2', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl3', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl4', label: '라플', cls: 'pos-rfl' },
+    ]
+  },
+  sa6: {
+    name: '서든어택 6v6',
+    total: 12,
+    perTeam: 6,
+    positions: [
+      { id: 'sna1', label: '스나', cls: 'pos-sna' },
+      { id: 'sna2', label: '스나', cls: 'pos-sna' },
+      { id: 'rfl1', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl2', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl3', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl4', label: '라플', cls: 'pos-rfl' },
+    ]
+  }
+};
+
+let config   = GAME_CONFIG[gameType] || GAME_CONFIG['lol'];
+let roomData = null;
+let mySlot   = null; // { team, posId }
+let selTeam  = null;
+let selPos   = null;
+let clickedSlot = null;
+
+// ── 초기화 ──
+document.getElementById('top-title').textContent = '⚔️ ' + config.name;
+
+// ── 데이터 로드 ──
+async function loadRoom() {
+  try {
+    const res  = await fetch(`/naejeon/room?roomId=${roomId}&userId=${userId}`);
+    roomData   = await res.json();
+    if (roomData.error) {
+      document.getElementById('main-content').innerHTML =
+        `<div style="text-align:center;padding:40px;color:#8888bb">${roomData.error}</div>`;
+      return;
+    }
+    config   = GAME_CONFIG[roomData.gameType] || config;
+    document.getElementById('top-title').textContent = '⚔️ ' + config.name;
+    renderRoom();
+  } catch(e) {
+    document.getElementById('main-content').innerHTML =
+      '<div style="text-align:center;padding:40px;color:#8888bb">로드 실패. 새로고침해주세요.</div>';
+  }
+}
+
+// ── 렌더링 ──
+function renderRoom() {
+  if (!roomData) return;
+  const slots  = roomData.slots || {};
+  const filled = Object.values(slots).filter(s => s).length;
+  const total  = config.total;
+
+  // 내 슬롯 찾기
+  mySlot = null;
+  for (const [key, slot] of Object.entries(slots)) {
+    if (slot && slot.userId == userId) {
+      mySlot = key; // "A_top" 형식
+    }
+  }
+
+  // 상태 바
+  const stVal = document.getElementById('status-val');
+  stVal.textContent = `${filled} / ${total}명`;
+  stVal.className   = filled === total ? 'st-val st-full' : 'st-val';
+
+  // 팀 렌더
+  const wrap = document.getElementById('teams-wrap');
+  wrap.innerHTML = '';
+  ['A', 'B'].forEach(team => {
+    const teamEl   = document.createElement('div');
+    const teamCls  = team === 'A' ? 'team-a' : 'team-b';
+    const teamColor = team === 'A' ? '🟣 1팀' : '🟢 2팀';
+    teamEl.className = `team-box ${teamCls}`;
+    teamEl.innerHTML = `<div class="team-header">${teamColor}</div>`;
+
+    config.positions.forEach(pos => {
+      const key  = `${team}_${pos.id}`;
+      const slot = slots[key];
+      const isMine = slot && slot.userId == userId;
+      const div  = document.createElement('div');
+      div.className = 'slot' + (slot ? ' filled' : '') + (isMine ? ' mine' : '');
+
+      if (slot) {
+        div.innerHTML = `
+          <span class="pos-badge ${pos.cls}">${pos.label}</span>
+          <span class="slot-name">${slot.name}</span>
+          ${isMine ? '<span class="slot-mine-badge">나</span>' : ''}
+        `;
+      } else {
+        div.innerHTML = `
+          <span class="pos-badge ${pos.cls}">${pos.label}</span>
+          <span class="slot-empty">비어있음</span>
+        `;
+        if (!mySlot && filled < total) {
+          div.onclick = () => openModal(team, pos);
+        }
+      }
+      teamEl.appendChild(div);
+    });
+    wrap.appendChild(teamEl);
+  });
+
+  // 버튼
+  const btn = document.getElementById('btn-join');
+  if (filled === total) {
+    btn.className   = 'btn-join full';
+    btn.textContent = '✅ 모집 완료!';
+    document.getElementById('done-screen').style.display = 'flex';
+    document.getElementById('main-content').style.paddingBottom = '14px';
+  } else if (mySlot) {
+    btn.className   = 'btn-join cancel';
+    btn.textContent = '❌ 참여 취소하기';
+  } else {
+    btn.className   = 'btn-join inactive';
+    btn.textContent = '위 슬롯을 탭해서 참여하세요';
+  }
+}
+
+// ── 모달 열기 ──
+function openModal(team, pos) {
+  if (mySlot) return;
+  clickedSlot = { team, pos };
+  selTeam = null;
+  selPos  = pos.id;
+
+  document.getElementById('modal-title').textContent = pos.label + ' 포지션';
+  document.getElementById('modal-sub').textContent   = '팀을 선택해주세요';
+
+  // 팀 버튼 상태
+  const slots = roomData.slots || {};
+  const aFull = config.positions.every(p => slots[`A_${p.id}`]);
+  const bFull = config.positions.every(p => slots[`B_${p.id}`]);
+
+  const mA = document.getElementById('m-team-a');
+  const mB = document.getElementById('m-team-b');
+  mA.className = 'modal-btn' + (aFull ? ' disabled' : '');
+  mB.className = 'modal-btn' + (bFull ? ' disabled' : '');
+
+  // 팀 미리 선택 (클릭한 쪽으로)
+  selectTeam(team);
+
+  document.getElementById('modal').classList.add('show');
+}
+
+function selectTeam(team) {
+  const slots = roomData.slots || {};
+  const key   = `${team}_${clickedSlot?.pos?.id}`;
+  if (slots[key]) return; // 이미 차있음
+
+  selTeam = team;
+  document.getElementById('m-team-a').className = 'modal-btn' + (team === 'A' ? ' sel-team-a' : '');
+  document.getElementById('m-team-b').className = 'modal-btn' + (team === 'B' ? ' sel-team-b' : '');
+
+  updateConfirmBtn();
+}
+
+function updateConfirmBtn() {
+  // modal-grid에 확인 버튼 추가
+  let confirmEl = document.getElementById('modal-confirm');
+  if (!confirmEl) {
+    confirmEl = document.createElement('button');
+    confirmEl.id        = 'modal-confirm';
+    confirmEl.className = 'btn-join active';
+    confirmEl.style.marginBottom = '8px';
+    confirmEl.style.borderRadius = '10px';
+    confirmEl.style.padding      = '12px';
+    confirmEl.style.fontSize     = '14px';
+    confirmEl.onclick = confirmJoin;
+    document.querySelector('.modal').insertBefore(
+      confirmEl,
+      document.querySelector('.modal-cancel')
+    );
+  }
+  confirmEl.textContent = selTeam
+    ? `✅ ${selTeam === 'A' ? '1팀' : '2팀'} ${clickedSlot?.pos?.label}로 참여하기`
+    : '팀을 선택해주세요';
+  confirmEl.className = selTeam ? 'btn-join active' : 'btn-join inactive';
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal')) return;
+  document.getElementById('modal').classList.remove('show');
+  const c = document.getElementById('modal-confirm');
+  if (c) c.remove();
+}
+
+// ── 참여 확정 ──
+async function confirmJoin() {
+  if (!selTeam || !clickedSlot) return;
+  const btn = document.getElementById('modal-confirm');
+  if (btn) { btn.textContent = '참여 중...'; btn.className = 'btn-join inactive'; }
+
+  try {
+    const res  = await fetch('/naejeon/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId, userId, groupId,
+        team: selTeam,
+        posId: clickedSlot.pos.id,
+        posLabel: clickedSlot.pos.label
+      })
+    });
+    const data = await res.json();
+    document.getElementById('modal').classList.remove('show');
+    if (btn) btn.remove();
+    if (data.ok) {
+      roomData = data.room;
+      renderRoom();
+    } else {
+      alert(data.error || '오류가 발생했어요.');
+    }
+  } catch(e) {
+    alert('오류가 발생했어요. 다시 시도해주세요.');
+  }
+}
+
+// ── 참여 취소 ──
+async function handleJoin() {
+  if (!mySlot) return;
+  const btn = document.getElementById('btn-join');
+  btn.textContent = '취소 중...';
+
+  try {
+    const res  = await fetch('/naejeon/leave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId, userId, groupId })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      roomData = data.room;
+      renderRoom();
+    } else {
+      alert(data.error || '오류가 발생했어요.');
+    }
+  } catch(e) {
+    alert('오류가 발생했어요. 다시 시도해주세요.');
+  }
+}
+
+// ── 폴링 (5초마다 갱신) ──
+loadRoom();
+setInterval(loadRoom, 5000);
+</script>
+</body>
+</html>
