@@ -813,9 +813,10 @@ def handle_all(message):
                 set_pending(user_id, group_id, current_teams, sent.message_id)
                 bot.reply_to(message, f"📩 {first_name}님, DM으로 수정 메시지를 보내드렸어요!")
             except Exception as e:
-                bot.reply_to(message,
-                    f"⚠️ DM을 보낼 수 없어요!\n"
-                    f"@dopamin_ranking_bot 을 눌러 START 버튼을 눌러주세요!")
+                print(f"DM 전송 실패: {e}")
+                bot.send_message(group_id,
+                    f"⚠️ {first_name}님, DM을 보낼 수 없어요!\n"
+                    f"@dopamin_ranking_bot 을 눌러 START 를 먼저 눌러주세요!")
 
         # ── /리스트 ──
         elif text.strip().startswith('/리스트'):
