@@ -19,7 +19,7 @@ app = Flask(__name__)
 KST = pytz.timezone('Asia/Seoul')
 
 # ─────────────────────────────────────────────────────────
-# 관리자 설정
+# 관리자 설정 (최신 명단 적용 완료)
 # ─────────────────────────────────────────────────────────
 ADMIN_IDS = [8698678650, 8236798970, 8621088096, 7319936275]
 
@@ -55,14 +55,14 @@ def send_affiliate_gif(chat_id):
         print(f"제휴 GIF 전송 실패: {e}")
 
 # ─────────────────────────────────────────────────────────
-# 제휴 텍스트
+# 제휴 텍스트 (최신 리스트 적용 완료)
 # ─────────────────────────────────────────────────────────
 AFFILIATE_TEXT = """🎰 <b>카지노</b>
 ──────────────────
 <b>[평생]</b> · <a href="https://t.me/gamte59/31">렛츠뱃</a>
 <b>[평생]</b> · <a href="https://t.me/gamte59/28">예스뱃</a>
 <b>[평생]</b> · <a href="https://t.me/gamte59/96">스피드벳</a>
-<b>[평생]</b> · <a href="https://t.me/gamte59/94>띵벳</a>
+<b>[평생]</b> · <a href="https://t.me/gamte59/94">띵벳</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/44">지엑스뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/46">케이비씨겜</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/49">블록체인바카라</a>
@@ -74,7 +74,6 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/78">소울카지노</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/84">123GAME카지노</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/100">벨라벳</a>
-
 
 💸 <b>급전</b>
 ──────────────────
@@ -219,6 +218,14 @@ def init_db():
             fund_amount TEXT DEFAULT '',
             created_at TIMESTAMP DEFAULT NOW()
         )""")
+        
+        # 실시간 타임어택 이벤트 전용 테이블 스키마 생성
+        c.execute("""CREATE TABLE IF NOT EXISTS naejeon_events (
+            room_id VARCHAR(50) PRIMARY KEY,
+            end_time TIMESTAMP NOT NULL,
+            winner_count INTEGER NOT NULL,
+            reward_text TEXT NOT NULL,
+            is_active BOOLEAN DEFAULT FALSE)""")
         
         for col in [
             ("extra_text",  "TEXT DEFAULT ''"),
@@ -1123,6 +1130,18 @@ def naejeon_room():
         row = c.fetchone()
         if not row:
             return {'error': '내전 방을 찾을 수 없어요.'}, 404
+            
+        # 이벤트 정보 함께 딜리버리
+        c.execute("SELECT end_time, winner_count, reward_text, is_active FROM naejeon_events WHERE room_id=%s", (room_id,))
+        ev = c.fetchone()
+        event_data = None
+        if ev and ev[3]:
+            event_data = {
+                'endTime': ev[0].isoformat(),
+                'winnerCount': ev[1],
+                'rewardText': ev[2]
+            }
+            
         return {
             'gameType':   row[0],
             'slots':      row[1] or {},
@@ -1133,6 +1152,7 @@ def naejeon_room():
             'started':    bool(row[6]),
             'fundType':   row[7] or '',
             'fundAmount': row[8] or '',
+            'event':      event_data
         }, 200
     except Exception as e:
         return {'error': str(e)}, 500
@@ -1170,10 +1190,9 @@ def naejeon_setup():
         param  = f"{user_id}_{group_id}_{game_type}_{room_id}"
         nj_url = f"{WEBAPP_BASE_URL}/naejeon?start={param}"
 
-        # ── 금액 천 단위 콤마 + '원' 포맷팅 처리 ──
         display_amount = fund_amount
         if fund_amount.isdigit():
-            display_amount = f"{int(fund_amount):,}원"  # 👈 콤마와 '원' 추가
+            display_amount = f"{int(fund_amount):,}원"
 
         send_naejeon_gif(group_id)
         msg = f"⚙️ {gname} 내전 설정 변경 및 공지!"
@@ -1455,6 +1474,115 @@ def _send_naejeon_result(group_id, game_type, slots):
         bot.send_message(group_id, result)
     except:
         pass
+
+
+# ─────────────────────────────────────────────────────────
+# 🔥 타임어택 이벤트 API 엔드포인트 세트
+# ─────────────────────────────────────────────────────────
+@app.route('/naejeon/start_event', methods=['POST'])
+def start_event():
+    db = get_db(); c = db.cursor()
+    try:
+        data = request.get_json()
+        room_id = data.get('roomId')
+        user_id = int(data.get('userId'))
+        group_id = int(data.get('groupId'))
+        mins = int(data.get('mins', 5))
+        winners = int(data.get('winners', 1))
+        reward = data.get('reward', '').strip()
+
+        if user_id not in ADMIN_IDS:
+            return {'ok': False, 'error': '관리자만 사용할 수 있어요.'}, 403
+        if not reward:
+            return {'ok': False, 'error': '보상 내용을 입력해주세요.'}, 400
+
+        end_time = datetime.now(KST) + timedelta(minutes=mins)
+        
+        c.execute("""
+            INSERT INTO naejeon_events (room_id, end_time, winner_count, reward_text, is_active)
+            VALUES (%s, %s, %s, %s, TRUE)
+            ON CONFLICT (room_id) DO UPDATE SET
+            end_time=%s, winner_count=%s, reward_text=%s, is_active=TRUE
+        """, (room_id, end_time, winners, reward, end_time, winners, reward))
+        db.commit()
+
+        # 금액 형식일 경우 자동으로 콤마+'원' 붙여주는 센스 발휘
+        formatted_reward = reward
+        if reward.isdigit():
+            formatted_reward = f"{int(reward):,}원"
+
+        bot.send_message(
+            group_id, 
+            f"🚨 <b>도파민 타임어택 투표 런칭!</b> 🚨\n"
+            f"──────────────────\n"
+            f"⏱ <b>제한시간:</b> {mins}분 배틀\n"
+            f"🎁 <b>이벤트 보상:</b> {formatted_reward}\n"
+            f"👥 <b>추첨 인원:</b> {winners}명 명단 스크롤\n"
+            f"──────────────────\n"
+            f"⚠️ 마감 직전 타이머 종료 전까지 웹앱에 접속해 빠르게 자리를 선점하세요!",
+            parse_mode='HTML'
+        )
+        return {'ok': True}, 200
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}, 500
+    finally:
+        c.close(); db.close()
+
+@app.route('/naejeon/finish_event', methods=['POST'])
+def finish_event():
+    db = get_db(); c = db.cursor()
+    try:
+        data = request.get_json()
+        room_id = data.get('roomId')
+
+        c.execute("SELECT is_active, winner_count, reward_text FROM naejeon_events WHERE room_id=%s", (room_id,))
+        ev = c.fetchone()
+        if not ev or not ev[0]:
+            return {'ok': False, 'error': '이미 종료되었거나 없는 이벤트입니다.'}, 400
+
+        winner_count, reward_text = ev[1], ev[2]
+
+        c.execute("SELECT group_id, slots FROM naejeon_rooms WHERE room_id=%s", (room_id,))
+        room = c.fetchone()
+        if not room:
+            return {'ok': False, 'error': '방을 찾을 수 없습니다.'}, 44
+        group_id, slots = room[0], room[1]
+
+        # 실존 유저 후보 명단만 필터링 (admin 대리 추가 계정 제외)
+        candidates = []
+        for k, v in slots.items():
+            if v and v.get('userId') and not str(v.get('userId')).startswith('admin_'):
+                candidates.append(v.get('name', '익명'))
+
+        winners = []
+        if candidates:
+            winners = random.sample(candidates, min(len(candidates), winner_count))
+
+        c.execute("UPDATE naejeon_events SET is_active=FALSE WHERE room_id=%s", (room_id,))
+        db.commit()
+
+        formatted_reward = reward_text
+        if reward_text.isdigit():
+            formatted_reward = f"{int(reward_text):,}원"
+
+        winner_lines = "\n".join([f"🥇 <b>{name}</b>" for name in winners]) if winners else "❌ 참여자 부족으로 인한 추첨 취소"
+        
+        bot.send_message(
+            group_id,
+            f"🏁 <b>타임어택 이벤트 종료 (타임오버)!</b> 🏁\n"
+            f"──────────────────\n"
+            f"🎁 <b>지급 보상:</b> {formatted_reward}\n\n"
+            f"🎉 <b>슬롯머신 잭팟 추첨 당첨자 리스트:</b>\n"
+            f"{winner_lines}\n"
+            f"──────────────────\n"
+            f"축하드립니다! 당첨자 형들은 방장에게 보상을 수령하세요! 🥳",
+            parse_mode='HTML'
+        )
+        return {'ok': True, 'winners': winners}, 200
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}, 500
+    finally:
+        c.close(); db.close()
 
 
 # ─────────────────────────────────────────────────────────
