@@ -1596,7 +1596,20 @@ def vote_room():
             return {'error': '이벤트를 찾을 수 없어요.'}, 404
         c.execute("SELECT user_id, name FROM vote_participants WHERE room_id=%s ORDER BY joined_at", (room_id,))
         parts = [{'userId': r[0], 'name': r[1]} for r in c.fetchall()]
-        end_time_str = row[8].isoformat() if row[8] else None
+
+        # ✅ 핵심 수정: UTC ISO 형식으로 내보내기 (Z 접미사 = UTC)
+        end_time_str = None
+        if row[8]:
+            import pytz
+            dt = row[8]
+            # DB에서 naive datetime으로 오면 UTC로 가정, aware면 UTC 변환
+            if dt.tzinfo is None:
+                dt = pytz.utc.localize(dt)
+            else:
+                dt = dt.astimezone(pytz.utc)
+            # JS가 확실히 인식하는 Z(UTC) 포맷으로
+            end_time_str = dt.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+
         return {
             'roomId':       row[0],
             'groupId':      row[1],
