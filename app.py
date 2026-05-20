@@ -924,73 +924,40 @@ def handle_all(message):
             
             bot.reply_to(message, f"👑 관리자 전용 내전 마스터 수정 링크가 생성되었습니다.\n인원이 가득 차서 잠긴 상태여도 강제 추가 및 내보내기가 가능합니다.", reply_markup=markup)
 
-        # ── 🔥 획기적인 /투표 커맨드 장치 (원스톱 타임어택 생성기) ──
+        # ── /투표 (웹에서 설정) ──
         elif text.strip().startswith('/투표'):
             if message.chat.type == 'private': return
             if user_id not in ADMIN_IDS:
                 bot.reply_to(message, "⚠️ 관리자만 투표 이벤트를 생성할 수 있어요!"); return
-            
-            # 구문 분석 패턴: /투표 [롤/서든] [시간분] [보상]
-            # 예시: /투표 롤 5 치킨세트 / /투표 서든 10 30000
-            parts = text.strip().split(maxsplit=3)
-            if len(parts) < 4:
-                bot.reply_to(message, "⏱️ <b>/투표 사용법 가이드</b>\n\n<code>/투표 [롤/서든] [시간(분)] [보상내용]</code>\n\n정확한 예시:\n👉 <code>/투표 롤 5 치킨한마리빵</code>\n👉 <code>/투표 서든 10 50000</code> (숫자만 입력 시 자동 원 단위 컴마 적용)", parse_mode='HTML')
-                return
-                
-            game_arg = parts[1]
-            mins_str = parts[2]
-            reward_text = parts[3].strip()
-            
-            game_map = {'롤':'lol', '서든':'sa5', 'lol':'lol', 'sa':'sa5', 'sa5':'sa5', 'sa6':'sa6'}
-            game_type = game_map.get(game_arg)
-            
-            if not game_type:
-                bot.reply_to(message, "⚠️ 게임 종류는 [롤] 또는 [서든] 중에서만 지정이 가능합니다."); return
-            if not mins_str.isdigit():
-                bot.reply_to(message, "⚠️ 제한 시간은 숫자로만 입력해 주세요. (예: 5)"); return
-                
-            mins = int(mins_str)
-            winners_count = 1 # 텔레그램 채팅방 한줄 요약 직관성을 위해 기본 1명 고정 스펙트럼 처리
-            
+
+            # room_id 미리 생성 후 웹에서 설정하도록 전달
+            room_id = str(uuid.uuid4())[:8]
+
             db = get_db(); c = db.cursor()
             try:
-                # 1. 먼저 신규 내전 방 베이스 레이어 즉시 인서트
-                room_id = str(uuid.uuid4())[:8]
-                c.execute("INSERT INTO naejeon_rooms (room_id, group_id, game_type, slots, extra_text) VALUES (%s,%s,%s,%s,%s)",
-                          (room_id, group_id, game_type, '{}', f"🔥 타임어택 배틀: {reward_text}"))
-                
-                # 2. 이어서 타임어택 이벤트 동시성 테이블 스케줄링 세팅 동시 처리
-                end_time = datetime.now(KST) + timedelta(minutes=mins)
-                c.execute("""INSERT INTO naejeon_events (room_id, end_time, winner_count, reward_text, is_active)
-                             VALUES (%s, %s, %s, %s, TRUE)""",
-                          (room_id, end_time, winners_count, reward_text))
+                c.execute(
+                    "INSERT INTO naejeon_rooms (room_id, group_id, game_type, slots, extra_text) VALUES (%s,%s,%s,%s,%s)",
+                    (room_id, group_id, 'lol', '{}', '')
+                )
                 db.commit()
             finally:
                 c.close(); db.close()
-                
-            # 웹앱 연동 파라미터 세팅
-            param = f"{user_id}_{group_id}_{game_type}_{room_id}"
-            nj_url = f"{WEBAPP_BASE_URL}/naejeon?start={param}"
-            
-            formatted_reward = reward_text
-            if reward_text.isdigit():
-                formatted_reward = f"{int(reward_text):,}원"
-                
-            send_naejeon_gif(group_id)
-            
+
+            # mode=vote_setup 으로 웹에서 게임종류/시간/보상 설정 가능
+            param  = f"{user_id}_{group_id}_lol_{room_id}"
+            nj_url = f"{WEBAPP_BASE_URL}/naejeon?start={param}&mode=vote_setup"
+
             markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("🔥 실시간 타임어택 투표 참여", url=nj_url))
-            
-            bot.send_message(
-                group_id, 
-                f"🚨 <b>단톡방 긴급 도파민 타임어택 투표 시작!</b> 🚨\n"
-                f"──────────────────\n"
-                f"🎮 <b>대상 종목:</b> {game_arg.upper()} 매치\n"
-                f"⏱ <b>제한 시간:</b> {mins}분 폭주 레이스\n"
-                f"🎁 <b>추첨 보상:</b> {formatted_reward}\n"
-                f"──────────────────\n"
-                f"👉 아래 버튼을 누르면 웹 화면 상단에 <b>0.01초 단위 네온 타이머</b>가 작동합니다!\n"
-                f"시간이 다 가기 전에 빠르게 빈 슬롯 투표를 선점하세요!",
+            markup.add(types.InlineKeyboardButton("🔥 투표 이벤트 설정하기", url=nj_url))
+
+            send_naejeon_gif(group_id)
+            bot.reply_to(
+                message,
+                "🎮 <b>투표 이벤트 설정</b>\n"
+                "──────────────────\n"
+                "아래 버튼을 눌러 웹에서\n"
+                "게임 종류 / 제한 시간 / 보상을\n"
+                "직접 설정하고 시작하세요!",
                 reply_markup=markup,
                 parse_mode='HTML'
             )
@@ -1174,7 +1141,7 @@ def kbo_hot():
 
 
 # ─────────────────────────────────────────────────────────
-# Flask 라우트 — 내전 
+# Flask 라우트 — 내전
 # ─────────────────────────────────────────────────────────
 @app.route('/naejeon')
 def serve_naejeon():
