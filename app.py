@@ -1168,17 +1168,17 @@ def naejeon_setup():
         param  = f"{user_id}_{group_id}_{game_type}_{room_id}"
         nj_url = f"{WEBAPP_BASE_URL}/naejeon?start={param}"
 
-        # ── 금액 천 단위 콤마 포맷팅 처리 ──
+        # ── 금액 천 단위 콤마 + '원' 포맷팅 처리 ──
         display_amount = fund_amount
         if fund_amount.isdigit():
-            display_amount = f"{int(fund_amount):,}"
+            display_amount = f"{int(fund_amount):,}원"  # 👈 콤마와 '원' 추가
 
         send_naejeon_gif(group_id)
         msg = f"⚙️ {gname} 내전 설정 변경 및 공지!"
         if extra_text:
             msg += f"\n📢 공지: {extra_text}"
         if fund_type and fund_amount:
-            msg += f"\n💰 {fund_type} 조건: {display_amount}"  # 👈 콤마 적용된 금액 반영
+            msg += f"\n💰 {fund_type} 조건: {display_amount}"
         msg += f"\n\n👉 <a href='{nj_url}'>[여기]를 눌러 내전 현황 보기</a>"
 
         markup = types.InlineKeyboardMarkup()
