@@ -751,7 +751,7 @@ async function adminStart() {
 // ════════════════════════════════════════
 async function loadEvent() {
   try {
-    const res  = await fetch(`/vote/room?roomId=${roomId}`);
+    const res = await fetch(`/vote/room?roomId=${roomId}`);
     const data = await res.json();
     if (data.error) return;
     eventData    = data;
