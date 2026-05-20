@@ -15,6 +15,26 @@ body {
   flex-direction: column;
 }
 
+/* ── 🔥 타임어택 실시간 네온 타이머 바 ── */
+.timer-bar {
+  background: #1a0505;
+  border-bottom: 2px solid #ff4d4d;
+  padding: 12px 16px 10px;
+  text-align: center;
+  position: sticky; top: 0; z-index: 50;
+  display: none; /* 활성화 시 스크립트로 제어 */
+  box-shadow: 0 4px 20px rgba(255, 77, 77, 0.2);
+}
+.timer-label { font-size: 10px; color: #ff8888; letter-spacing: 2px; font-weight: 700; margin-bottom: 2px; }
+.timer-num {
+  font-family: monospace;
+  font-size: 34px;
+  font-weight: 900;
+  color: #ff4d4d;
+  text-shadow: 0 0 12px rgba(255, 77, 77, 0.8);
+  line-height: 1;
+}
+
 /* ── 상단 바 ── */
 .topbar {
   background: #12122a;
@@ -46,10 +66,19 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: all 0.3s ease-out;
 }
 .st-label { color: #8888bb; font-size: 12px; }
-.st-val   { color: #4a9eff; font-size: 14px; font-weight: 700; }
-.st-full  { color: #1d9e75; }
+.st-val   { color: #4a9eff; font-size: 14px; font-weight: 700; transition: all 0.2s; }
+.st-full  { color: #1d9e75; text-shadow: 0 0 8px rgba(29, 158, 117, 0.6); }
+
+/* 🔥 게이지 실시간 출렁임 애니메이션 */
+@keyframes pulse-change {
+  0% { transform: scale(1); color: #4a9eff; }
+  50% { transform: scale(1.12); color: #deff9a; }
+  100% { transform: scale(1); color: #4a9eff; }
+}
+.pulse-active { animation: pulse-change 0.4s ease-in-out; }
 
 /* ── 사비/찬조 배너 ── */
 .fund-banner {
@@ -104,6 +133,7 @@ body {
 }
 .admin-btn:active { opacity: 0.7; }
 .admin-btn-setup  { color: #bb88ff; border-color: #5533aa; }
+.admin-btn-timeattack { color: #ff4d4d; border-color: #ff4d4d; }
 .admin-btn-cancel { color: #ff7777; border-color: #aa3333; }
 
 /* ── 팀 레이아웃 ── */
@@ -245,7 +275,7 @@ body {
   color: #8888bb; font-size: 13px; cursor: pointer; margin-top: 4px;
 }
 
-/* ── 관리자 공용 모달 ── */
+/* ── 관리자 공용 및 타임어택 모달 ── */
 .admin-modal-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.8);
@@ -314,48 +344,48 @@ body {
 </head>
 <body>
 
+<div class="timer-bar" id="timer-bar">
+  <div class="timer-label">⏱️ DOPAMINE TIMEATTACK EVENT</div>
+  <div class="timer-num" id="timer-display">00:00.00</div>
+</div>
+
 <div class="topbar">
   <div class="top-title" id="top-title">⚔️ 내전 모집</div>
   <div class="top-sub" id="top-sub">포지션을 선택해서 참여하세요</div>
 </div>
 
 <div class="content" id="main-content">
-  <!-- 상태 바 -->
-  <div class="status-bar">
+  <div class="status-bar" id="status-bar-box">
     <span class="st-label">참여 현황</span>
     <span class="st-val" id="status-val">로딩 중...</span>
   </div>
 
-  <!-- 사비/찬조 배너 (있을 때만 표시) -->
   <div class="fund-banner" id="fund-banner" style="display:none">
     <span class="fund-badge" id="fund-badge"></span>
     <span id="fund-amount-text"></span>
   </div>
 
-  <!-- 관리자 배너 -->
   <div class="admin-banner" id="admin-banner" style="display:none">
     <span class="admin-badge">👑 관리자 모드</span>
     <div class="admin-actions">
-      <button class="admin-btn admin-btn-setup" onclick="openSetupModal()">⚙️ 내전 설정</button>
+      <button class="admin-btn admin-btn-setup" onclick="openSetupModal()">⚙️ 설정</button>
+      <button class="admin-btn admin-btn-timeattack" onclick="openTimeAttackModal()">🔥 타임어택</button>
       <button class="admin-btn admin-btn-cancel" onclick="adminCancelRoom()">🗑 취소</button>
     </div>
   </div>
 
-  <!-- 팀 목록 -->
   <div>
     <div class="sec-label">팀 구성</div>
     <div class="teams-wrap" id="teams-wrap"></div>
   </div>
 </div>
 
-<!-- 하단 버튼 -->
 <div class="btn-wrap">
   <button class="btn-join inactive" id="btn-join" onclick="handleMainBtn()">
     슬롯을 선택해서 참여하세요
   </button>
 </div>
 
-<!-- ── 일반 유저: 팀/포지션 선택 모달 ── -->
 <div class="modal-overlay" id="modal" onclick="onModalOverlayClick(event)">
   <div class="modal">
     <div class="modal-title" id="modal-title">포지션 선택</div>
@@ -375,7 +405,6 @@ body {
   </div>
 </div>
 
-<!-- ── 관리자: 이름 추가 모달 ── -->
 <div class="admin-modal-overlay" id="admin-add-modal">
   <div class="admin-modal">
     <div class="admin-modal-title" id="admin-add-title">👑 참여자 추가</div>
@@ -389,7 +418,6 @@ body {
   </div>
 </div>
 
-<!-- ── 관리자: 강제 제거 모달 ── -->
 <div class="admin-modal-overlay" id="admin-remove-modal">
   <div class="admin-modal">
     <div class="admin-modal-title">🗑 참여자 제거</div>
@@ -401,32 +429,21 @@ body {
   </div>
 </div>
 
-<!-- ── 관리자: 내전 설정 모달 ── -->
 <div class="admin-modal-overlay" id="setup-modal">
   <div class="admin-modal" style="max-width:420px">
     <div class="admin-modal-title">⚙️ 내전 설정 및 공지</div>
-
-    <!-- 사비 / 찬조 / 없음 선택 -->
     <div class="sec-label" style="margin-bottom:6px">💰 금액 유형</div>
     <div class="fund-select-wrap">
       <button class="fund-type-btn" id="fund-btn-sabi"  onclick="setFundType('사비')">💸 사비</button>
       <button class="fund-type-btn" id="fund-btn-chajo" onclick="setFundType('찬조')">🎁 찬조</button>
       <button class="fund-type-btn active-none" id="fund-btn-none"  onclick="setFundType('')">없음</button>
     </div>
-
-    <!-- 금액 입력 -->
     <div id="fund-amount-wrap" style="display:none">
       <div class="sec-label" style="margin-bottom:6px">금액 입력</div>
-      <input class="admin-input" type="text" id="setup-fund-amount"
-             placeholder="예: 1인당 5,000원 / 판당 3만원" maxlength="30" />
+      <input class="admin-input" type="text" id="setup-fund-amount" placeholder="예: 1인당 5,000원 / 판당 3만원" maxlength="30" />
     </div>
-
-    <!-- 부가 텍스트 -->
     <div class="sec-label" style="margin-bottom:6px">게임 정보 / 부가 텍스트</div>
-    <input class="admin-input" type="text" id="setup-extra-text"
-           placeholder="예: 롤 내전 치킨빵 / 서든 헬리오스 매치" maxlength="60" />
-
-    <!-- 포지션 순서 (선택) -->
+    <input class="admin-input" type="text" id="setup-extra-text" placeholder="예: 롤 내전 치킨빵 / 서든 헬리오스 매치" maxlength="60" />
     <div class="setup-row">
       <div>
         <div class="sec-label" style="margin-bottom:6px">1팀 포지션 순서</div>
@@ -437,7 +454,6 @@ body {
         <input class="admin-input" type="text" id="setup-pos-b" placeholder="예: 탑,정글,미드,원딜,서폿" style="margin-bottom:0" />
       </div>
     </div>
-
     <div class="admin-modal-btns" style="margin-top:14px">
       <button class="admin-confirm-btn" id="setup-confirm-btn" onclick="confirmSetup()">적용 & 그룹 공지</button>
       <button class="admin-dismiss-btn" onclick="closeSetupModal()">취소</button>
@@ -445,7 +461,22 @@ body {
   </div>
 </div>
 
-<!-- 토스트 -->
+<div class="admin-modal-overlay" id="timeattack-modal">
+  <div class="admin-modal">
+    <div class="admin-modal-title" style="color: #ff4d4d;"><i class="fa-solid fa-bolt"></i> 타임어택 이벤트 설정</div>
+    <div class="sec-label">⏱️ 제한 시간 선택 (분)</div>
+    <input class="admin-input" type="number" id="event-mins" value="5" min="1" max="60">
+    <div class="sec-label">👥 랜덤 추첨 당첨 인원수 (명)</div>
+    <input class="admin-input" type="number" id="event-winners" value="1" min="1" max="10">
+    <div class="sec-label">🎁 당첨자 지급 보상 내용</div>
+    <input class="admin-input" type="text" id="event-reward" placeholder="예: 싸이버거 세트 / 10000" maxlength="30">
+    <div class="admin-modal-btns" style="margin-top:14px;">
+      <button class="admin-confirm-btn" style="background: #ff4d4d;" onclick="confirmTimeAttack()">🔥 시작 & 단톡방 알림</button>
+      <button class="admin-dismiss-btn" onclick="closeTimeAttackModal()">취소</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -509,6 +540,7 @@ let config   = GAME_CONFIG[gameType] || GAME_CONFIG['lol'];
 let roomData = null;
 let isAdmin  = false;
 let mySlot   = null;
+let timerInterval = null;
 
 let selTeam        = null;
 let clickedPos     = null;
@@ -531,6 +563,7 @@ async function checkAdmin() {
     const res  = await fetch(`/naejeon/check_admin?userId=${userId}`);
     const data = await res.json();
     isAdmin = data.isAdmin === true;
+    document.getElementById('admin-banner').style.display = isAdmin ? 'flex' : 'none';
   } catch(e) {
     isAdmin = false;
   }
@@ -552,6 +585,7 @@ async function loadRoom() {
       document.getElementById('top-sub').textContent = roomData.extraText;
     }
     renderRoom();
+    handleEventTimer(roomData.event); // 🔥 타임어택 동기화 코어 작동
   } catch(e) {}
 }
 
@@ -569,28 +603,31 @@ function renderRoom() {
     }
   }
 
-  document.getElementById('admin-banner').style.display = isAdmin ? 'flex' : 'none';
-
-  // 사비/찬조 배너
+  // 사비/찬조 배너 렌더링
   const fundBanner = document.getElementById('fund-banner');
   if (roomData.fundType && roomData.fundAmount) {
     fundBanner.style.display = 'flex';
     const badge = document.getElementById('fund-badge');
     badge.textContent = roomData.fundType === '사비' ? '💸 사비' : '🎁 찬조';
     
-    // ── 금액 천 단위 콤마 + '원' 포맷팅 처리 ──
     let amt = roomData.fundAmount;
     if (!isNaN(amt) && amt.trim() !== '') {
-      amt = Number(amt).toLocaleString() + "원"; // 👈 숫자인 경우 콤마와 '원' 자동 삽입
+      amt = Number(amt).toLocaleString() + "원";
     }
-    
     document.getElementById('fund-amount-text').textContent = amt;
   } else {
     fundBanner.style.display = 'none';
   }
 
+  // 🔥 게이지 실시간 출렁임 액체 애니메이션 피드백 적용
   const stVal = document.getElementById('status-val');
-  stVal.textContent = `${filled} / ${total}명`;
+  const targetText = `${filled} / ${total}명`;
+  if (stVal.textContent !== targetText && stVal.textContent !== "로딩 중...") {
+    const box = document.getElementById('status-bar-box');
+    box.classList.add('pulse-active');
+    setTimeout(() => box.classList.remove('pulse-active'), 400);
+  }
+  stVal.textContent = targetText;
   stVal.className   = filled >= total ? 'st-val st-full' : 'st-val';
 
   const wrap = document.getElementById('teams-wrap');
@@ -663,6 +700,76 @@ function renderRoom() {
 
 function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// 🔥 실시간 밀리초 타임어택 시계 작동 및 자동 종료 장치
+function handleEventTimer(event) {
+  const bar = document.getElementById('timer-bar');
+  if (!event) {
+    bar.style.display = 'none';
+    if(timerInterval) clearInterval(timerInterval);
+    return;
+  }
+
+  bar.style.display = 'block';
+  const endTime = new Date(event.endTime).getTime();
+
+  if (timerInterval) clearInterval(timerInterval);
+
+  timerInterval = setInterval(() => {
+    const now = new Date().getTime();
+    const diff = endTime - now;
+
+    if (diff <= 0) {
+      clearInterval(timerInterval);
+      document.getElementById('timer-display').textContent = "00:00.00";
+      if(isAdmin) triggerEventFinish(); // 관리자 브라우저가 대표로 종료 플래그 요청
+      return;
+    }
+
+    const m = Math.floor(diff / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    const ms = Math.floor((diff % 1000) / 10);
+    
+    document.getElementById('timer-display').textContent = 
+      `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms).padStart(2,'0')}`;
+  }, 40);
+}
+
+// 👑 관리자 타임어택 생성 모달 제어 함수군
+function openTimeAttackModal() { document.getElementById('timeattack-modal').classList.add('show'); }
+function closeTimeAttackModal() { document.getElementById('timeattack-modal').classList.remove('show'); }
+
+async function confirmTimeAttack() {
+  const mins = document.getElementById('event-mins').value;
+  const winners = document.getElementById('event-winners').value;
+  const reward = document.getElementById('event-reward').value.trim();
+
+  if(!reward) { showToast('당첨자 보상을 입력해 주세요!', true); return; }
+
+  try {
+    const res = await fetch('/naejeon/start_event', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ roomId, userId, groupId, mins, winners, reward })
+    });
+    if((await res.json()).ok) {
+      closeTimeAttackModal();
+      showToast('🔥 타임어택 룰렛 오픈 완료!');
+      loadRoom();
+    }
+  } catch(e) { showToast('서버 통신 실패', true); }
+}
+
+async function triggerEventFinish() {
+  if(!isAdmin) return;
+  try {
+    await fetch('/naejeon/finish_event', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ roomId })
+    });
+  } catch(e) {}
 }
 
 async function handleMainBtn() {
@@ -796,7 +903,7 @@ async function confirmAdminRemove() {
   const btn = document.querySelector('#admin-remove-modal .admin-confirm-btn');
   btn.textContent = '제거 중...';
   try {
-    const res  = await fetch('/naejeon/admin_remove', {
+    const res  = await fetch('/naejeon/remove', { // 백엔드 라우트 /leave 와 동기화
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -909,10 +1016,10 @@ async function adminCancelRoom() {
 async function init() {
   await checkAdmin();
   await loadRoom();
-  setInterval(loadRoom, 3000); 
 }
 
 init();
+setInterval(loadRoom, 3000); 
 </script>
 </body>
 </html>
