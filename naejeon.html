@@ -1,1456 +1,907 @@
-import os
-import re
-import json
-import random
-import telebot
-import psycopg2
-import requests
-import urllib.parse
-import pytz
-import uuid
-from telebot import types
-from datetime import datetime, timedelta
-from flask import Flask, request, send_from_directory
-
-BOT_TOKEN = '8046489365:AAHAFBz4Ca07KcjqI0EJl76aIAu-rlVHw-4'
-bot = telebot.TeleBot(BOT_TOKEN)
-app = Flask(__name__)
-
-KST = pytz.timezone('Asia/Seoul')
-
-# ─────────────────────────────────────────────────────────
-# 관리자 설정
-# ─────────────────────────────────────────────────────────
-ADMIN_IDS = [8698678650, 8236798970]
-
-# ─────────────────────────────────────────────────────────
-# GIF 설정
-# ─────────────────────────────────────────────────────────
-BASEBALL_GIF_FILE_ID = "CgACAgUAAxkBAAMzagl3svn3G8Jr7JDeNhdXbodfQnIAAi8dAAJux0hUOyDPUXIJtRs7BA"
-NAEJEON_GIF_FILE_ID  = "CgACAgUAAxkBAAOGag0cXgdCIn_PggmqSmC0GM0GnC4AAkofAAKWbGhUMjetimSM_S47BA"
-AFFILIATE_GIF_URL    = "CgACAgUAAxkBAAM4agmS7OD4fz1bxh5zNQPn8VNCpysAAmYdAAJux0hUYXAsQb02yzs7BA"
-
-def send_baseball_gif(chat_id):
-    if not BASEBALL_GIF_FILE_ID:
-        return
-    try:
-        bot.send_animation(chat_id=chat_id, animation=BASEBALL_GIF_FILE_ID)
-    except Exception as e:
-        print(f"야구 GIF 전송 실패: {e}")
-
-def send_naejeon_gif(chat_id):
-    if not NAEJEON_GIF_FILE_ID:
-        return
-    try:
-        bot.send_animation(chat_id=chat_id, animation=NAEJEON_GIF_FILE_ID)
-    except Exception as e:
-        print(f"내전 GIF 전송 실패: {e}")
-
-def send_affiliate_gif(chat_id):
-    if not AFFILIATE_GIF_URL:
-        return
-    try:
-        bot.send_animation(chat_id=chat_id, animation=AFFILIATE_GIF_URL)
-    except Exception as e:
-        print(f"제휴 GIF 전송 실패: {e}")
-
-# ─────────────────────────────────────────────────────────
-# 제휴 텍스트
-# ─────────────────────────────────────────────────────────
-AFFILIATE_TEXT = """🎰 <b>카지노</b>
-──────────────────
-<b>[평생]</b> · <a href="https://t.me/gamte59/31">렛츠뱃</a>
-<b>[평생]</b> · <a href="https://t.me/gamte59/28">예스뱃</a>
-<b>[평생]</b> · <a href="https://t.me/spd1588/84">스피드벳</a>
-<b>[평생]</b> · <a href="https://t.me/Gwaedwaji/15">띵벳</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/44">지엑스뱃</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/46">케이비씨겜</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/49">블록체인바카라</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/60">우루스뱃</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/60">마닐라</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/70">미우카지노</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/72">그랜드파리</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/74">룰라뱃</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/78">소울카지노</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/84">123GAME카지노</a>
-
-💸 <b>급전</b>
-──────────────────
-<b>[도파민]</b> · <a href="https://t.me/gamte59/16">OR급전</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/77">빅딜OTC</a>
-
-🏠 <b>장집</b>
-──────────────────
-<b>[도파민]</b> · <a href="https://t.me/gamte59/76">빅딜 장집</a>
-
-💳 <b>충전 계좌매입</b>
-──────────────────
-<b>[평생]</b> · <a href="https://t.me/gamte59/42">저승사자</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/58">김여포</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/64">대문팀</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/92">관짝</a>
-
-♠️ <b>홀덤</b>
-──────────────────
-<b>[도파민]</b> · <a href="https://t.me/gamte59/69">룽지홀덤</a>
-
-💼 <b>이체 알바</b>
-──────────────────
-<b>[도파민]</b> · <a href="https://t.me/gamte59/87">창비팀 대면이체알바</a>"""
-
-# ─────────────────────────────────────────────────────────
-# KBO 팀 설정
-# ─────────────────────────────────────────────────────────
-KBO_TEAMS = ['KT', '삼성', 'LG', 'SSG', 'KIA', '한화', '두산', 'NC', '롯데', '키움']
-KBO_TEAMS_DISPLAY = {
-    'KT':   '🔴 KT',
-    '삼성': '🔵 삼성',
-    'LG':   '🔴 LG',
-    'SSG':  '🟡 SSG',
-    'KIA':  '🔴 KIA',
-    '한화': '🟠 한화',
-    '두산': '🔵 두산',
-    'NC':   '🔵 NC',
-    '롯데': '🔴 롯데',
-    '키움': '🟣 키움',
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>내전 모집</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0a0a1a;
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-WEBAPP_BASE_URL = os.environ.get('WEBAPP_URL', 'https://telegram-bot-14vg.onrender.com')
-
-VOTE_START = "18:00"
-VOTE_END   = "18:30"
-
-
-# ─────────────────────────────────────────────────────────
-# KBO 인라인 키보드 빌더
-# ─────────────────────────────────────────────────────────
-def build_team_keyboard(selected: list) -> types.InlineKeyboardMarkup:
-    markup = types.InlineKeyboardMarkup(row_width=3)
-    buttons = []
-    for team in KBO_TEAMS:
-        label = f"✅ {team}" if team in selected else KBO_TEAMS_DISPLAY.get(team, team)
-        buttons.append(types.InlineKeyboardButton(
-            text=label, callback_data=f"kbo_toggle:{team}"
-        ))
-    markup.add(*buttons)
-    count = len(selected)
-    if count == 5:
-        markup.add(
-            types.InlineKeyboardButton("🔄 초기화", callback_data="kbo_reset"),
-            types.InlineKeyboardButton(f"✅ 제출하기 ({count}/5)", callback_data="kbo_submit")
-        )
-    else:
-        markup.add(
-            types.InlineKeyboardButton("🔄 초기화", callback_data="kbo_reset"),
-            types.InlineKeyboardButton(f"⬜ 선택 중 ({count}/5)", callback_data="kbo_noop")
-        )
-    return markup
-
-def build_vote_message(selected: list) -> str:
-    count = len(selected)
-    if count == 0:
-        status = "팀을 선택해주세요"
-    elif count < 5:
-        status = f"{count}개 선택 — {5 - count}개 더 선택하세요"
-    else:
-        status = "5개 선택 완료! 제출하기를 눌러주세요 ✅"
-    lines = ["⚾ KBO 승 예측 — 팀 선택", "", f"📊 {status}", ""]
-    for t in selected:
-        lines.append(f"   • {KBO_TEAMS_DISPLAY.get(t, t)}")
-    return "\n".join(lines)
-
-
-# ─────────────────────────────────────────────────────────
-# DB 헬퍼
-# ─────────────────────────────────────────────────────────
-def clean_name(name):
-    if not name:
-        return ''
-    cleaned = (name.strip()
-               .replace('\u3164', '').replace('\u200b', '')
-               .replace('\u200c', '').replace('\u200d', '')
-               .replace('\ufeff', '').strip())
-    return cleaned
-
-def get_db():
-    return psycopg2.connect(os.environ.get('DATABASE_URL'))
-
-def init_db():
-    db = get_db(); c = db.cursor()
-    try:
-        c.execute("""CREATE TABLE IF NOT EXISTS chat_logs (
-            id SERIAL PRIMARY KEY, user_id BIGINT NOT NULL,
-            username VARCHAR(255), first_name VARCHAR(255),
-            group_id BIGINT NOT NULL, message_date TIMESTAMP NOT NULL,
-            created_at TIMESTAMP DEFAULT NOW())""")
-        c.execute("""CREATE TABLE IF NOT EXISTS points (
-            id SERIAL PRIMARY KEY, user_id BIGINT NOT NULL,
-            group_id BIGINT NOT NULL, first_name VARCHAR(255),
-            username VARCHAR(255), point INTEGER DEFAULT 0,
-            last_attendance DATE, UNIQUE(user_id, group_id))""")
-        c.execute("""CREATE TABLE IF NOT EXISTS refill_logs (
-            id SERIAL PRIMARY KEY, user_id BIGINT NOT NULL,
-            group_id BIGINT NOT NULL, first_name VARCHAR(255),
-            username VARCHAR(255), refill_date DATE NOT NULL)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS kbo_votes (
-            id SERIAL PRIMARY KEY, user_id BIGINT NOT NULL,
-            group_id BIGINT NOT NULL, first_name VARCHAR(255),
-            username VARCHAR(255), teams TEXT NOT NULL,
-            vote_date DATE NOT NULL, created_at TIMESTAMP DEFAULT NOW(),
-            UNIQUE(user_id, group_id, vote_date))""")
-        c.execute("""CREATE TABLE IF NOT EXISTS kbo_pending (
-            user_id BIGINT NOT NULL, group_id BIGINT NOT NULL,
-            selected TEXT NOT NULL DEFAULT '', message_id BIGINT,
-            PRIMARY KEY (user_id, group_id))""")
-        c.execute("""CREATE TABLE IF NOT EXISTS naejeon_rooms (
-            id SERIAL PRIMARY KEY,
-            room_id VARCHAR(50) NOT NULL UNIQUE,
-            group_id BIGINT NOT NULL,
-            game_type VARCHAR(10) NOT NULL,
-            slots JSONB NOT NULL DEFAULT '{}',
-            status VARCHAR(20) DEFAULT 'open',
-            extra_text TEXT DEFAULT '',
-            pos_a JSONB DEFAULT '[]',
-            pos_b JSONB DEFAULT '[]',
-            started BOOLEAN DEFAULT FALSE,
-            fund_type VARCHAR(10) DEFAULT '',
-            fund_amount TEXT DEFAULT '',
-            created_at TIMESTAMP DEFAULT NOW()
-        )""")
-        
-        for col in [
-            ("extra_text",  "TEXT DEFAULT ''"),
-            ("pos_a",       "JSONB DEFAULT '[]'"),
-            ("pos_b",       "JSONB DEFAULT '[]'"),
-            ("started",     "BOOLEAN DEFAULT FALSE"),
-            ("fund_type",   "VARCHAR(10) DEFAULT ''"),
-            ("fund_amount", "TEXT DEFAULT ''"),
-        ]:
-            try:
-                c.execute(f"ALTER TABLE naejeon_rooms ADD COLUMN IF NOT EXISTS {col[0]} {col[1]}")
-                db.commit()
-            except:
-                db.rollback()
-        try:
-            c.execute("ALTER TABLE points ALTER COLUMN last_attendance TYPE DATE USING last_attendance::DATE")
-            db.commit()
-        except:
-            db.rollback()
-        db.commit()
-    finally:
-        c.close(); db.close()
-
-def get_point(user_id, group_id):
-    db = get_db(); c = db.cursor()
-    try:
-        c.execute("SELECT point FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
-        row = c.fetchone()
-        return row[0] if row else 0
-    finally:
-        c.close(); db.close()
-
-def update_point(user_id, group_id, first_name, username, amount):
-    db = get_db(); c = db.cursor()
-    try:
-        c.execute("""INSERT INTO points (user_id, group_id, first_name, username, point)
-            VALUES (%s,%s,%s,%s,%s) ON CONFLICT (user_id, group_id)
-            DO UPDATE SET point=points.point+%s, first_name=%s, username=%s""",
-            (user_id, group_id, first_name, username, amount, amount, first_name, username))
-        db.commit()
-    finally:
-        c.close(); db.close()
-
-def save_message(user_id, username, first_name, group_id):
-    db = get_db(); c = db.cursor()
-    try:
-        c.execute("INSERT INTO chat_logs (user_id,username,first_name,group_id,message_date) VALUES (%s,%s,%s,%s,%s)",
-                  (user_id, username, first_name, group_id, datetime.now()))
-        db.commit()
-    finally:
-        c.close(); db.close()
-
-def get_pending(user_id, group_id):
-    db = get_db(); c = db.cursor()
-    try:
-        c.execute("SELECT selected, message_id FROM kbo_pending WHERE user_id=%s AND group_id=%s", (user_id, group_id))
-        row = c.fetchone()
-        if row:
-            return ([t for t in row[0].split(',') if t], row[1])
-        return ([], None)
-    finally:
-        c.close(); db.close()
-
-def get_pending_with_group(user_id):
-    db = get_db(); c = db.cursor()
-    try:
-        c.execute("SELECT group_id, selected, message_id FROM kbo_pending WHERE user_id=%s LIMIT 1", (user_id,))
-        row = c.fetchone()
-        if row:
-            group_id = row[0]
-            selected = [t for t in row[1].split(',') if t]
-            msg_id   = row[2]
-            return (group_id, selected), msg_id
-        return None, None
-    finally:
-        c.close(); db.close()
-
-def set_pending(user_id, group_id, selected: list, message_id=None):
-    db = get_db(); c = db.cursor()
-    try:
-        s = ','.join(selected)
-        c.execute("""INSERT INTO kbo_pending (user_id, group_id, selected, message_id)
-            VALUES (%s,%s,%s,%s) ON CONFLICT (user_id, group_id)
-            DO UPDATE SET selected=%s, message_id=%s""",
-            (user_id, group_id, s, message_id, s, message_id))
-        db.commit()
-    finally:
-        c.close(); db.close()
-
-def clear_pending(user_id, group_id):
-    db = get_db(); c = db.cursor()
-    try:
-        c.execute("DELETE FROM kbo_pending WHERE user_id=%s AND group_id=%s", (user_id, group_id))
-        db.commit()
-    finally:
-        c.close(); db.close()
-
-def is_vote_time(now_kst):
-    if now_kst.weekday() not in [1, 2, 3, 4]:
-        return False
-    cur = now_kst.time()
-    return (datetime.strptime(VOTE_START, "%H:%M").time()
-            <= cur <=
-            datetime.strptime(VOTE_END, "%H:%M").time())
-
-def get_usdt_rate():
-    try:
-        r = requests.get('https://api.upbit.com/v1/ticker?markets=KRW-USDT', timeout=5)
-        if r.status_code == 200:
-            return float(r.json()[0]['trade_price'])
-    except:
-        pass
-    try:
-        r = requests.get('https://api.binance.com/api/v3/ticker/price?symbol=USDTKRW', timeout=5)
-        if r.status_code == 200:
-            return float(r.json()['price'])
-    except:
-        pass
-    return None
-
-
-# ─────────────────────────────────────────────────────────
-# 내전 서든 모드 선택 콜백
-# ─────────────────────────────────────────────────────────
-@bot.callback_query_handler(func=lambda call: call.data.startswith('nj_open:'))
-def handle_nj_open(call):
-    try:
-        user_id    = call.from_user.id
-        group_id   = call.message.chat.id
-
-        if user_id not in ADMIN_IDS:
-            bot.answer_callback_query(call.id, "⚠️ 관리자만 사용할 수 있어요!", show_alert=True)
-            return
-
-        parts      = call.data.split(':', 2)
-        game_type  = parts[1]
-        extra_text = parts[2] if len(parts) > 2 else ''
-
-        game_names   = {'sa5': '서든어택 5v5', 'sa6': '서든어택 6v6'}
-        display_name = game_names.get(game_type, '서든어택')
-
-        db = get_db(); c = db.cursor()
-        try:
-            c.execute("SELECT room_id FROM naejeon_rooms WHERE group_id=%s AND game_type=%s AND status='open'",
-                      (group_id, game_type))
-            existing = c.fetchone()
-            if existing:
-                bot.answer_callback_query(call.id, "⚠️ 이미 진행 중인 내전이 있어요!", show_alert=True)
-                return
-
-            room_id = str(uuid.uuid4())[:8]
-            c.execute("INSERT INTO naejeon_rooms (room_id, group_id, game_type, slots, extra_text) VALUES (%s,%s,%s,%s,%s)",
-                      (room_id, group_id, game_type, '{}', extra_text))
-            db.commit()
-        finally:
-            c.close(); db.close()
-
-        param  = f"{user_id}_{group_id}_{game_type}_{room_id}"
-        nj_url = f"{WEBAPP_BASE_URL}/naejeon?start={param}"
-
-        group_msg = f"⚔️ {display_name} 내전 모집!"
-        if extra_text:
-            group_msg += f"\n{extra_text}"
-        group_msg += f"\n\n아래 버튼을 눌러 참여하세요!\n⚠️ 처음 참여하시는 분은 @dopamin_ranking_bot 을 눌러 START 를 먼저 눌러주세요!"
-
-        send_naejeon_gif(group_id)
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("⚔️ 내전 참여하기", url=nj_url))
-        bot.edit_message_text(group_msg, chat_id=group_id, message_id=call.message.message_id, reply_markup=markup)
-        bot.answer_callback_query(call.id, f"✅ {display_name} 내전 시작!")
-
-    except Exception as e:
-        import traceback
-        print(f"nj_open error: {e}\n{traceback.format_exc()}")
-        bot.answer_callback_query(call.id, "오류가 발생했어요.")
-
-
-# ─────────────────────────────────────────────────────────
-# KBO 콜백 핸들러
-# ─────────────────────────────────────────────────────────
-@bot.callback_query_handler(func=lambda call: call.data.startswith('kbo_'))
-def handle_kbo_callback(call):
-    try:
-        user_id    = call.from_user.id
-        first_name = call.from_user.first_name or '사용자'
-        username   = call.from_user.username or ''
-        now_kst    = datetime.now(KST)
-        today      = now_kst.date()
-        action     = call.data
-
-        if not is_vote_time(now_kst):
-            bot.answer_callback_query(call.id,
-                f"⏰ 화~금 {VOTE_START}~{VOTE_END} 사이에만 참여 가능해요!", show_alert=True)
-            return
-
-        selected, msg_id = get_pending_with_group(user_id)
-        if selected is None:
-            bot.answer_callback_query(call.id, "⚠️ 세션이 만료됐어요. 그룹에서 /승 을 다시 입력해주세요.", show_alert=True)
-            return
-        group_id = selected[0]
-        selected = selected[1]
-
-        db = get_db(); c = db.cursor()
-        try:
-            c.execute("SELECT teams FROM kbo_votes WHERE user_id=%s AND group_id=%s AND vote_date=%s",
-                      (user_id, group_id, today))
-            already = c.fetchone()
-        finally:
-            c.close(); db.close()
-
-        if action == "kbo_noop":
-            if already:
-                bot.answer_callback_query(call.id, "이미 제출하셨어요! 수정하려면 /수정 을 사용하세요.")
-            else:
-                bot.answer_callback_query(call.id, f"5개를 선택해야 제출할 수 있어요! (현재 {len(selected)}개)")
-            return
-
-        elif action == "kbo_reset":
-            selected = []
-            set_pending(user_id, group_id, selected, call.message.message_id)
-            bot.edit_message_text(
-                chat_id=user_id, message_id=call.message.message_id,
-                text=build_vote_message(selected),
-                reply_markup=build_team_keyboard(selected)
-            )
-            bot.answer_callback_query(call.id, "초기화 됐어요!")
-
-        elif action.startswith("kbo_toggle:"):
-            team = action.split(":")[1]
-            if team in selected:
-                selected.remove(team)
-                bot.answer_callback_query(call.id, f"{KBO_TEAMS_DISPLAY.get(team, team)} 선택 취소")
-            else:
-                if len(selected) >= 5:
-                    bot.answer_callback_query(call.id, "이미 5개 선택! 초기화 후 다시 선택하세요.", show_alert=True)
-                    return
-                selected.append(team)
-                bot.answer_callback_query(call.id, f"{KBO_TEAMS_DISPLAY.get(team, team)} 선택! ({len(selected)}/5)")
-            set_pending(user_id, group_id, selected, call.message.message_id)
-            bot.edit_message_text(
-                chat_id=user_id, message_id=call.message.message_id,
-                text=build_vote_message(selected),
-                reply_markup=build_team_keyboard(selected)
-            )
-
-        elif action == "kbo_submit":
-            if len(selected) != 5:
-                bot.answer_callback_query(call.id, "5개를 선택해야 제출할 수 있어요!", show_alert=True)
-                return
-            teams_str = ','.join(selected)
-            db = get_db(); c = db.cursor()
-            try:
-                if already:
-                    c.execute("""UPDATE kbo_votes SET teams=%s, first_name=%s, username=%s
-                        WHERE user_id=%s AND group_id=%s AND vote_date=%s""",
-                        (teams_str, first_name, username, user_id, group_id, today))
-                    action_label = "수정 완료"
-                else:
-                    c.execute("""INSERT INTO kbo_votes (user_id, group_id, first_name, username, teams, vote_date)
-                        VALUES (%s,%s,%s,%s,%s,%s)""",
-                        (user_id, group_id, first_name, username, teams_str, today))
-                    action_label = "예측 완료"
-                c.execute("SELECT COUNT(*) FROM kbo_votes WHERE group_id=%s AND vote_date=%s", (group_id, today))
-                total = c.fetchone()[0]
-                db.commit()
-            finally:
-                c.close(); db.close()
-                
-            clear_pending(user_id, group_id)
-            team_display = "\n".join([f"   {i+1}. {KBO_TEAMS_DISPLAY.get(t,t)}" for i, t in enumerate(selected)])
-            bot.edit_message_text(
-                chat_id=user_id, message_id=call.message.message_id,
-                text=(
-                    f"╔══ ⚾ KBO 승 {action_label} ══╗\n"
-                    f"   👤 {first_name}님\n\n"
-                    f"   선택한 팀 (5개):\n{team_display}\n\n"
-                    f"   👥 오늘 참여자: {total}명\n"
-                    f"   ✏️ 수정: 그룹에서 /수정 입력\n"
-                    f"╚══════════════════╝"
-                ),
-                reply_markup=None
-            )
-            bot.answer_callback_query(call.id, f"✅ {action_label}!")
-
-    except Exception as e:
-        import traceback
-        print(f"kbo callback error: {e}\n{traceback.format_exc()}")
-        bot.answer_callback_query(call.id, "오류가 발생했어요. 다시 시도해주세요.")
-
-
-# ─────────────────────────────────────────────────────────
-# 메시지 핸들러
-# ─────────────────────────────────────────────────────────
-@bot.message_handler(func=lambda m: True)
-def handle_all(message):
-    try:
-        text       = message.text or ''
-        user_id    = message.from_user.id
-        group_id   = message.chat.id
-        first_name = message.from_user.first_name or '사용자'
-        username   = message.from_user.username or ''
-        now_kst    = datetime.now(KST)
-        today      = now_kst.date()
-
-        # ── /test ──
-        if '/test' in text:
-            bot.reply_to(message, f"봇 작동 중! ✅\n내 user_id: {user_id}")
-
-        # ── /포인트복구 (관리자) ──
-        elif '/포인트복구' in text:
-            if user_id not in ADMIN_IDS:
-                bot.reply_to(message, "⚠️ 관리자만 사용할 수 있어요!"); return
-            db = get_db(); c = db.cursor()
-            try:
-                c.execute("SELECT user_id, first_name, username, point FROM points WHERE group_id=%s ORDER BY point DESC", (group_id,))
-                rows = c.fetchall()
-            finally:
-                c.close(); db.close()
-            if not rows:
-                bot.reply_to(message, "포인트 기록이 없어요."); return
-            result = "╔══ 🔧 포인트 현황 ══╗\n\n"
-            for row in rows:
-                name = row[1] or row[2] or "익명"
-                result += f"   • {name} (id:{row[0]}): {row[3]:,}P\n"
-            result += "\n   ` 포인트 설정:\n"
-            result += "   /포인트설정 [이름] [포인트]\n"
-            result += "   /전체포인트초기화 확인\n"
-            result += "╚══════════════════╝"
-            bot.reply_to(message, result)
-
-        # ── /포인트설정 (관리자) ──
-        elif '/포인트설정' in text:
-            if user_id not in ADMIN_IDS:
-                bot.reply_to(message, "⚠️ 관리자만 사용할 수 있어요!"); return
-            parts = text.split()
-            if len(parts) < 3 or not parts[2].isdigit():
-                bot.reply_to(message, "🔧 사용법: /포인트설정 [이름] [포인트]\n예: /포인트설정 홍길동 500"); return
-            target_name = parts[1]
-            new_pt = int(parts[2])
-            db = get_db(); c = db.cursor()
-            try:
-                c.execute("UPDATE points SET point=%s WHERE first_name=%s AND group_id=%s", (new_pt, target_name, group_id))
-                affected = c.rowcount
-                db.commit()
-            finally:
-                c.close(); db.close()
-            if affected > 0:
-                bot.reply_to(message, f"✅ {target_name}님 포인트를 {new_pt:,}P로 설정했어요!")
-            else:
-                bot.reply_to(message, f"⚠️ {target_name}님을 찾을 수 없어요!")
-
-        # ── /전체포인트초기화 (관리자) ──
-        elif '/전체포인트초기화' in text:
-            if user_id not in ADMIN_IDS:
-                bot.reply_to(message, "⚠️ 관리자만 사용할 수 있어요!"); return
-            if '확인' not in text:
-                bot.reply_to(message, "⚠️ 정말 전체 포인트를 초기화하려면\n/전체포인트초기화 확인\n이라고 입력하세요!"); return
-            db = get_db(); c = db.cursor()
-            try:
-                c.execute("UPDATE points SET point=0 WHERE group_id=%s", (group_id,))
-                affected = c.rowcount
-                db.commit()
-            finally:
-                c.close(); db.close()
-            bot.reply_to(message, f"✅ {affected}명의 포인트를 전체 초기화했어요!")
-
-        # ── /getfileid ──
-        elif '/getfileid' in text:
-            if message.reply_to_message:
-                msg = message.reply_to_message
-                file_id = None
-                if msg.animation:  file_id = msg.animation.file_id
-                elif msg.video:    file_id = msg.video.file_id
-                elif msg.document: file_id = msg.document.file_id
-                if file_id:
-                    bot.reply_to(message, f"📋 file_id:\n\n<code>{file_id}</code>\n\nbot.py 상단 변수에 넣으세요!", parse_mode='HTML')
-                else:
-                    bot.reply_to(message, "⚠️ GIF나 영상 메시지에 답장해서 사용하세요.")
-            else:
-                bot.reply_to(message, "GIF/영상 메시지에 답장으로 /getfileid 를 입력하세요!")
-
-        # ── /노래 ──
-        elif '/노래' in text:
-            query = text.replace('/노래', '').strip()
-            if not query:
-                bot.reply_to(message, "🎵 검색어를 입력해주세요!\n예시: /노래 아이유 좋은날"); return
-            encoded = urllib.parse.quote(query)
-            bot.reply_to(message, f"🎵 {query}\n\n🔗 유튜브:\nhttps://www.youtube.com/results?search_query={encoded}")
-
-        # ── /제휴 ──
-        elif '/제휴' in text:
-            send_affiliate_gif(group_id)
-            bot.reply_to(message, AFFILIATE_TEXT, parse_mode='HTML', disable_web_page_preview=True)
-
-        # ── 테더 환율 ──
-        elif re.search(r'(\d+(\.\d+)?)\s*테더', text):
-            match = re.search(r'(\d+(\.\d+)?)\s*테더', text)
-            amount = float(match.group(1))
-            rate = get_usdt_rate()
-            if rate is None:
-                bot.reply_to(message, "⚠️ 환율 정보를 가져오지 못했어요."); return
-            bot.reply_to(message, f"💰 USDT 환율 계산\n\n📈 현재 환율: {rate:,.0f}원\n💵 {amount:,.0f} USDT: {amount * rate:,.0f}원")
-
-        # ── /출석 ──
-        elif '/출석' in text:
-            if message.chat.type == 'private': return
-            db = get_db(); c = db.cursor()
-            try:
-                c.execute("SELECT last_attendance FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
-                row = c.fetchone()
-                if row and row[0] == today:
-                    bot.reply_to(message, "⏰ 오늘 이미 출석했어요!\n자정이 지나면 다시 출석할 수 있어요 😊"); return
-                c.execute("""INSERT INTO points (user_id,group_id,first_name,username,point,last_attendance)
-                    VALUES (%s,%s,%s,%s,100,%s) ON CONFLICT (user_id,group_id)
-                    DO UPDATE SET point=points.point+100, last_attendance=%s, first_name=%s, username=%s""",
-                    (user_id, group_id, first_name, username, today, today, first_name, username))
-                db.commit()
-                c.execute("SELECT point FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
-                total = c.fetchone()[0]
-            finally:
-                c.close(); db.close()
-            bot.reply_to(message, f"╔══ ✅ 출석 완료 ══╗\n   👤 {first_name}님\n\n   🎁 획득: 100포인트\n   💰 잔여: {total}포인트\n   🔄 리셋: 매일 자정 00:00\n╚══════════════════╝")
-
-        # ── /리필 ──
-        elif '/리필' in text:
-            if message.chat.type == 'private': return
-            db = get_db(); c = db.cursor()
-            try:
-                c.execute("SELECT COUNT(*) FROM refill_logs WHERE user_id=%s AND group_id=%s AND refill_date=%s", (user_id, group_id, today))
-                count = c.fetchone()[0]
-                if count >= 5:
-                    bot.reply_to(message, "⚠️ 오늘 리필을 5번 모두 사용했어요!"); return
-                c.execute("INSERT INTO refill_logs (user_id,group_id,first_name,username,refill_date) VALUES (%s,%s,%s,%s,%s)", (user_id, group_id, first_name, username, today))
-                db.commit()
-            finally:
-                c.close(); db.close()
-            update_point(user_id, group_id, first_name, username, 100)
-            bot.reply_to(message, f"╔══ 🔄 리필 완료 ══╗\n   👤 {first_name}님\n\n   🎁 획득: 100포인트\n   💰 잔여: {get_point(user_id, group_id)}포인트\n   📊 오늘 남은 리필: {5 - count - 1}회\n   🔄 리셋: 매일 자정 00:00\n╚══════════════════╝")
-
-        # ── /선물 ──
-        elif '/선물' in text:
-            if message.chat.type == 'private':
-                bot.reply_to(message, "⚠️ 선물은 그룹에서만 사용할 수 있어요!"); return
-            if not message.reply_to_message:
-                bot.reply_to(message, "🎁 선물할 상대의 메시지에 답장으로\n/선물 [포인트]\n예시: /선물 100\n⚠️ 최소: 10포인트"); return
-            parts = text.split()
-            if len(parts) < 2 or not parts[1].isdigit():
-                bot.reply_to(message, "🎁 사용법: /선물 [포인트]\n예시: /선물 100"); return
-            amount = int(parts[1])
-            if amount < 10:
-                bot.reply_to(message, "⚠️ 최소 선물 포인트는 10포인트예요!"); return
-            target = message.reply_to_message.from_user
-            if target.id == user_id:
-                bot.reply_to(message, "⚠️ 자기 자신에게는 선물할 수 없어요!"); return
-            if target.is_bot:
-                bot.reply_to(message, "⚠️ 봇에게는 선물할 수 없어요!"); return
-            my_point = get_point(user_id, group_id)
-            if my_point < amount:
-                bot.reply_to(message, f"💸 포인트 부족!\n  보유: {my_point}포인트\n  필요: {amount}포인트"); return
-            target_name = target.first_name or '상대방'
-            update_point(user_id, group_id, first_name, username, -amount)
-            update_point(target.id, group_id, target_name, target.username or '', amount)
-            bot.reply_to(message, f"╔══ 🎁 포인트 선물 ══╗\n   💝 {first_name} → {target_name}\n\n   🎀 선물: {amount}포인트\n\n   📤 {first_name} 잔여: {get_point(user_id, group_id)}포인트\n   📥 {target_name} 잔여: {get_point(target.id, group_id)}포인트\n╚══════════════════╝")
-
-        # ── /포인트랭킹 ──
-        elif '/포인트랭킹' in text:
-            if message.chat.type == 'private': return
-            db = get_db(); c = db.cursor()
-            try:
-                c.execute("SELECT first_name,username,point FROM points WHERE group_id=%s ORDER BY point DESC LIMIT 5", (group_id,))
-                rows = c.fetchall()
-            finally:
-                c.close(); db.close()
-            medals = ['🥇','🥈','🥉','4️⃣','5️⃣']
-            result = "╔══ 💰 포인트 랭킹 ══╗\n\n"
-            for i, row in enumerate(rows):
-                result += f"   {medals[i]} {row[0] or row[1] or '익명':<10} {row[2]}포인트\n"
-            result += "╚══════════════════╝"
-            bot.reply_to(message, result)
-
-        # ── /포인트 ──
-        elif '/포인트' in text:
-            if message.chat.type == 'private': return
-            bot.reply_to(message, f"╔══ 💰 포인트 ══╗\n   👤 {first_name}님\n\n   💰 잔여: {get_point(user_id, group_id)}포인트\n╚══════════════════╝")
-
-        # ── /게임 ──
-        elif text.strip() in ['/게임', '/게임@dopamin_ranking_bot']:
-            bot.reply_to(message, "🎮 게임 목록\n\n🎰 /슬롯 [배팅] - 슬롯머신\n🎡 /룰렛 [배팅] - 룰렛\n⚠️ 최소 배팅: 20포인트")
-
-        # ── /슬롯 ──
-        elif '/슬롯' in text:
-            if message.chat.type == 'private': return
-            parts = text.split()
-            if len(parts) < 2 or not parts[1].isdigit():
-                bot.reply_to(message, "🎰 사용법: /슬롯 [배팅포인트]\n예시: /슬롯 100"); return
-            bet = int(parts[1])
-            if bet < 20:
-                bot.reply_to(message, "⚠️ 최소 배팅은 20포인트예요!"); return
-            if get_point(user_id, group_id) < bet:
-                bot.reply_to(message, f"💸 포인트 부족!\n현재: {get_point(user_id, group_id)}포인트"); return
-            symbols = ['🍋','🍒','🍇','⭐','7️⃣','💎']
-            weights = [30, 25, 20, 15, 7, 3]
-            s1, s2, s3 = [random.choices(symbols, weights=weights)[0] for _ in range(3)]
-            if s1 == s2 == s3:
-                m, rt = {'💎':(50,"💎 JACKPOT! 50배!"),'7️⃣':(10,"7️⃣ 럭키세븐! 10배!"),'⭐':(7,"⭐ 스타! 7배!")}.get(s1,(5,"🎉 3개 일치! 5배!"))
-                won = bet * m - bet
-            elif s1==s2 or s2==s3 or s1==s3:
-                won = int(bet*1.5)-bet; rt="✨ 2개 일치! 1.5배!"
-            else:
-                won = -bet; rt="💀 꽝!"
-            update_point(user_id, group_id, first_name, username, won)
-            bot.reply_to(message, f"╔══ 🎰 슬롯머신 ══╗\n   [ {s1} | {s2} | {s3} ]\n\n   {rt}\n\n   배팅: {bet}포인트\n   {'획득: +' if won>=0 else '손실: '}{won}포인트\n   잔여: {get_point(user_id, group_id)}포인트\n╚══════════════════╝")
-
-        # ── /룰렛 ──
-        elif '/룰렛' in text:
-            if message.chat.type == 'private': return
-            parts = text.split()
-            if len(parts) < 2 or not parts[1].isdigit():
-                bot.reply_to(message, "🎡 사용법: /룰렛 [배팅포인트]\n예시: /룰렛 100"); return
-            bet = int(parts[1])
-            if bet < 20:
-                bot.reply_to(message, "⚠️ 최소 배팅은 20포인트예요!"); return
-            if get_point(user_id, group_id) < bet:
-                bot.reply_to(message, f"💸 포인트 부족!\n현재: {get_point(user_id, group_id)}포인트"); return
-            roulette = [('💀 꽝',0,55),('🔵 1.5배',1.5,20),('🟢 2배',2,15),('🟡 3배',3,7),('🔴 5배',5,2),('💎 10배',10,1)]
-            label, mult, _ = roulette[random.choices(range(len(roulette)), weights=[r[2] for r in roulette])[0]]
-            won = int(bet*mult)-bet if mult>0 else -bet
-            update_point(user_id, group_id, first_name, username, won)
-            bot.reply_to(message, f"╔══ 🎡 룰렛 ══╗\n   결과: {label}\n\n   배팅: {bet}포인트\n   {'획득: +' if won>=0 else '손실: '}{won}포인트\n   잔여: {get_point(user_id, group_id)}포인트\n╚══════════════════╝")
-
-        # ── /채팅랭킹 ──
-        elif '/채팅랭킹' in text:
-            if message.chat.type == 'private': return
-            monday = today - timedelta(days=today.weekday())
-            sunday = monday + timedelta(days=6)
-            db = get_db(); c = db.cursor()
-            try:
-                c.execute("SELECT first_name,username,COUNT(*) as cnt FROM chat_logs WHERE group_id=%s AND message_date>=%s GROUP BY user_id,first_name,username ORDER BY cnt DESC LIMIT 5", (group_id, monday))
-                rows = c.fetchall()
-            finally:
-                c.close(); db.close()
-            medals = ['🥇','🥈','🥉','4️⃣','5️⃣']
-            result  = f"╔══ 🏆 주간 랭킹 ══╗\n"
-            result += f"   📅 {monday.strftime('%m/%d')} ~ {sunday.strftime('%m/%d')}\n\n"
-            if rows:
-                for i, r in enumerate(rows):
-                    result += f"   {medals[i]} {r[0] or r[1] or '익명':<10} {r[2]}개\n"
-            else:
-                result += "   채팅 기록이 없어요 😅\n"
-            result += "╚══════════════════╝"
-            bot.reply_to(message, result)
-
-        # ── /채팅 ──
-        elif '/채팅' in text:
-            if message.chat.type == 'private': return
-            monday = today - timedelta(days=today.weekday())
-            db = get_db(); c = db.cursor()
-            try:
-                c.execute("SELECT COUNT(*) FROM chat_logs WHERE user_id=%s AND group_id=%s AND DATE(message_date)=%s", (user_id, group_id, today))
-                today_count = c.fetchone()[0]
-                c.execute("SELECT COUNT(*) FROM chat_logs WHERE user_id=%s AND group_id=%s AND message_date>=%s", (user_id, group_id, monday))
-                week_count = c.fetchone()[0]
-                c.execute("SELECT COUNT(*) FROM chat_logs WHERE user_id=%s AND group_id=%s AND EXTRACT(YEAR FROM message_date)=EXTRACT(YEAR FROM NOW()) AND EXTRACT(MONTH FROM message_date)=EXTRACT(MONTH FROM NOW())", (user_id, group_id))
-                month_count = c.fetchone()[0]
-                c.execute("SELECT COUNT(*) FROM chat_logs WHERE user_id=%s AND group_id=%s", (user_id, group_id))
-                total_count = c.fetchone()[0]
-            finally:
-                c.close(); db.close()
-            bot.reply_to(message, f"╔══ 📊 채팅 통계 ══╗\n   👤 {first_name}님\n\n   ☀️ 오늘       {today_count}개\n   Calendar 이번 주   {week_count}개\n   🗓 이번 달   {month_count}개\n   💬 전체      {total_count}개\n\n   🎀 오늘도 열심히 채팅했어요!\n╚══════════════════╝")
-
-        # ── /야구 ──
-        elif text.strip().startswith('/야구'):
-            if message.chat.type == 'private': return
-            send_baseball_gif(group_id)
-            bot.reply_to(message, f"⚾ KBO 승 예측 안내\n{'─' * 23}\n\n📅 참여 요일: 화 / 수 / 목 / 금\n⏰ 참여 시간: {VOTE_START} ~ {VOTE_END}\n📌 10개 팀 중 5개 선택\n📌 하루 1회 참여 (수정 가능)\n\n📩 참여 링크를 DM으로 전달드렸습니다!")
-            try:
-                param   = f"{user_id}_{group_id}"
-                kbo_url = f"{WEBAPP_BASE_URL}/kbo?start={param}"
-                markup  = types.InlineKeyboardMarkup()
-                markup.add(types.InlineKeyboardButton("⚾ KBO 승 예측 참여하기", url=kbo_url))
-                bot.send_message(user_id, f"⚾ KBO 승 예측 참여 링크\n\n📅 참여 요일: 화 / 수 / 목 / 금\n⏰ 참여 시간: {VOTE_START} ~ {VOTE_END}\n\n아래 버튼을 눌러 참여하세요!", reply_markup=markup)
-            except Exception as e:
-                print(f"DM 전송 실패: {e}")
-                bot.send_message(group_id, f"⚠️ {first_name}님, DM을 보낼 수 없어요!\n@dopamin_ranking_bot 을 눌러 START 를 먼저 눌러주세요!")
-
-        # ── /승 ──
-        elif text.strip().startswith('/승'):
-            if message.chat.type == 'private': return
-            if not is_vote_time(now_kst):
-                bot.reply_to(message, f"🚫 지금은 참여할 수 없어요.\n\n📅 참여 가능 요일: 화 / 수 / 목 / 금\n⏰ 참여 가능 시간: PM {VOTE_START} ~ {VOTE_END}"); return
-            db = get_db(); c = db.cursor()
-            try:
-                c.execute("SELECT teams FROM kbo_votes WHERE user_id=%s AND group_id=%s AND vote_date=%s", (user_id, group_id, today))
-                existing = c.fetchone()
-            finally:
-                c.close(); db.close()
-            if existing:
-                existing_teams = existing[0].split(',')
-                team_str = "\n".join([f"   {i+1}. {KBO_TEAMS_DISPLAY.get(t,t)}" for i,t in enumerate(existing_teams)])
-                try:
-                    bot.send_message(user_id, f"⚠️ 이미 오늘 예측에 참여하셨어요!\n\n선택하신 팀:\n{team_str}\n\n수정하려면 /수정 을 사용하세요.")
-                except:
-                    bot.reply_to(message, "⚠️ 이미 오늘 예측에 참여하셨어요! DM으로 확인해주세요.")
-                return
-            try:
-                send_baseball_gif(user_id)
-                selected = []
-                set_pending(user_id, group_id, selected)
-                sent = bot.send_message(user_id, build_vote_message(selected), reply_markup=build_team_keyboard(selected))
-                set_pending(user_id, group_id, selected, sent.message_id)
-                bot.reply_to(message, f"📩 {first_name}님, DM으로 팀 선택 메시지를 보내드렸어요!")
-            except Exception as e:
-                bot.reply_to(message, "⚠️ DM을 보낼 수 없어요!\n봇과 DM을 먼저 시작해주세요 👇\n@dopamin_ranking_bot 을 눌러 START 버튼을 눌러주세요!")
-
-        # ── /수정 ──
-        elif text.strip().startswith('/수정'):
-            if message.chat.type == 'private': return
-            if not is_vote_time(now_kst):
-                bot.reply_to(message, f"🚫 지금은 수정할 수 없어요.\n\n📅 참여 가능 요일: 화 / 수 / 목 / 금\n⏰ 참여 가능 시간: PM {VOTE_START} ~ {VOTE_END}"); return
-            db = get_db(); c = db.cursor()
-            try:
-                c.execute("SELECT teams FROM kbo_votes WHERE user_id=%s AND group_id=%s AND vote_date=%s", (user_id, group_id, today))
-                existing = c.fetchone()
-            finally:
-                c.close(); db.close()
-            if not existing:
-                bot.reply_to(message, "⚠️ 오늘 예측에 참여하지 않으셨어요!\n/승 명령어로 먼저 예측에 참여해주세요."); return
-            try:
-                send_baseball_gif(user_id)
-                current_teams = existing[0].split(',')
-                set_pending(user_id, group_id, current_teams)
-                sent = bot.send_message(user_id, build_vote_message(current_teams), reply_markup=build_team_keyboard(current_teams))
-                set_pending(user_id, group_id, current_teams, sent.message_id)
-                bot.reply_to(message, f"📩 {first_name}님, DM으로 수정 메시지를 보내드렸어요!")
-            except Exception as e:
-                bot.reply_to(message, "⚠️ DM을 보낼 수 없어요!\n@dopamin_ranking_bot 을 눌러 START 버튼을 눌러주세요!")
-
-        # ── /리스트 ──
-        elif text.strip().startswith('/리스트'):
-            if message.chat.type == 'private': return
-            db = get_db(); c = db.cursor()
-            try:
-                c.execute("SELECT user_id, first_name, username, teams FROM kbo_votes WHERE group_id=%s AND vote_date=%s ORDER BY created_at", (group_id, today))
-                rows = c.fetchall()
-            finally:
-                c.close(); db.close()
-            if not rows:
-                bot.reply_to(message, "📋 오늘 예측에 참여한 사람이 없어요!"); return
-            send_baseball_gif(group_id)
-            result  = f"╔══ ⚾ KBO 승 예측 리스트 ══╗\n"
-            result += f"   📅 {today.strftime('%Y년 %m월 %d일')}\n"
-            result += f"   👥 참여자: {len(rows)}명\n"
-            result += f"   {'─' * 21}\n"
-            for row in rows:
-                uid   = row[0]
-                first = row[1] or ''
-                uname = row[2] or ''
-                teams_picked = row[3].split(',')
-                team_icons = "  ".join([KBO_TEAMS_DISPLAY.get(t, t) for t in teams_picked])
-                if first:     name = first
-                elif uname:   name = f"@{uname}"
-                else:         name = f"id:{uid}"
-                result += f"   👤 {name}\n  {team_icons}\n  {'─' * 21}\n"
-            result += "╚══════════════════╝"
-            bot.reply_to(message, result)
-
-        # ── /내전취소 ──
-        elif text.strip().startswith('/내전취소'):
-            if message.chat.type == 'private': return
-            if user_id not in ADMIN_IDS:
-                bot.reply_to(message, "⚠️ 관리자만 내전을 취소할 수 있어요!"); return
-            parts    = text.strip().split()
-            game_arg = parts[1] if len(parts) > 1 else ''
-            game_map = {'롤':'lol','서든':'sa','lol':'lol','sa':'sa','sa5':'sa5','sa6':'sa6'}
-            game_type = game_map.get(game_arg)
-            if not game_type:
-                bot.reply_to(message, "⚔️ 사용법: /내전취소 롤  또는  /내전취소 서든"); return
-            db = get_db(); c = db.cursor()
-            try:
-                if game_type == 'sa':
-                    c.execute("UPDATE naejeon_rooms SET status='cancelled' WHERE group_id=%s AND game_type IN ('sa5','sa6') AND status='open'", (group_id,))
-                else:
-                    c.execute("UPDATE naejeon_rooms SET status='cancelled' WHERE group_id=%s AND game_type=%s AND status='open'", (group_id, game_type))
-                affected = c.rowcount
-                db.commit()
-            finally:
-                c.close(); db.close()
-            if affected > 0:
-                game_names = {'롤':'리그오브레전드','서든':'서든어택'}
-                gname = game_names.get(game_arg, game_arg)
-                bot.reply_to(message, f"✅ {gname} 내전이 취소됐어요!")
-            else:
-                bot.reply_to(message, "⚠️ 진행 중인 내전이 없어요!")
-
-        # ── /내전 ──
-        elif text.strip().startswith('/내전'):
-            if message.chat.type == 'private': return
-            if user_id not in ADMIN_IDS:
-                bot.reply_to(message, "⚠️ 관리자만 내전을 열 수 있어요!"); return
-            parts    = text.strip().split()
-            game_arg = parts[1] if len(parts) > 1 else ''
-            if game_arg not in ['롤', '서든']:
-                bot.reply_to(message, "⚔️ 내전 사용법\n\n/내전 롤 [부가텍스트]  — 리그오브레전드 5v5\n/내전 서든 [부가텍스트] — 서든어택 (5v5 / 6v6 선택)\n\n예시: /내전 롤 10만원 찬조\n예시: /내전 서든 승리 시 3만원"); return
-
-            extra_text = ' '.join(parts[2:]) if len(parts) > 2 else ''
-
-            if game_arg == '서든':
-                markup = types.InlineKeyboardMarkup(row_width=2)
-                markup.add(
-                    types.InlineKeyboardButton("⚔️ 서든 5v5", callback_data=f"nj_open:sa5:{extra_text}"),
-                    types.InlineKeyboardButton("⚔️ 서든 6v6", callback_data=f"nj_open:sa6:{extra_text}"),
-                )
-                bot.reply_to(message, "⚔️ 서든어택 인원을 선택하세요!", reply_markup=markup)
-                return
-
-            game_type    = 'lol'
-            display_name = '리그오브레전드 5v5'
-
-            db = get_db(); c = db.cursor()
-            try:
-                c.execute("SELECT room_id FROM naejeon_rooms WHERE group_id=%s AND game_type=%s AND status='open'", (group_id, game_type))
-                existing = c.fetchone()
-                if existing:
-                    bot.reply_to(message, "⚠️ 이미 진행 중인 내전이 있어요!"); return
-
-                room_id = str(uuid.uuid4())[:8]
-                c.execute("INSERT INTO naejeon_rooms (room_id, group_id, game_type, slots, extra_text) VALUES (%s,%s,%s,%s,%s)",
-                          (room_id, group_id, game_type, '{}', extra_text))
-                db.commit()
-            finally:
-                c.close(); db.close()
-
-            param  = f"{user_id}_{group_id}_{game_type}_{room_id}"
-            nj_url = f"{WEBAPP_BASE_URL}/naejeon?start={param}"
-            markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("⚔️ 내전 참여하기", url=nj_url))
-
-            send_naejeon_gif(group_id)
-            msg = f"⚔️ {display_name} 내전 모집!"
-            if extra_text:
-                msg += f"\n{extra_text}"
-            msg += "\n\n아래 버튼을 눌러 참여하세요!\n⚠️ 처음 참여하시는 분은 @dopamin_ranking_bot 을 눌러 START 를 먼저 눌러주세요!"
-            bot.send_message(group_id, msg, reply_markup=markup)
-
-        # ── 메시지 기록 ──
-        elif message.chat.type in ['group', 'supergroup']:
-            save_message(user_id, username, first_name, group_id)
-
-    except Exception as e:
-        import traceback
-        print(f"handle_all error: {e}\n{traceback.format_exc()}")
-
-
-# ─────────────────────────────────────────────────────────
-# Flask 라우트 — KBO
-# ─────────────────────────────────────────────────────────
-@app.route('/kbo')
-def serve_kbo():
-    return send_from_directory('.', 'kbo.html')
-
-@app.route('/kbo/submit', methods=['POST'])
-def kbo_submit():
-    db = get_db(); c = db.cursor()
-    try:
-        data     = request.get_json()
-        user_id  = int(data.get('userId'))
-        group_id = int(data.get('groupId'))
-        teams    = data.get('teams', [])
-        if len(teams) != 5:
-            return {'ok': False}, 400
-        today = datetime.now(KST).date()
-        c.execute("SELECT first_name, username FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
-        row = c.fetchone()
-        first_name = clean_name(row[0]) if row and row[0] else ''
-        username   = row[1] if row else ''
-        if not first_name:
-            first_name = f"@{username}" if username else f"id:{user_id}"
-        teams_str = ','.join(teams)
-        c.execute("SELECT id FROM kbo_votes WHERE user_id=%s AND group_id=%s AND vote_date=%s", (user_id, group_id, today))
-        existing = c.fetchone()
-        if existing:
-            c.execute("UPDATE kbo_votes SET teams=%s, first_name=%s, username=%s WHERE user_id=%s AND group_id=%s AND vote_date=%s",
-                      (teams_str, first_name, username, user_id, group_id, today))
-            action_label = "수정 완료"
-        else:
-            c.execute("INSERT INTO kbo_votes (user_id, group_id, first_name, username, teams, vote_date) VALUES (%s,%s,%s,%s,%s,%s)",
-                      (user_id, group_id, first_name, username, teams_str, today))
-            action_label = "예측 완료"
-        c.execute("SELECT COUNT(*) FROM kbo_votes WHERE group_id=%s AND vote_date=%s", (group_id, today))
-        total = c.fetchone()[0]
-        db.commit()
-        team_display = '\n'.join([f"   {i+1}. {t}" for i, t in enumerate(teams)])
-        bot.send_message(group_id, f"⚾ KBO 승 {action_label}\n   👤 {first_name}님\n\n   선택한 팀 (5개):\n{team_display}\n\n   👥 오늘 참여자: {total}명")
-        return {'ok': True}, 200
-    except Exception as e:
-        import traceback
-        print(f"kbo_submit error: {e}\n{traceback.format_exc()}")
-        return {'ok': False}, 500
-    finally:
-        c.close(); db.close()
-
-@app.route('/kbo/list')
-def kbo_list():
-    db = get_db(); c = db.cursor()
-    try:
-        group_id = int(request.args.get('groupId', 0))
-        today = datetime.now(KST).date()
-        c.execute("SELECT user_id, first_name, username, teams FROM kbo_votes WHERE group_id=%s AND vote_date=%s ORDER BY created_at", (group_id, today))
-        rows = c.fetchall()
-        result = []
-        for row in rows:
-            uid   = row[0]
-            first = clean_name(row[1] or '')
-            uname = row[2] or ''
-            name  = first if first else (('@' + uname) if uname else ('id:' + str(uid)))
-            teams = row[3].split(',')
-            result.append({'name': name, 'teams': teams})
-        return result, 200
-    except:
-        return [], 500
-    finally:
-        c.close(); db.close()
-
-@app.route('/kbo/hot')
-def kbo_hot():
-    db = get_db(); c = db.cursor()
-    try:
-        group_id = int(request.args.get('groupId', 0))
-        today = datetime.now(KST).date()
-        c.execute("SELECT teams FROM kbo_votes WHERE group_id=%s AND vote_date=%s", (group_id, today))
-        rows = c.fetchall()
-        from collections import Counter
-        cnt = Counter()
-        for row in rows:
-            for team in row[0].split(','):
-                cnt[team] += 1
-        result = [{'team': t, 'count': v} for t, v in cnt.most_common(3)]
-        return result, 200
-    except:
-        return [], 500
-    finally:
-        c.close(); db.close()
-
-
-# ─────────────────────────────────────────────────────────
-# Flask 라우트 — 내전 (관리자 식별 및 싱크 최적화)
-# ─────────────────────────────────────────────────────────
-@app.route('/naejeon')
-def serve_naejeon():
-    return send_from_directory('.', 'naejeon.html')
-
-@app.route('/naejeon/check_admin')
-def naejeon_check_admin():
-    try:
-        user_id = int(request.args.get('userId', 0))
-        return {'isAdmin': user_id in ADMIN_IDS}, 200
-    except:
-        return {'isAdmin': False}, 200
-
-@app.route('/naejeon/room')
-def naejeon_room():
-    db = get_db(); c = db.cursor()
-    try:
-        room_id = request.args.get('roomId')
-        c.execute("""
-            SELECT game_type, slots, status, extra_text,
-                   pos_a, pos_b, started, fund_type, fund_amount
-            FROM naejeon_rooms WHERE room_id=%s
-        """, (room_id,))
-        row = c.fetchone()
-        if not row:
-            return {'error': '내전 방을 찾을 수 없어요.'}, 404
-        return {
-            'gameType':   row[0],
-            'slots':      row[1] or {},
-            'status':     row[2],
-            'extraText':  row[3] or '',
-            'posA':       row[4] or [],
-            'posB':       row[5] or [],
-            'started':    bool(row[6]),
-            'fundType':   row[7] or '',
-            'fundAmount': row[8] or '',
-        }, 200
-    except Exception as e:
-        return {'error': str(e)}, 500
-    finally:
-        c.close(); db.close()
-
-@app.route('/naejeon/setup', methods=['POST'])
-def naejeon_setup():
-    db = get_db(); c = db.cursor()
-    try:
-        data        = request.get_json()
-        room_id     = data.get('roomId')
-        user_id     = int(data.get('userId'))
-        group_id    = int(data.get('groupId'))
-        game_type   = data.get('gameType')
-        extra_text  = data.get('extraText', '')
-        pos_a       = data.get('posA', [])
-        pos_b       = data.get('posB', [])
-        fund_type   = data.get('fundType', '')
-        fund_amount = data.get('fundAmount', '')
-
-        if user_id not in ADMIN_IDS:
-            return {'ok': False, 'error': '관리자만 사용할 수 있어요.'}, 403
-
-        c.execute("""
-            UPDATE naejeon_rooms
-            SET extra_text=%s, pos_a=%s, pos_b=%s, started=TRUE,
-                fund_type=%s, fund_amount=%s
-            WHERE room_id=%s
-        """, (extra_text, json.dumps(pos_a), json.dumps(pos_b), fund_type, fund_amount, room_id))
-        db.commit()
-
-        game_names = {'lol':'리그오브레전드 5v5','sa5':'서든어택 5v5','sa6':'서든어택 6v6'}
-        gname  = game_names.get(game_type, '내전')
-        param  = f"{user_id}_{group_id}_{game_type}_{room_id}"
-        nj_url = f"{WEBAPP_BASE_URL}/naejeon?start={param}"
-
-        send_naejeon_gif(group_id)
-        msg = f"⚙️ {gname} 내전 설정 변경 및 공지!"
-        if extra_text:
-            msg += f"\n📢 공지: {extra_text}"
-        if fund_type and fund_amount:
-            msg += f"\n💰 {fund_type} 조건: {fund_amount}"
-        msg += f"\n\n👉 <a href='{nj_url}'>[여기]를 눌러 내전 현황 보기</a>"
-
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("⚔️ 내전 바로가기", url=nj_url))
-        bot.send_message(group_id, msg, reply_markup=markup, parse_mode='HTML')
-
-        c.execute("SELECT game_type, slots, status, extra_text, pos_a, pos_b, started, fund_type, fund_amount FROM naejeon_rooms WHERE room_id=%s", (room_id,))
-        row2 = c.fetchone()
-        return {
-            'ok': True,
-            'room': {
-                'gameType':   row2[0],
-                'slots':      row2[1] or {},
-                'status':     row2[2],
-                'extraText':  row2[3] or '',
-                'posA':       row2[4] or [],
-                'posB':       row2[5] or [],
-                'started':    bool(row2[6]),
-                'fundType':   row2[7] or '',
-                'fundAmount': row2[8] or '',
-            }
-        }, 200
-    except Exception as e:
-        return {'ok': False, 'error': str(e)}, 500
-    finally:
-        c.close(); db.close()
-
-@app.route('/naejeon/cancel', methods=['POST'])
-def naejeon_cancel():
-    db = get_db(); c = db.cursor()
-    try:
-        data     = request.get_json()
-        room_id  = data.get('roomId')
-        user_id  = int(data.get('userId', 0))
-        group_id = int(data.get('groupId', 0))
-
-        if user_id not in ADMIN_IDS:
-            return {'ok': False, 'error': '관리자만 사용할 수 있어요.'}, 403
-
-        c.execute("UPDATE naejeon_rooms SET status='cancelled' WHERE room_id=%s AND group_id=%s", (room_id, group_id))
-        affected = c.rowcount
-        db.commit()
-
-        if affected > 0:
-            try:
-                bot.send_message(group_id, "⚔️ 내전이 관리자에 의해 취소됐어요.")
-            except:
-                pass
-            return {'ok': True}, 200
-        else:
-            return {'ok': False, 'error': '내전을 찾을 수 없어요.'}, 404
-    except Exception as e:
-        return {'ok': False, 'error': str(e)}, 500
-    finally:
-        c.close(); db.close()
-
-@app.route('/naejeon/admin_add', methods=['POST'])
-def naejeon_admin_add():
-    db = get_db(); c = db.cursor()
-    try:
-        data     = request.get_json()
-        room_id  = data.get('roomId')
-        user_id  = int(data.get('userId'))
-        group_id = int(data.get('groupId'))
-        slot_key = data.get('slotKey')
-        name     = data.get('name', '').strip()
-
-        if user_id not in ADMIN_IDS:
-            return {'ok': False, 'error': '관리자만 사용할 수 있어요.'}, 403
-        if not name:
-            return {'ok': False, 'error': '이름을 입력해주세요.'}, 400
-
-        c.execute("SELECT game_type, slots, status FROM naejeon_rooms WHERE room_id=%s FOR UPDATE", (room_id,))
-        row = c.fetchone()
-        if not row:
-            return {'ok': False, 'error': '방을 찾을 수 없어요.'}, 404
-
-        slots = row[1] if row[1] else {}
-        slots[slot_key] = {'userId': f'admin_{uuid.uuid4().hex[:6]}', 'name': name, 'team': slot_key.split('_')[0]}
-
-        total  = {'lol':10,'sa5':10,'sa6':12}.get(row[0], 10)
-        filled = len([v for v in slots.values() if v and v.get('userId')])
-        status = 'closed' if filled >= total else 'open'
-
-        c.execute("UPDATE naejeon_rooms SET slots=%s, status=%s WHERE room_id=%s", (json.dumps(slots), status, room_id))
-        db.commit()
-
-        if status == 'closed':
-            _send_naejeon_result(group_id, row[0], slots)
-
-        c.execute("SELECT game_type, slots, status, extra_text, pos_a, pos_b, started, fund_type, fund_amount FROM naejeon_rooms WHERE room_id=%s", (room_id,))
-        row2 = c.fetchone()
-        return {
-            'ok': True,
-            'room': {
-                'gameType':   row2[0],
-                'slots':      row2[1] or {},
-                'status':     row2[2],
-                'extraText':  row2[3] or '',
-                'posA':       row2[4] or [],
-                'posB':       row2[5] or [],
-                'started':    bool(row2[6]),
-                'fundType':   row2[7] or '',
-                'fundAmount': row2[8] or '',
-            }
-        }, 200
-    except Exception as e:
-        return {'ok': False, 'error': str(e)}, 500
-    finally:
-        c.close(); db.close()
-
-@app.route('/naejeon/admin_remove', methods=['POST'])
-def naejeon_admin_remove():
-    db = get_db(); c = db.cursor()
-    try:
-        data     = request.get_json()
-        room_id  = data.get('roomId')
-        user_id  = int(data.get('userId'))
-        group_id = int(data.get('groupId'))
-        slot_key = data.get('slotKey')
-
-        if user_id not in ADMIN_IDS:
-            return {'ok': False, 'error': '관리자만 사용할 수 있어요.'}, 403
-
-        c.execute("SELECT game_type, slots, status FROM naejeon_rooms WHERE room_id=%s FOR UPDATE", (room_id,))
-        row = c.fetchone()
-        if not row:
-            return {'ok': False, 'error': '방을 찾을 수 없어요.'}, 404
-
-        slots = row[1] if row[1] else {}
-        if slot_key in slots:
-            slots[slot_key] = None
-
-        c.execute("UPDATE naejeon_rooms SET slots=%s, status='open' WHERE room_id=%s", (json.dumps(slots), room_id))
-        db.commit()
-
-        c.execute("SELECT game_type, slots, status, extra_text, pos_a, pos_b, started, fund_type, fund_amount FROM naejeon_rooms WHERE room_id=%s", (room_id,))
-        row2 = c.fetchone()
-        return {
-            'ok': True,
-            'room': {
-                'gameType':   row2[0],
-                'slots':      row2[1] or {},
-                'status':     row2[2],
-                'extraText':  row2[3] or '',
-                'posA':       row2[4] or [],
-                'posB':       row2[5] or [],
-                'started':    bool(row2[6]),
-                'fundType':   row2[7] or '',
-                'fundAmount': row2[8] or '',
-            }
-        }, 200
-    except Exception as e:
-        return {'ok': False, 'error': str(e)}, 500
-    finally:
-        c.close(); db.close()
-
-@app.route('/naejeon/join', methods=['POST'])
-def naejeon_join():
-    db = get_db(); c = db.cursor()
-    try:
-        data      = request.get_json()
-        room_id   = data.get('roomId')
-        user_id   = int(data.get('userId'))
-        group_id  = int(data.get('groupId'))
-        team      = data.get('team')
-        pos_id    = data.get('posId')
-        pos_label = data.get('posLabel')
-
-        c.execute("SELECT game_type, slots, status FROM naejeon_rooms WHERE room_id=%s FOR UPDATE", (room_id,))
-        row = c.fetchone()
-        if not row:
-            return {'ok': False, 'error': '방을 찾을 수 없어요.'}, 404
-        if row[2] != 'open':
-            return {'ok': False, 'error': '이미 마감된 내전이에요.'}, 400
-
-        slots     = row[1] if row[1] else {}
-        game_type = row[0]
-        slot_key  = f"{team}_{pos_id}"
-
-        for k, v in slots.items():
-            if v and str(v.get('userId')) == str(user_id):
-                return {'ok': False, 'error': '이미 참여하셨어요!'}, 400
-
-        if slots.get(slot_key):
-            return {'ok': False, 'error': '이미 선택된 포지션이에요!'}, 400
-
-        c.execute("SELECT first_name, username FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
-        ur   = c.fetchone()
-        name = clean_name(ur[0]) if ur and ur[0] else (f"@{ur[1]}" if ur and ur[1] else f"id:{user_id}")
-
-        slots[slot_key] = {'userId': user_id, 'name': name, 'posLabel': pos_label, 'team': team}
-
-        total_map = {'lol':10,'sa5':10,'sa6':12}
-        total     = total_map.get(game_type, 10)
-        filled    = len([v for v in slots.values() if v])
-        status    = 'closed' if filled >= total else 'open'
-
-        c.execute("UPDATE naejeon_rooms SET slots=%s, status=%s WHERE room_id=%s", (json.dumps(slots), status, room_id))
-        db.commit()
-
-        if status == 'closed':
-            _send_naejeon_result(group_id, game_type, slots)
-
-        c.execute("SELECT game_type, slots, status, extra_text, pos_a, pos_b, started, fund_type, fund_amount FROM naejeon_rooms WHERE room_id=%s", (room_id,))
-        row2 = c.fetchone()
-        return {'ok': True, 'room': {'gameType': row2[0], 'slots': row2[1] or {}, 'status': row2[2], 'extraText': row2[3] or '', 'posA': row2[4] or [], 'posB': row2[5] or [], 'started': bool(row2[6]), 'fundType': row2[7] or '', 'fundAmount': row2[8] or ''}}, 200
-    except Exception as e:
-        import traceback
-        print(f"naejeon_join error: {e}\n{traceback.format_exc()}")
-        return {'ok': False, 'error': str(e)}, 500
-    finally:
-        c.close(); db.close()
-
-@app.route('/naejeon/leave', methods=['POST'])
-def naejeon_leave():
-    db = get_db(); c = db.cursor()
-    try:
-        data    = request.get_json()
-        room_id = data.get('roomId')
-        user_id = int(data.get('userId'))
-
-        c.execute("SELECT game_type, slots, status FROM naejeon_rooms WHERE room_id=%s FOR UPDATE", (room_id,))
-        row = c.fetchone()
-        if not row:
-            return {'ok': False, 'error': '방을 찾을 수 없어요.'}, 404
-
-        slots   = row[1] if row[1] else {}
-        updated = False
-        for k, v in list(slots.items()):
-            if v and str(v.get('userId')) == str(user_id):
-                slots[k] = None
-                updated  = True
-                break
-
-        if not updated:
-            return {'ok': False, 'error': '참여 기록을 찾을 수 없어요.'}, 400
-
-        c.execute("UPDATE naejeon_rooms SET slots=%s, status='open' WHERE room_id=%s", (json.dumps(slots), room_id))
-        db.commit()
-        
-        c.execute("SELECT game_type, slots, status, extra_text, pos_a, pos_b, started, fund_type, fund_amount FROM naejeon_rooms WHERE room_id=%s", (room_id,))
-        row2 = c.fetchone()
-        return {'ok': True, 'room': {'gameType': row2[0], 'slots': row2[1] or {}, 'status': row2[2], 'extraText': row2[3] or '', 'posA': row2[4] or [], 'posB': row2[5] or [], 'started': bool(row2[6]), 'fundType': row2[7] or '', 'fundAmount': row2[8] or ''}}, 200
-    except Exception as e:
-        return {'ok': False, 'error': str(e)}, 500
-    finally:
-        c.close(); db.close()
-
-def _send_naejeon_result(group_id, game_type, slots):
-    game_names = {'lol':'리그오브레전드 5v5','sa5':'서든어택 5v5','sa6':'서든어택 6v6'}
-    pos_order = {
-        'lol': ['top','jg','mid','adc','sup'],
-        'sa5': ['sna','rfl1','rfl2','rfl3','rfl4'],
-        'sa6': ['sna1','sna2','rfl1','rfl2','rfl3','rfl4'],
-    }.get(game_type, [])
-    pos_labels = {
-        'top':'탑','jg':'정글','mid':'미드','adc':'원딜','sup':'서폿',
-        'sna':'스나','sna1':'스나1','sna2':'스나2',
-        'rfl1':'라플1','rfl2':'라플2','rfl3':'라플3','rfl4':'라플4',
+/* ── 상단 바 ── */
+.topbar {
+  background: #12122a;
+  padding: 14px 16px 10px;
+  text-align: center;
+  border-bottom: 1px solid #1e1e3a;
+  flex-shrink: 0;
+}
+.top-title { font-size: 16px; font-weight: 700; color: #fff; }
+.top-sub   { font-size: 11px; color: #8888bb; margin-top: 3px; }
+
+/* ── 컨텐츠 ── */
+.content {
+  flex: 1;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 90px;
+  overflow-y: auto;
+}
+
+/* ── 상태 바 ── */
+.status-bar {
+  background: #12122a;
+  border: 1px solid #1e1e3a;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.st-label { color: #8888bb; font-size: 12px; }
+.st-val   { color: #4a9eff; font-size: 14px; font-weight: 700; }
+.st-full  { color: #1d9e75; }
+
+/* ── 사비/찬조 배너 ── */
+.fund-banner {
+  background: #1a1a10;
+  border: 1px solid #6644aa55;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #ffdd77;
+}
+.fund-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: #33220088;
+  border-radius: 6px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+/* ── 관리자 배너 ── */
+.admin-banner {
+  background: #1a1030;
+  border: 1px solid #5533aa;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.admin-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #bb88ff;
+  background: #2a1050;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+.admin-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.admin-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  background: none;
+}
+.admin-btn:active { opacity: 0.7; }
+.admin-btn-setup  { color: #bb88ff; border-color: #5533aa; }
+.admin-btn-cancel { color: #ff7777; border-color: #aa3333; }
+
+/* ── 팀 레이아웃 ── */
+.teams-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.team-box {
+  background: #12122a;
+  border: 1px solid #1e1e3a;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.team-header {
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.team-a .team-header { background: #1a1030; color: #aa66ff; }
+.team-b .team-header { background: #0a1a10; color: #44cc88; }
+
+/* ── 슬롯 ── */
+.slot {
+  padding: 9px 10px;
+  border-top: 1px solid #1e1e3a;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: background 0.15s;
+  min-height: 42px;
+}
+.slot:active { background: #1e1e3a; }
+.slot.filled { cursor: default; }
+.slot.filled:active { background: transparent; }
+.slot.mine { background: #0d1a10; }
+
+.admin-mode .slot { cursor: pointer; }
+.admin-mode .slot:active { background: #1e1e3a; }
+.admin-mode .slot:not(.filled) { border-left: 2px dashed #5533aa44; }
+
+/* ── 포지션 배지 ── */
+.pos-badge {
+  font-size: 9px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-weight: 700;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.pos-top { background: #2a1a3a; color: #aa77ff; }
+.pos-jg  { background: #1a2a1a; color: #44bb44; }
+.pos-mid { background: #2a2210; color: #ddaa33; }
+.pos-adc { background: #2a1010; color: #ee5555; }
+.pos-sup { background: #102030; color: #4488ee; }
+.pos-sna { background: #2a1010; color: #ff7777; }
+.pos-rfl { background: #102010; color: #77cc77; }
+
+.slot-name  { font-size: 12px; color: #fff; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot-empty { font-size: 11px; color: #44446688; flex: 1; font-style: italic; }
+.slot-mine-badge {
+  font-size: 9px;
+  color: #44cc88;
+  background: #0a2010;
+  border-radius: 4px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+}
+.slot-admin-tag {
+  font-size: 10px;
+  border-radius: 4px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.slot-admin-tag.add    { color: #bb88ff; background: #1a1030; border-color: #5533aa44; }
+.slot-admin-tag.remove { color: #ff7777; background: #200a0a; border-color: #aa333344; }
+
+/* ── 하단 버튼 ── */
+.btn-wrap {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  padding: 12px 14px 24px;
+  background: #0a0a1a;
+  border-top: 1px solid #1e1e3a;
+}
+.btn-join {
+  width: 100%;
+  padding: 15px;
+  border-radius: 14px;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+.btn-join.active   { background: #4a9eff; color: #fff; }
+.btn-join.inactive { background: #1e1e3a; color: #444466; cursor: default; }
+.btn-join.cancel   { background: #cc3333; color: #fff; }
+.btn-join.full     { background: #1d9e75; color: #fff; cursor: default; }
+
+/* ── 일반 모달 (팀/포지션 선택) ── */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  display: none; align-items: flex-end; justify-content: center;
+  z-index: 100;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #12122a;
+  border-radius: 20px 20px 0 0;
+  padding: 20px 16px 32px;
+  width: 100%; max-width: 480px;
+}
+.modal-title {
+  font-size: 15px; font-weight: 700; color: #fff;
+  text-align: center; margin-bottom: 6px;
+}
+.modal-sub {
+  font-size: 12px; color: #8888bb;
+  text-align: center; margin-bottom: 14px;
+}
+.sec-label { color: #8888bb; font-size: 10px; margin-bottom: 5px; letter-spacing: 0.04em; }
+.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.modal-btn {
+  padding: 12px; border-radius: 10px;
+  border: 1.5px solid #1e1e3a; background: #0a0a1a;
+  color: #ccc; font-size: 13px; font-weight: 600;
+  cursor: pointer; text-align: center; transition: all 0.15s;
+}
+.modal-btn:active { transform: scale(0.97); }
+.modal-btn.disabled { opacity: 0.35; cursor: not-allowed; }
+.modal-btn.sel-team-a { border-color: #aa66ff; background: #1a1030; color: #aa66ff; }
+.modal-btn.sel-team-b { border-color: #44cc88; background: #0a1a10; color: #44cc88; }
+.modal-cancel {
+  width: 100%; padding: 12px; border-radius: 10px;
+  border: 1px solid #1e1e3a; background: transparent;
+  color: #8888bb; font-size: 13px; cursor: pointer; margin-top: 4px;
+}
+
+/* ── 관리자 공용 모달 ── */
+.admin-modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.8);
+  display: none; align-items: center; justify-content: center;
+  z-index: 200; padding: 20px;
+}
+.admin-modal-overlay.show { display: flex; }
+.admin-modal {
+  background: #12122a;
+  border: 1px solid #5533aa;
+  border-radius: 16px;
+  padding: 20px 18px 18px;
+  width: 100%; max-width: 380px;
+}
+.admin-modal-title {
+  font-size: 14px; font-weight: 700; color: #bb88ff;
+  margin-bottom: 14px; text-align: center;
+}
+.admin-input {
+  width: 100%; background: #0a0a1a;
+  border: 1px solid #3a3a6a; border-radius: 10px;
+  color: #fff; font-size: 14px; padding: 12px 14px;
+  margin-bottom: 10px; outline: none;
+}
+.admin-input:focus { border-color: #5533aa; }
+.admin-input::placeholder { color: #44446699; }
+.admin-modal-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+.admin-confirm-btn {
+  padding: 12px; border-radius: 10px; border: none;
+  background: #5533aa; color: #fff;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.admin-confirm-btn:active { opacity: 0.8; }
+.admin-dismiss-btn {
+  padding: 12px; border-radius: 10px;
+  border: 1px solid #3a3a6a; background: transparent;
+  color: #8888bb; font-size: 13px; cursor: pointer;
+}
+
+/* ── 설정 모달 전용 ── */
+.setup-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0; }
+.fund-select-wrap { display: flex; gap: 8px; margin-bottom: 10px; }
+.fund-type-btn {
+  flex: 1; padding: 10px; border-radius: 10px;
+  border: 1.5px solid #3a3a6a; background: #0a0a1a;
+  color: #888; font-size: 13px; font-weight: 600;
+  cursor: pointer; text-align: center; transition: all 0.15s;
+}
+.fund-type-btn.active-sabi { border-color: #ff9944; background: #1a1000; color: #ff9944; }
+.fund-type-btn.active-chajo { border-color: #44bbff; background: #001a2a; color: #44bbff; }
+.fund-type-btn.active-none { border-color: #666; background: #111; color: #aaa; }
+
+/* ── 토스트 ── */
+.toast {
+  position: fixed; bottom: 100px; left: 50%;
+  transform: translateX(-50%);
+  background: #1d9e75; color: #fff;
+  font-size: 13px; font-weight: 600;
+  padding: 10px 20px; border-radius: 20px;
+  z-index: 300; opacity: 0; transition: opacity 0.2s;
+  white-space: nowrap; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+.toast.error { background: #cc3333; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="top-title" id="top-title">⚔️ 내전 모집</div>
+  <div class="top-sub" id="top-sub">포지션을 선택해서 참여하세요</div>
+</div>
+
+<div class="content" id="main-content">
+  <!-- 상태 바 -->
+  <div class="status-bar">
+    <span class="st-label">참여 현황</span>
+    <span class="st-val" id="status-val">로딩 중...</span>
+  </div>
+
+  <!-- 사비/찬조 배너 (있을 때만 표시) -->
+  <div class="fund-banner" id="fund-banner" style="display:none">
+    <span class="fund-badge" id="fund-badge"></span>
+    <span id="fund-amount-text"></span>
+  </div>
+
+  <!-- 관리자 배너 -->
+  <div class="admin-banner" id="admin-banner" style="display:none">
+    <span class="admin-badge">👑 관리자 모드</span>
+    <div class="admin-actions">
+      <button class="admin-btn admin-btn-setup" onclick="openSetupModal()">⚙️ 내전 설정</button>
+      <button class="admin-btn admin-btn-cancel" onclick="adminCancelRoom()">🗑 취소</button>
+    </div>
+  </div>
+
+  <!-- 팀 목록 -->
+  <div>
+    <div class="sec-label">팀 구성</div>
+    <div class="teams-wrap" id="teams-wrap"></div>
+  </div>
+</div>
+
+<!-- 하단 버튼 -->
+<div class="btn-wrap">
+  <button class="btn-join inactive" id="btn-join" onclick="handleMainBtn()">
+    슬롯을 선택해서 참여하세요
+  </button>
+</div>
+
+<!-- ── 일반 유저: 팀/포지션 선택 모달 ── -->
+<div class="modal-overlay" id="modal" onclick="onModalOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">포지션 선택</div>
+    <div class="modal-sub" id="modal-sub">팀을 선택해주세요</div>
+
+    <div class="sec-label">팀 선택</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div class="modal-btn" id="m-team-a" onclick="selectTeam('A')">🟣 1팀</div>
+      <div class="modal-btn" id="m-team-b" onclick="selectTeam('B')">🟢 2팀</div>
+    </div>
+
+    <div class="sec-label">확인</div>
+    <button class="btn-join inactive" id="modal-confirm" style="border-radius:10px;padding:12px;font-size:14px;margin-bottom:8px" onclick="confirmJoin()">
+      팀을 선택해주세요
+    </button>
+    <button class="modal-cancel" onclick="closeModal()">취소</button>
+  </div>
+</div>
+
+<!-- ── 관리자: 이름 추가 모달 ── -->
+<div class="admin-modal-overlay" id="admin-add-modal">
+  <div class="admin-modal">
+    <div class="admin-modal-title" id="admin-add-title">👑 참여자 추가</div>
+    <input class="admin-input" type="text" id="admin-name-input"
+           placeholder="참여자 이름 직접 입력" maxlength="20"
+           onkeydown="if(event.key==='Enter') confirmAdminAdd()" />
+    <div class="admin-modal-btns">
+      <button class="admin-confirm-btn" onclick="confirmAdminAdd()">추가</button>
+      <button class="admin-dismiss-btn" onclick="closeAdminAddModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 관리자: 강제 제거 모달 ── -->
+<div class="admin-modal-overlay" id="admin-remove-modal">
+  <div class="admin-modal">
+    <div class="admin-modal-title">🗑 참여자 제거</div>
+    <p style="font-size:13px;color:#aaa;text-align:center;margin-bottom:14px" id="admin-remove-sub"></p>
+    <div class="admin-modal-btns">
+      <button class="admin-confirm-btn" style="background:#cc3333" onclick="confirmAdminRemove()">제거</button>
+      <button class="admin-dismiss-btn" onclick="closeAdminRemoveModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 관리자: 내전 설정 모달 ── -->
+<div class="admin-modal-overlay" id="setup-modal">
+  <div class="admin-modal" style="max-width:420px">
+    <div class="admin-modal-title">⚙️ 내전 설정 및 공지</div>
+
+    <!-- 사비 / 찬조 / 없음 선택 -->
+    <div class="sec-label" style="margin-bottom:6px">💰 금액 유형</div>
+    <div class="fund-select-wrap">
+      <button class="fund-type-btn" id="fund-btn-sabi"  onclick="setFundType('사비')">💸 사비</button>
+      <button class="fund-type-btn" id="fund-btn-chajo" onclick="setFundType('찬조')">🎁 찬조</button>
+      <button class="fund-type-btn active-none" id="fund-btn-none"  onclick="setFundType('')">없음</button>
+    </div>
+
+    <!-- 금액 입력 -->
+    <div id="fund-amount-wrap" style="display:none">
+      <div class="sec-label" style="margin-bottom:6px">금액 입력</div>
+      <input class="admin-input" type="text" id="setup-fund-amount"
+             placeholder="예: 1인당 5,000원 / 판당 3만원" maxlength="30" />
+    </div>
+
+    <!-- 부가 텍스트 -->
+    <div class="sec-label" style="margin-bottom:6px">게임 정보 / 부가 텍스트</div>
+    <input class="admin-input" type="text" id="setup-extra-text"
+           placeholder="예: 롤 내전 치킨빵 / 서든 헬리오스 매치" maxlength="60" />
+
+    <!-- 포지션 순서 (선택) -->
+    <div class="setup-row">
+      <div>
+        <div class="sec-label" style="margin-bottom:6px">1팀 포지션 순서</div>
+        <input class="admin-input" type="text" id="setup-pos-a" placeholder="예: 탑,정글,미드,원딜,서폿" style="margin-bottom:0" />
+      </div>
+      <div>
+        <div class="sec-label" style="margin-bottom:6px">2팀 포지션 순서</div>
+        <input class="admin-input" type="text" id="setup-pos-b" placeholder="예: 탑,정글,미드,원딜,서폿" style="margin-bottom:0" />
+      </div>
+    </div>
+
+    <div class="admin-modal-btns" style="margin-top:14px">
+      <button class="admin-confirm-btn" id="setup-confirm-btn" onclick="confirmSetup()">적용 & 그룹 공지</button>
+      <button class="admin-dismiss-btn" onclick="closeSetupModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════
+// 파라미터 파싱
+// ════════════════════════════════════
+let userId   = null;
+let groupId  = null;
+let gameType = null;
+let roomId   = null;
+
+try {
+  const params = new URLSearchParams(window.location.search);
+  const start  = params.get('start');
+  if (start) {
+    const parts = start.split('_');
+    userId   = parts[0] || null;
+    groupId  = parts[1] || null;
+    gameType = parts[2] || null;
+    roomId   = parts[3] || null;
+  }
+} catch(e) {}
+
+const GAME_CONFIG = {
+  lol: {
+    name: '리그오브레전드 5v5', total: 10, perTeam: 5,
+    positions: [
+      { id: 'top',  label: '탑',  cls: 'pos-top' },
+      { id: 'jg',   label: '정글', cls: 'pos-jg'  },
+      { id: 'mid',  label: '미드', cls: 'pos-mid' },
+      { id: 'adc',  label: '원딜', cls: 'pos-adc' },
+      { id: 'sup',  label: '서폿', cls: 'pos-sup' },
+    ]
+  },
+  sa5: {
+    name: '서든어택 5v5', total: 10, perTeam: 5,
+    positions: [
+      { id: 'sna',  label: '스나', cls: 'pos-sna' },
+      { id: 'rfl1', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl2', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl3', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl4', label: '라플', cls: 'pos-rfl' },
+    ]
+  },
+  sa6: {
+    name: '서든어택 6v6', total: 12, perTeam: 6,
+    positions: [
+      { id: 'sna1', label: '스나', cls: 'pos-sna' },
+      { id: 'sna2', label: '스나', cls: 'pos-sna' },
+      { id: 'rfl1', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl2', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl3', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl4', label: '라플', cls: 'pos-rfl' },
+    ]
+  }
+};
+
+let config   = GAME_CONFIG[gameType] || GAME_CONFIG['lol'];
+let roomData = null;
+let isAdmin  = false;
+let mySlot   = null;
+
+let selTeam        = null;
+let clickedPos     = null;
+let adminAddSlot   = null;
+let adminRemoveSlot = null;
+let selectedFundType = ''; 
+
+document.getElementById('top-title').textContent = '⚔️ ' + config.name;
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => { t.className = 'toast'; }, 2500);
+}
+
+async function checkAdmin() {
+  if (!userId) return;
+  try {
+    const res  = await fetch(`/naejeon/check_admin?userId=${userId}`);
+    const data = await res.json();
+    isAdmin = data.isAdmin === true;
+  } catch(e) {
+    isAdmin = false;
+  }
+}
+
+async function loadRoom() {
+  try {
+    const res  = await fetch(`/naejeon/room?roomId=${roomId}`);
+    const data = await res.json();
+    if (data.error) {
+      document.getElementById('main-content').innerHTML =
+        `<div style="text-align:center;padding:40px;color:#8888bb">${data.error}</div>`;
+      return;
     }
-    result = f"⚔️ {game_names.get(game_type,'')} 내전 모집 완료!\n\n"
-    for team_id, label in [('A','🟣 1팀'), ('B','🟢 2팀')]:
-        result += f"{label}\n"
-        for pos in pos_order:
-            slot  = slots.get(f"{team_id}_{pos}")
-            pname = pos_labels.get(pos, pos)
-            uname = slot['name'] if (slot and slot.get('userId')) else '비어있음'
-            result += f"   [{pname}] {uname}\n"
-        result += "\n"
-    try:
-        bot.send_message(group_id, result)
-    except:
-        pass
+    roomData = data;
+    config   = GAME_CONFIG[roomData.gameType] || config;
+    document.getElementById('top-title').textContent = '⚔️ ' + config.name;
+    if (roomData.extraText) {
+      document.getElementById('top-sub').textContent = roomData.extraText;
+    }
+    renderRoom();
+  } catch(e) {}
+}
 
+function renderRoom() {
+  if (!roomData) return;
+  const slots  = roomData.slots || {};
+  const filled = Object.values(slots).filter(Boolean).length;
+  const total  = config.total;
 
-# ─────────────────────────────────────────────────────────
-# Webhook
-# ─────────────────────────────────────────────────────────
-@app.route('/' + BOT_TOKEN, methods=['POST'])
-def webhook():
-    try:
-        json_str = request.stream.read().decode('utf-8')
-        update   = telebot.types.Update.de_json(json_str)
-        if update.message:
-            handle_all(update.message)
-        elif update.callback_query:
-            if update.callback_query.data.startswith('kbo_'):
-                handle_kbo_callback(update.callback_query)
-            elif update.callback_query.data.startswith('nj_open:'):
-                handle_nj_open(update.callback_query)
-    except Exception as e:
-        import traceback
-        print(f"webhook error: {e}\n{traceback.format_exc()}")
-    return 'OK', 200
+  mySlot = null;
+  for (const [key, slot] of Object.entries(slots)) {
+    if (slot && String(slot.userId) === String(userId)) {
+      mySlot = key;
+      break;
+    }
+  }
 
-@app.route('/')
-def index():
-    return 'Bot is running!', 200
+  document.getElementById('admin-banner').style.display = isAdmin ? 'flex' : 'none';
 
+  const fundBanner = document.getElementById('fund-banner');
+  if (roomData.fundType && roomData.fundAmount) {
+    fundBanner.style.display = 'flex';
+    const badge = document.getElementById('fund-badge');
+    badge.textContent = roomData.fundType === '사비' ? '💸 사비' : '🎁 찬조';
+    document.getElementById('fund-amount-text').textContent = roomData.fundAmount;
+  } else {
+    fundBanner.style.display = 'none';
+  }
 
-# ─────────────────────────────────────────────────────────
-# 시작
-# ─────────────────────────────────────────────────────────
-try:
-    init_db()
-    print("DB 초기화 성공!")
-except Exception as e:
-    print(f"DB init error: {e}")
+  const stVal = document.getElementById('status-val');
+  stVal.textContent = `${filled} / ${total}명`;
+  stVal.className   = filled >= total ? 'st-val st-full' : 'st-val';
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+  const wrap = document.getElementById('teams-wrap');
+  wrap.className = 'teams-wrap' + (isAdmin ? ' admin-mode' : '');
+  wrap.innerHTML = '';
+
+  ['A', 'B'].forEach(team => {
+    const box  = document.createElement('div');
+    const tcls = team === 'A' ? 'team-a' : 'team-b';
+    box.className = `team-box ${tcls}`;
+    box.innerHTML = `<div class="team-header">${team === 'A' ? '🟣 1팀' : '🟢 2팀'}</div>`;
+
+    config.positions.forEach(pos => {
+      const key    = `${team}_${pos.id}`;
+      const slot   = slots[key];
+      const isMine = slot && String(slot.userId) === String(userId);
+      const div    = document.createElement('div');
+      div.className = 'slot' + (slot ? ' filled' : '') + (isMine ? ' mine' : '');
+
+      if (slot) {
+        div.innerHTML = `
+          <span class="pos-badge ${pos.cls}">${pos.label}</span>
+          <span class="slot-name">${escHtml(slot.name)}</span>
+          ${isMine ? '<span class="slot-mine-badge">나</span>' : ''}
+          ${isAdmin ? `<button class="slot-admin-tag remove" onclick="openAdminRemove('${key}','${escHtml(slot.name)}',event)">제거</button>` : ''}
+        `;
+        if (isAdmin) {
+          div.onclick = (e) => openAdminRemove(key, slot.name, e);
+        } else {
+          div.style.cursor = 'default';
+        }
+      } else {
+        div.innerHTML = `
+          <span class="pos-badge ${pos.cls}">${pos.label}</span>
+          <span class="slot-empty">${isAdmin ? '+ 타이핑 추가' : '비어있음'}</span>
+          ${isAdmin ? '<button class="slot-admin-tag add">추가</button>' : ''}
+        `;
+        if (isAdmin) {
+          div.onclick = () => openAdminAdd(team, pos);
+        } else if (!mySlot && filled < total && roomData.status === 'open') {
+          div.onclick = () => openUserModal(team, pos);
+        } else {
+          div.style.cursor = 'default';
+        }
+      }
+      box.appendChild(div);
+    });
+    wrap.appendChild(box);
+  });
+
+  const btn = document.getElementById('btn-join');
+  if (roomData.status !== 'open' || filled >= total) {
+    btn.className   = 'btn-join full';
+    btn.textContent = '✅ 모집 완료!';
+  } else if (isAdmin) {
+    btn.className   = 'btn-join inactive';
+    btn.textContent = '👑 슬롯을 눌러 직접 추가하거나 빼기 가능';
+  } else if (mySlot) {
+    btn.className   = 'btn-join cancel';
+    btn.textContent = '❌ 참여 취소하기';
+  } else {
+    btn.className   = 'btn-join inactive';
+    btn.textContent = '위 슬롯을 탭해서 참여하세요';
+  }
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function handleMainBtn() {
+  if (isAdmin || !mySlot) return;
+  const btn = document.getElementById('btn-join');
+  btn.textContent = '취소 중...'; btn.className = 'btn-join inactive';
+  try {
+    const res  = await fetch('/naejeon/leave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId, userId, groupId })
+    });
+    const data = await res.json();
+    if (data.ok) { roomData = data.room; renderRoom(); showToast('참여가 취소됐어요.'); }
+    else showToast(data.error || '오류가 발생했어요.', true);
+  } catch(e) {
+    showToast('오류가 발생했어요.', true);
+    renderRoom();
+  }
+}
+
+function openUserModal(team, pos) {
+  clickedPos = pos;
+  selTeam    = null;
+  const slots = roomData.slots || {};
+  const aFull = config.positions.every(p => slots[`A_${p.id}`]);
+  const bFull = config.positions.every(p => slots[`B_${p.id}`]);
+
+  document.getElementById('modal-title').textContent = `[${pos.label}] 포지션 참여`;
+  document.getElementById('modal-sub').textContent   = '참여할 팀을 선택해주세요';
+  document.getElementById('m-team-a').className = 'modal-btn' + (aFull ? ' disabled' : '');
+  document.getElementById('m-team-b').className = 'modal-btn' + (bFull ? ' disabled' : '');
+  document.getElementById('modal-confirm').className = 'btn-join inactive';
+  document.getElementById('modal-confirm').textContent = '팀을 선택해주세요';
+
+  if (!slots[`${team}_${pos.id}`]) selectTeam(team);
+  document.getElementById('modal').classList.add('show');
+}
+
+function selectTeam(team) {
+  const key = `${team}_${clickedPos?.id}`;
+  if ((roomData.slots || {})[key]) return;
+  selTeam = team;
+  document.getElementById('m-team-a').className = 'modal-btn' + (team === 'A' ? ' sel-team-a' : '');
+  document.getElementById('m-team-b').className = 'modal-btn' + (team === 'B' ? ' sel-team-b' : '');
+  const btn = document.getElementById('modal-confirm');
+  btn.className   = 'btn-join active';
+  btn.textContent = `✅ ${team === 'A' ? '🟣 1팀' : '🟢 2팀'} [${clickedPos.label}]로 참여`;
+}
+
+function onModalOverlayClick(e) {
+  if (e.target === document.getElementById('modal')) closeModal();
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+  selTeam = null; clickedPos = null;
+}
+
+async function confirmJoin() {
+  if (!selTeam || !clickedPos) return;
+  const btn = document.getElementById('modal-confirm');
+  btn.textContent = '참여 중...'; btn.className = 'btn-join inactive';
+  try {
+    const res  = await fetch('/naejeon/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId, userId, groupId,
+        team: selTeam,
+        posId: clickedPos.id,
+        posLabel: clickedPos.label
+      })
+    });
+    const data = await res.json();
+    closeModal();
+    if (data.ok) { roomData = data.room; renderRoom(); showToast('✅ 참여 완료!'); }
+    else showToast(data.error || '오류가 발생했어요.', true);
+  } catch(e) {
+    showToast('오류가 발생했어요.', true);
+    closeModal(); renderRoom();
+  }
+}
+
+// 👑 관리자: 직접 타이핑 추가
+function openAdminAdd(team, pos) {
+  adminAddSlot = { team, pos, slotKey: `${team}_${pos.id}` };
+  document.getElementById('admin-add-title').textContent = `👑 ${team === 'A' ? '🟣 1팀' : '🟢 2팀'} [${pos.label}] 추가`;
+  document.getElementById('admin-name-input').value = '';
+  document.getElementById('admin-add-modal').classList.add('show');
+  setTimeout(() => document.getElementById('admin-name-input').focus(), 150);
+}
+function closeAdminAddModal() {
+  document.getElementById('admin-add-modal').classList.remove('show');
+  adminAddSlot = null;
+}
+async function confirmAdminAdd() {
+  const name = document.getElementById('admin-name-input').value.trim();
+  if (!name) { showToast('이름을 입력해주세요!', true); return; }
+  if (!adminAddSlot) return;
+  const btn = document.querySelector('#admin-add-modal .admin-confirm-btn');
+  btn.textContent = '추가 중...';
+  try {
+    const res  = await fetch('/naejeon/admin_add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId, userId: parseInt(userId), groupId: parseInt(groupId),
+        slotKey: adminAddSlot.slotKey, name
+      })
+    });
+    const data = await res.json();
+    closeAdminAddModal();
+    if (data.ok) { roomData = data.room; renderRoom(); showToast(`✅ ${name} 등록 완료!`); }
+    else showToast(data.error || '오류가 발생했어요.', true);
+  } catch(e) {
+    showToast('오류가 발생했어요.', true);
+  } finally { btn.textContent = '추가'; }
+}
+
+// 👑 관리자: 유저 제거
+function openAdminRemove(slotKey, name, event) {
+  if(event) event.stopPropagation();
+  adminRemoveSlot = { slotKey, name };
+  document.getElementById('admin-remove-sub').textContent = `"${name}" 님을 슬롯에서 뺄까요?`;
+  document.getElementById('admin-remove-modal').classList.add('show');
+}
+function closeAdminRemoveModal() {
+  document.getElementById('admin-remove-modal').classList.remove('show');
+  adminRemoveSlot = null;
+}
+async function confirmAdminRemove() {
+  if (!adminRemoveSlot) return;
+  const btn = document.querySelector('#admin-remove-modal .admin-confirm-btn');
+  btn.textContent = '제거 중...';
+  try {
+    const res  = await fetch('/naejeon/admin_remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId, userId: parseInt(userId), groupId: parseInt(groupId),
+        slotKey: adminRemoveSlot.slotKey
+      })
+    });
+    const data = await res.json();
+    const removedName = adminRemoveSlot.name;
+    closeAdminRemoveModal();
+    if (data.ok) { roomData = data.room; renderRoom(); showToast(`🗑 ${removedName} 제거 완료`); }
+    else showToast(data.error || '오류가 발생했어요.', true);
+  } catch(e) {
+    showToast('오류가 발생했어요.', true);
+  } finally { btn.textContent = '제거'; }
+}
+
+function setFundType(type) {
+  selectedFundType = type;
+  document.getElementById('fund-btn-sabi').className  = 'fund-type-btn' + (type === '사비' ? ' active-sabi' : '');
+  document.getElementById('fund-btn-chajo').className = 'fund-type-btn' + (type === '찬조' ? ' active-chajo' : '');
+  document.getElementById('fund-btn-none').className  = 'fund-type-btn' + (type === '' ? ' active-none' : '');
+  document.getElementById('fund-amount-wrap').style.display = type ? 'block' : 'none';
+}
+
+function openSetupModal() {
+  if (roomData) {
+    // 2번 요구사항: 롤/서든 및 기존 부가텍스트, 사비/찬조 금액 폼 자동 렌더링
+    document.getElementById('setup-extra-text').value = roomData.extraText || '';
+    if (roomData.posA && roomData.posA.length > 0)
+      document.getElementById('setup-pos-a').value = roomData.posA.join(',');
+    if (roomData.posB && roomData.posB.length > 0)
+      document.getElementById('setup-pos-b').value = roomData.posB.join(',');
+    if (roomData.fundType) {
+      setFundType(roomData.fundType);
+      document.getElementById('setup-fund-amount').value = roomData.fundAmount || '';
+    } else {
+      setFundType('');
+      document.getElementById('setup-fund-amount').value = '';
+    }
+  }
+  document.getElementById('setup-modal').classList.add('show');
+}
+function closeSetupModal() {
+  document.getElementById('setup-modal').classList.remove('show');
+}
+
+async function confirmSetup() {
+  const extraText  = document.getElementById('setup-extra-text').value.trim();
+  const fundAmount = selectedFundType ? document.getElementById('setup-fund-amount').value.trim() : '';
+  const posAStr = document.getElementById('setup-pos-a').value.trim();
+  const posBStr = document.getElementById('setup-pos-b').value.trim();
+  const posA = posAStr ? posAStr.split(',').map(s => s.trim()).filter(Boolean) : config.positions.map(p => p.label);
+  const posB = posBStr ? posBStr.split(',').map(s => s.trim()).filter(Boolean) : config.positions.map(p => p.label);
+
+  if (selectedFundType && !fundAmount) {
+    showToast('금액을 입력해주세요!', true); return;
+  }
+
+  const btn = document.getElementById('setup-confirm-btn');
+  btn.textContent = '적용 중...';
+
+  try {
+    const res  = await fetch('/naejeon/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId, userId: parseInt(userId), groupId: parseInt(groupId),
+        gameType, extraText, fundType: selectedFundType, fundAmount, posA, posB
+      })
+    });
+    const data = await res.json();
+    closeSetupModal();
+    if (data.ok) {
+      roomData = data.room;
+      if (roomData.extraText) {
+        document.getElementById('top-sub').textContent = roomData.extraText;
+      }
+      renderRoom();
+      showToast('✅ 설정 완료! 그룹에 공지됐어요.');
+    } else {
+      showToast(data.error || '오류가 발생했어요.', true);
+    }
+  } catch(e) {
+    showToast('오류가 발생했어요.', true);
+  } finally {
+    btn.textContent = '적용 & 그룹 공지';
+  }
+}
+
+async function adminCancelRoom() {
+  if (!confirm('정말 내전을 취소할까요?')) return;
+  try {
+    const res  = await fetch('/naejeon/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId, userId: parseInt(userId), groupId: parseInt(groupId) })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast('✅ 내전이 취소됐어요.');
+      setTimeout(() => window.location.reload(), 1200);
+    } else {
+      showToast(data.error || '오류가 발생했어요.', true);
+    }
+  } catch(e) {
+    showToast('오류가 발생했어요.', true);
+  }
+}
+
+async function init() {
+  await checkAdmin();
+  await loadRoom();
+  setInterval(loadRoom, 3000); // 실시간 싱크 주기를 3초로 단축
+}
+
+init();
+</script>
+</body>
+</html>
