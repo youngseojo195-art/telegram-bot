@@ -106,7 +106,7 @@ KBO_TEAMS_DISPLAY = {
 }
 
 VOTE_START = "18:00"
-VOTE_END   = "16:50"
+VOTE_END   = "18:30"
 
 
 # ─────────────────────────────────────────────────────────
@@ -156,6 +156,13 @@ def build_vote_message(selected: list) -> str:
 # ─────────────────────────────────────────────────────────
 # DB 헬퍼
 # ─────────────────────────────────────────────────────────
+def clean_name(name):
+    """특수 공백 문자(ㅤ 등) 제거 후 진짜 이름인지 확인"""
+    if not name:
+        return ''
+    cleaned = name.strip().replace('\u3164', '').replace('\u200b', '').replace('\u200c', '').replace('\u200d', '').replace('\ufeff', '').strip()
+    return cleaned
+
 def get_db():
     return psycopg2.connect(os.environ.get('DATABASE_URL'))
 
@@ -704,20 +711,22 @@ def handle_all(message):
         elif text.strip().startswith('/야구'):
             if message.chat.type == 'private': return
             send_baseball_gif(group_id)
-            team_list = "  " + "  /  ".join(KBO_TEAMS)
+            param = f"{user_id}_{group_id}"
+            kbo_url = f"{WEBAPP_BASE_URL}/kbo?start={param}"
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton(
+                "⚾ KBO 승 예측 참여하기",
+                url=kbo_url
+            ))
             bot.reply_to(message,
                 f"⚾ KBO 승 예측 안내\n"
                 f"{'─' * 23}\n\n"
-                f"📋 선택 가능 팀 (10개):\n{team_list}\n\n"
-                f"{'─' * 23}\n"
-                f"✅ /승       — 버튼으로 5개 팀 선택\n"
-                f"✏️  /수정    — 선택 변경\n"
-                f"📋 /리스트 — 오늘 참여 현황\n"
-                f"{'─' * 23}\n\n"
-                f"⏰ 참여 시간: PM {VOTE_START} ~ {VOTE_END}\n"
                 f"📅 참여 요일: 화 / 수 / 목 / 금\n"
-                f"📌 10개 팀 중 5개만 선택 가능\n"
-                f"📌 하루 1회 참여 (수정 가능)")
+                f"⏰ 참여 시간: PM {VOTE_START} ~ {VOTE_END}\n"
+                f"📌 10개 팀 중 5개 선택\n"
+                f"📌 하루 1회 참여 (수정 가능)\n\n"
+                f"아래 버튼을 눌러 참여하세요!",
+                reply_markup=markup)
 
         # ── /승 ──
         elif text.strip().startswith('/승'):
@@ -838,7 +847,73 @@ def handle_all(message):
 # ─────────────────────────────────────────────────────────
 # Flask 라우트
 # ─────────────────────────────────────────────────────────
+from flask import send_from_directory
 
+@app.route('/kbo')
+def serve_kbo():
+    return send_from_directory('.', 'kbo.html')
+
+@app.route('/kbo/submit', methods=['POST'])
+def kbo_submit():
+    try:
+        data     = request.get_json()
+        user_id  = int(data.get('userId'))
+        group_id = int(data.get('groupId'))
+        teams    = data.get('teams', [])
+        if len(teams) != 5:
+            return {'ok': False}, 400
+        today = datetime.now(KST).date()
+        db = get_db(); c = db.cursor()
+        c.execute("SELECT first_name, username FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
+        row = c.fetchone()
+        first_name = clean_name(row[0]) if row and row[0] else ''
+        username   = row[1] if row else ''
+        if not first_name:
+            first_name = f"@{username}" if username else f"id:{user_id}"
+        teams_str = ','.join(teams)
+        c.execute("SELECT id FROM kbo_votes WHERE user_id=%s AND group_id=%s AND vote_date=%s", (user_id, group_id, today))
+        existing = c.fetchone()
+        if existing:
+            c.execute("UPDATE kbo_votes SET teams=%s, first_name=%s, username=%s WHERE user_id=%s AND group_id=%s AND vote_date=%s",
+                      (teams_str, first_name, username, user_id, group_id, today))
+            action_label = "수정 완료"
+        else:
+            c.execute("INSERT INTO kbo_votes (user_id, group_id, first_name, username, teams, vote_date) VALUES (%s,%s,%s,%s,%s,%s)",
+                      (user_id, group_id, first_name, username, teams_str, today))
+            action_label = "예측 완료"
+        c.execute("SELECT COUNT(*) FROM kbo_votes WHERE group_id=%s AND vote_date=%s", (group_id, today))
+        total = c.fetchone()[0]
+        db.commit(); c.close(); db.close()
+        team_display = '\n'.join([f"  {i+1}. {t}" for i, t in enumerate(teams)])
+        bot.send_message(group_id,
+            f"⚾ KBO 승 {action_label}\n"
+            f"  👤 {first_name}님\n\n"
+            f"  선택한 팀 (5개):\n{team_display}\n\n"
+            f"  👥 오늘 참여자: {total}명"
+        )
+        return {'ok': True}, 200
+    except Exception as e:
+        import traceback
+        print(f"kbo_submit error: {e}\n{traceback.format_exc()}")
+        return {'ok': False}, 500
+
+@app.route('/kbo/hot')
+def kbo_hot():
+    try:
+        group_id = int(request.args.get('groupId', 0))
+        today = datetime.now(KST).date()
+        db = get_db(); c = db.cursor()
+        c.execute("SELECT teams FROM kbo_votes WHERE group_id=%s AND vote_date=%s", (group_id, today))
+        rows = c.fetchall(); c.close(); db.close()
+        from collections import Counter
+        cnt = Counter()
+        for row in rows:
+            for team in row[0].split(','):
+                cnt[team] += 1
+        result = [{'team': t, 'count': c} for t, c in cnt.most_common(3)]
+        return result, 200
+    except Exception as e:
+        return [], 500
 
 @app.route('/' + BOT_TOKEN, methods=['POST'])
 def webhook():
