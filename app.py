@@ -104,7 +104,7 @@ KBO_TEAMS_DISPLAY = {
     '롯데': '🔴 롯데',
     '키움': '🟣 키움',
 }
-
+WEBAPP_BASE_URL = os.environ.get('WEBAPP_URL', 'https://telegram-bot-14vg.onrender.com')
 VOTE_START = "10:00"
 VOTE_END   = "14:00"
 
@@ -736,6 +736,7 @@ def handle_all(message):
                     f"아래 버튼을 눌러 참여하세요!",
                     reply_markup=markup)
             except Exception as e:
+                print(f"DM 전송 실패: {e}")
                 bot.send_message(group_id,
                     f"⚠️ {first_name}님, DM을 보낼 수 없어요!\n"
                     f"@dopamin_ranking_bot 을 눌러 START 를 먼저 눌러주세요!")
@@ -813,10 +814,9 @@ def handle_all(message):
                 set_pending(user_id, group_id, current_teams, sent.message_id)
                 bot.reply_to(message, f"📩 {first_name}님, DM으로 수정 메시지를 보내드렸어요!")
             except Exception as e:
-                print(f"DM 전송 실패: {e}")
-                bot.send_message(group_id,
-                    f"⚠️ {first_name}님, DM을 보낼 수 없어요!\n"
-                    f"@dopamin_ranking_bot 을 눌러 START 를 먼저 눌러주세요!")
+                bot.reply_to(message,
+                    f"⚠️ DM을 보낼 수 없어요!\n"
+                    f"@dopamin_ranking_bot 을 눌러 START 버튼을 눌러주세요!")
 
         # ── /리스트 ──
         elif text.strip().startswith('/리스트'):
