@@ -1614,62 +1614,6 @@ def vote_room():
     finally:
         c.close(); db.close()
 
-@app.route('/vote/start', methods=['POST'])
-def vote_start():
-    db = get_db(); c = db.cursor()
-    try:
-        data       = request.get_json()
-        room_id    = data.get('roomId')
-        user_id    = int(data.get('userId'))
-        group_id   = int(data.get('groupId'))
-        content    = data.get('content', '').strip()
-        mins       = data.get('mins')
-        winners    = int(data.get('winners', 1))
-        anim_style = data.get('animStyle', 'slot')
-        if user_id not in ADMIN_IDS:
-            return {'ok': False, 'error': '관리자만 시작할 수 있어요.'}, 403
-        if not content:
-            return {'ok': False, 'error': '이벤트 내용을 입력해주세요.'}, 400
-        end_time = None
-        if mins:
-            end_time = datetime.now(KST) + timedelta(minutes=int(mins))
-        c.execute("""
-            UPDATE vote_rooms
-            SET content=%s, mins=%s, winners=%s, anim_style=%s,
-                started=TRUE, ended=FALSE, end_time=%s
-            WHERE room_id=%s AND group_id=%s
-        """, (content, mins, winners, anim_style, end_time, room_id, group_id))
-        db.commit()
-        time_str   = f"{mins}분 타임어택" if mins else "제한 시간 없음"
-        anim_names = {'slot':'🎰 슬롯머신', 'roulette':'🎡 룰렛', 'highlight':'⚡ 랜덤 하이라이트'}
-        anim_label = anim_names.get(anim_style, anim_style)
-        param    = f"{user_id}_{group_id}_{room_id}"
-        vote_url = f"{WEBAPP_BASE_URL}/vote?start={param}"
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("🙋 이벤트 참여하기", url=vote_url))
-        send_naejeon_gif(group_id)
-        bot.send_message(
-            group_id,
-            f"🎰 <b>도파민 투표 이벤트 시작!</b>\n"
-            f"──────────────────\n"
-            f"📢 <b>이벤트:</b> {content}\n"
-            f"⏱ <b>시간:</b> {time_str}\n"
-            f"👥 <b>당첨자:</b> {winners}명\n"
-            f"🎬 <b>추첨 방식:</b> {anim_label}\n"
-            f"──────────────────\n"
-            f"아래 버튼을 눌러 참여하세요!\n"
-            f"⚠️ 처음 참여하시는 분은 @dopamin_ranking_bot 을 눌러 START 를 먼저 눌러주세요!",
-            reply_markup=markup,
-            parse_mode='HTML'
-        )
-        return {'ok': True}, 200
-    except Exception as e:
-        import traceback
-        print(f"vote_start error: {e}\n{traceback.format_exc()}")
-        return {'ok': False, 'error': str(e)}, 500
-    finally:
-        c.close(); db.close()
-
 @app.route('/vote/join', methods=['POST'])
 def vote_join():
     db = get_db(); c = db.cursor()
