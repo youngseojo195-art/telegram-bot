@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>KBO 승 예측</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body {
@@ -25,6 +24,27 @@ body {
 .top-title { font-size: 16px; font-weight: 700; color: #fff; }
 .top-sub   { font-size: 11px; color: #8888bb; margin-top: 3px; }
 
+/* 탭 */
+.tabs {
+  display: flex;
+  background: #12122a;
+  border-bottom: 1px solid #1e1e3a;
+}
+.tab {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  font-size: 13px;
+  color: #8888bb;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.tab.active { color: #4a9eff; border-bottom-color: #4a9eff; }
+
+.page { display: none; flex: 1; flex-direction: column; }
+.page.active { display: flex; }
+
 .content {
   flex: 1;
   padding: 14px;
@@ -32,6 +52,7 @@ body {
   flex-direction: column;
   gap: 12px;
   padding-bottom: 90px;
+  overflow-y: auto;
 }
 
 /* 타이머 */
@@ -45,11 +66,21 @@ body {
   gap: 8px;
 }
 .timer-label { color: #9966cc; font-size: 12px; flex: 1; }
-.timer-val   { color: #cc88ff; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.timer-dot   { color: #cc88ff; animation: blink 1s infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.timer-val   { color: #cc88ff; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.05em; }
 
-/* 인기팀 배너 */
+/* 마감 안내 */
+.closed-box {
+  background: #2a1010;
+  border: 1px solid #5a1a1a;
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-align: center;
+  font-size: 13px;
+  color: #ff8888;
+  display: none;
+}
+
+/* 인기팀 */
 .hot-box {
   background: #12122a;
   border: 1px solid #1e1e3a;
@@ -68,14 +99,9 @@ body {
   align-items: center;
   gap: 4px;
 }
-.hot-tag .rank1 { color: #ffd700; }
-.hot-tag .rank2 { color: #c0c0c0; }
-.hot-tag .rank3 { color: #cd7f32; }
-
-/* 섹션 */
-.sec-label { color: #8888bb; font-size: 11px; margin-bottom: 6px; letter-spacing: 0.04em; }
 
 /* 팀 그리드 */
+.sec-label { color: #8888bb; font-size: 11px; margin-bottom: 6px; letter-spacing: 0.04em; }
 .team-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .tc {
   background: #12122a;
@@ -88,31 +114,28 @@ body {
   cursor: pointer;
   transition: all 0.15s;
   user-select: none;
-  position: relative;
 }
 .tc:active { transform: scale(0.97); }
-.tc.sel {
-  border-color: #4a9eff;
-  background: #0d1a30;
-}
+.tc.sel { border-color: #4a9eff; background: #0d1a30; }
+.tc.disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* 팀 로고 — 색상 원 */
 .tc-logo {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
-  background: #1e1e3a;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 12px;
+  font-weight: 700;
   flex-shrink: 0;
-  overflow: hidden;
+  color: #fff;
 }
-.tc-logo img { width: 100%; height: 100%; object-fit: contain; }
 .tc-name { font-size: 13px; font-weight: 500; color: #ccc; flex: 1; }
 .tc.sel .tc-name { color: #fff; }
 .tc-check {
-  width: 18px;
-  height: 18px;
+  width: 18px; height: 18px;
   border-radius: 50%;
   background: #4a9eff;
   display: none;
@@ -124,7 +147,7 @@ body {
 }
 .tc.sel .tc-check { display: flex; }
 
-/* 선택 카운터 */
+/* 카운터 */
 .count-bar {
   background: #12122a;
   border: 1px solid #1e1e3a;
@@ -136,23 +159,16 @@ body {
 }
 .count-label { color: #8888bb; font-size: 12px; }
 .count-pills { display: flex; gap: 4px; }
-.pill {
-  width: 28px;
-  height: 8px;
-  border-radius: 4px;
-  background: #1e1e3a;
-  transition: background 0.2s;
-}
+.pill { width: 28px; height: 8px; border-radius: 4px; background: #1e1e3a; transition: background 0.2s; }
 .pill.filled { background: #4a9eff; }
 
-/* 제출 버튼 - 하단 고정 */
+/* 제출 버튼 */
 .btn-wrap {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 12px 14px 20px;
-  background: linear-gradient(0deg, #0a0a1a 70%, transparent);
+  bottom: 0; left: 0; right: 0;
+  padding: 12px 14px 24px;
+  background: #0a0a1a;
+  border-top: 1px solid #1e1e3a;
 }
 .btn-submit {
   width: 100%;
@@ -165,71 +181,99 @@ body {
   letter-spacing: 0.02em;
   transition: all 0.2s;
 }
-.btn-submit.inactive {
+.btn-submit.inactive { background: #1e1e3a; color: #444466; cursor: not-allowed; }
+.btn-submit.active   { background: #4a9eff; color: #fff; box-shadow: 0 0 20px #4a9eff55; }
+.btn-submit.done     { background: #1d9e75; color: #fff; }
+
+/* 리스트 탭 */
+.list-content {
+  flex: 1;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+.list-header {
+  background: #12122a;
+  border: 1px solid #1e1e3a;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.list-date  { color: #8888bb; font-size: 12px; }
+.list-count { color: #4a9eff; font-size: 13px; font-weight: 600; }
+.list-item {
+  background: #12122a;
+  border: 1px solid #1e1e3a;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.list-name { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 8px; }
+.list-teams { display: flex; flex-wrap: wrap; gap: 6px; }
+.list-team-tag {
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.list-empty { text-align: center; color: #8888bb; font-size: 13px; padding: 40px 0; }
+.list-refresh {
   background: #1e1e3a;
-  color: #444466;
-  cursor: not-allowed;
-}
-.btn-submit.active {
-  background: #4a9eff;
-  color: #fff;
-  box-shadow: 0 0 24px #4a9eff66, 0 4px 16px #4a9eff44;
-  animation: pulse 2s infinite;
-}
-@keyframes pulse {
-  0%,100% { box-shadow: 0 0 24px #4a9eff66, 0 4px 16px #4a9eff44; }
-  50%      { box-shadow: 0 0 36px #4a9effaa, 0 4px 24px #4a9eff66; }
-}
-.btn-submit.done {
-  background: #1d9e75;
-  color: #fff;
-  box-shadow: 0 0 24px #1d9e7566;
-  animation: none;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  color: #8888bb;
+  font-size: 13px;
+  cursor: pointer;
+  width: 100%;
 }
 
 /* 결과 화면 */
 .result-screen {
   display: none;
+  flex: 1;
   flex-direction: column;
   gap: 14px;
-  flex: 1;
+  padding: 14px;
+  padding-bottom: 90px;
 }
 .result-header {
   background: #12122a;
   border: 1px solid #1e1e3a;
   border-radius: 14px;
-  padding: 20px;
+  padding: 24px;
   text-align: center;
 }
-.result-icon  { font-size: 40px; margin-bottom: 8px; }
-.result-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.result-icon  { font-size: 44px; margin-bottom: 10px; }
+.result-title { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 4px; }
 .result-sub   { font-size: 12px; color: #8888bb; }
 .result-teams {
   background: #12122a;
   border: 1px solid #1e1e3a;
   border-radius: 14px;
-  padding: 14px;
+  overflow: hidden;
 }
 .result-team-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 0;
+  gap: 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid #1e1e3a;
 }
 .result-team-row:last-child { border-bottom: none; }
 .result-team-logo {
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
-  background: #1e1e3a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  overflow: hidden;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
 }
-.result-team-logo img { width: 100%; height: 100%; object-fit: contain; }
 .result-team-name { font-size: 14px; font-weight: 500; color: #fff; flex: 1; }
 .result-check { color: #4a9eff; font-size: 16px; }
 </style>
@@ -241,68 +285,75 @@ body {
   <div class="top-sub">5경기 모두 맞추면 3만원!</div>
 </div>
 
-<div class="content" id="main-content">
+<div class="tabs">
+  <div class="tab active" id="tab-vote" onclick="switchTab('vote')">예측 참여</div>
+  <div class="tab" id="tab-list" onclick="switchTab('list')">오늘 리스트</div>
+</div>
 
-  <!-- 타이머 -->
-  <div class="timer-box">
-    <span class="timer-label">⏰ 마감까지</span>
-    <span class="timer-val" id="timer-val">-- : -- : --</span>
-  </div>
+<!-- 예측 참여 페이지 -->
+<div class="page active" id="page-vote">
+  <div class="content" id="vote-content">
+    <div class="timer-box">
+      <span class="timer-label">⏰ 마감까지</span>
+      <span class="timer-val" id="timer-val">-- : -- : --</span>
+    </div>
 
-  <!-- 인기팀 -->
-  <div class="hot-box">
-    <div class="hot-title">🔥 오늘 많이 선택된 팀</div>
-    <div class="hot-list" id="hot-list">
-      <div class="hot-tag"><span class="rank1">1위</span> 로딩중...</div>
+    <div class="closed-box" id="closed-box">
+      🚫 현재 예측 참여 시간이 아닙니다<br>
+      <span style="font-size:11px; color:#cc6666; margin-top:4px; display:block" id="vote-time-info"></span>
+    </div>
+
+    <div class="hot-box">
+      <div class="hot-title">🔥 오늘 많이 선택된 팀</div>
+      <div class="hot-list" id="hot-list">
+        <div class="hot-tag">로딩중...</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-label">승리할 팀 5개를 선택하세요</div>
+      <div class="team-grid" id="team-grid"></div>
+    </div>
+
+    <div class="count-bar">
+      <span class="count-label" id="count-label">0개 선택됨</span>
+      <div class="count-pills">
+        <div class="pill" id="p0"></div>
+        <div class="pill" id="p1"></div>
+        <div class="pill" id="p2"></div>
+        <div class="pill" id="p3"></div>
+        <div class="pill" id="p4"></div>
+      </div>
     </div>
   </div>
 
-  <!-- 팀 선택 -->
-  <div>
-    <div class="sec-label">승리할 팀 5개를 선택하세요</div>
-    <div class="team-grid" id="team-grid"></div>
-  </div>
-
-  <!-- 선택 카운터 -->
-  <div class="count-bar">
-    <span class="count-label" id="count-label">0개 선택됨</span>
-    <div class="count-pills" id="count-pills">
-      <div class="pill" id="p0"></div>
-      <div class="pill" id="p1"></div>
-      <div class="pill" id="p2"></div>
-      <div class="pill" id="p3"></div>
-      <div class="pill" id="p4"></div>
+  <div class="result-screen" id="result-screen">
+    <div class="result-header">
+      <div class="result-icon">✅</div>
+      <div class="result-title">예측 완료!</div>
+      <div class="result-sub">선택한 팀 5개가 제출됐어요</div>
     </div>
+    <div class="result-teams" id="result-teams"></div>
   </div>
 
-</div>
-
-<!-- 결과 화면 -->
-<div class="content result-screen" id="result-screen">
-  <div class="result-header">
-    <div class="result-icon">✅</div>
-    <div class="result-title">예측 완료!</div>
-    <div class="result-sub" id="result-sub">선택한 팀 5개가 제출됐어요</div>
+  <div class="btn-wrap" id="btn-wrap">
+    <button class="btn-submit inactive" id="btn-submit" onclick="handleSubmit()">
+      5개 팀을 선택해주세요
+    </button>
   </div>
-  <div class="result-teams" id="result-teams"></div>
 </div>
 
-<!-- 하단 제출 버튼 -->
-<div class="btn-wrap">
-  <button class="btn-submit inactive" id="btn-submit" onclick="handleSubmit()">
-    5개 팀을 선택해주세요
-  </button>
+<!-- 리스트 페이지 -->
+<div class="page" id="page-list">
+  <div class="list-content" id="list-content">
+    <div class="list-empty" id="list-loading">로딩 중...</div>
+  </div>
 </div>
 
 <script>
-const tg = window.Telegram.WebApp;
-tg.ready();
-tg.expand();
-
 // ── 파라미터 파싱 ──
 let userId  = null;
 let groupId = null;
-
 try {
   const params = new URLSearchParams(window.location.search);
   const start  = params.get('start');
@@ -313,44 +364,108 @@ try {
   }
 } catch(e) {}
 
-// ── 팀 데이터 ──
+// ── 팀 데이터 (색상 + 이니셜) ──
 const TEAMS = [
-  { id: 'KT',   name: 'KT',   emoji: '🔴', logo: 'https://upload.wikimedia.org/wikipedia/en/c/c2/KT_Wiz_logo.png' },
-  { id: '삼성', name: '삼성', emoji: '🔵', logo: 'https://upload.wikimedia.org/wikipedia/en/3/38/Samsung_Lions_logo.png' },
-  { id: 'LG',   name: 'LG',   emoji: '🔴', logo: 'https://upload.wikimedia.org/wikipedia/en/a/a2/LG_Twins_logo.png' },
-  { id: 'SSG',  name: 'SSG',  emoji: '🟡', logo: 'https://upload.wikimedia.org/wikipedia/en/7/71/SSG_Landers_logo.png' },
-  { id: 'KIA',  name: 'KIA',  emoji: '🔴', logo: 'https://upload.wikimedia.org/wikipedia/en/a/ac/Kia_Tigers_logo.png' },
-  { id: '한화', name: '한화', emoji: '🟠', logo: 'https://upload.wikimedia.org/wikipedia/en/9/98/Hanwha_Eagles_logo.png' },
-  { id: '두산', name: '두산', emoji: '🔵', logo: 'https://upload.wikimedia.org/wikipedia/en/9/9d/Doosan_Bears_logo.png' },
-  { id: 'NC',   name: 'NC',   emoji: '🔵', logo: 'https://upload.wikimedia.org/wikipedia/en/b/b8/NC_Dinos_logo.png' },
-  { id: '롯데', name: '롯데', emoji: '🔴', logo: 'https://upload.wikimedia.org/wikipedia/en/5/56/Lotte_Giants_logo.png' },
-  { id: '키움', name: '키움', emoji: '🟣', logo: 'https://upload.wikimedia.org/wikipedia/en/8/8d/Kiwoom_Heroes_logo.png' },
+  { id: 'KT',   name: 'KT',   color: '#E8003D', text: 'KT'  },
+  { id: '삼성', name: '삼성', color: '#074CA1', text: '삼'  },
+  { id: 'LG',   name: 'LG',   color: '#C30452', text: 'LG'  },
+  { id: 'SSG',  name: 'SSG',  color: '#CE0A0A', text: 'SSG' },
+  { id: 'KIA',  name: 'KIA',  color: '#EA0029', text: 'KIA' },
+  { id: '한화', name: '한화', color: '#FC4E00', text: '한'  },
+  { id: '두산', name: '두산', color: '#131230', text: '두'  },
+  { id: 'NC',   name: 'NC',   color: '#071D5B', text: 'NC'  },
+  { id: '롯데', name: '롯데', color: '#041E42', text: '롯'  },
+  { id: '키움', name: '키움', color: '#570514', text: '키'  },
 ];
 
-let selected = [];
+let selected   = [];
+let voteOpen   = false;
+let submitted  = false;
+
+// ── 참여 시간 체크 (KST 기준) ──
+function checkVoteTime() {
+  const now  = new Date();
+  // KST = UTC+9
+  const kst  = new Date(now.getTime() + 9 * 3600 * 1000);
+  const day  = kst.getUTCDay(); // 0=일,1=월,2=화,3=수,4=목,5=금,6=토
+  const h    = kst.getUTCHours();
+  const m    = kst.getUTCMinutes();
+  const total = h * 60 + m;
+
+  const VOTE_DAYS  = [2, 3, 4, 5]; // 화,수,목,금
+  const START_MIN  = 18 * 60 + 0;  // 18:00 ← 여기서 시작 시간 수정
+  const END_MIN    = 18 * 60 + 30; // 18:30 ← 여기서 종료 시간 수정
+
+  return VOTE_DAYS.includes(day) && total >= START_MIN && total <= END_MIN;
+}
+
+function getVoteTimeInfo() {
+  return "참여 가능: 화~금 오후 6:00 ~ 6:30"; // ← 여기서 안내 문구 수정
+}
+
+// ── 타이머 ──
+function updateTimer() {
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 3600 * 1000);
+  // 마감 시각: KST 18:30
+  const end = new Date(kst);
+  end.setUTCHours(9, 30, 0, 0); // ← 여기서 UTC 마감 시간 수정 (KST-9)
+  let diff = Math.floor((end - kst) / 1000);
+
+  const el = document.getElementById('timer-val');
+  if (diff <= 0) {
+    el.textContent = '마감됨';
+    el.style.color = '#ff6666';
+    return;
+  }
+  const h = Math.floor(diff / 3600).toString().padStart(2,'0');
+  const m = Math.floor((diff % 3600) / 60).toString().padStart(2,'0');
+  const s = (diff % 60).toString().padStart(2,'0');
+  el.textContent = h + ' : ' + m + ' : ' + s;
+}
+setInterval(updateTimer, 1000);
+updateTimer();
+
+// ── 탭 전환 ──
+function switchTab(tab) {
+  document.getElementById('tab-vote').className = 'tab' + (tab==='vote' ? ' active' : '');
+  document.getElementById('tab-list').className = 'tab' + (tab==='list' ? ' active' : '');
+  document.getElementById('page-vote').className = 'page' + (tab==='vote' ? ' active' : '');
+  document.getElementById('page-list').className = 'page' + (tab==='list' ? ' active' : '');
+  if (tab === 'list') loadList();
+}
 
 // ── 팀 카드 렌더 ──
 function renderTeams() {
-  const grid = document.getElementById('team-grid');
+  voteOpen = checkVoteTime();
+  const grid   = document.getElementById('team-grid');
+  const closed = document.getElementById('closed-box');
+
   grid.innerHTML = '';
   TEAMS.forEach(t => {
     const div = document.createElement('div');
-    div.className = 'tc';
+    div.className = 'tc' + (voteOpen ? '' : ' disabled');
     div.id = 'tc-' + t.id;
-    div.onclick = () => toggle(t.id);
+    if (voteOpen) div.onclick = () => toggle(t.id);
     div.innerHTML = `
-      <div class="tc-logo">
-        <img src="${t.logo}" onerror="this.style.display='none';this.parentNode.innerText='${t.emoji}'">
-      </div>
+      <div class="tc-logo" style="background:${t.color}">${t.text}</div>
       <span class="tc-name">${t.name}</span>
       <span class="tc-check">✓</span>
     `;
     grid.appendChild(div);
   });
+
+  if (!voteOpen) {
+    closed.style.display = 'block';
+    document.getElementById('vote-time-info').textContent = getVoteTimeInfo();
+    document.getElementById('btn-submit').className = 'btn-submit inactive';
+    document.getElementById('btn-submit').textContent = '지금은 참여 시간이 아니에요';
+  }
 }
 
 // ── 토글 ──
 function toggle(id) {
+  if (!voteOpen || submitted) return;
   const el = document.getElementById('tc-' + id);
   if (el.classList.contains('sel')) {
     el.classList.remove('sel');
@@ -376,6 +491,7 @@ function updateUI() {
     if (p) p.className = 'pill' + (i < n ? ' filled' : '');
   }
   const btn = document.getElementById('btn-submit');
+  if (!voteOpen) return;
   if (n === 5) {
     btn.className = 'btn-submit active';
     btn.textContent = '✅ 예측 제출하기';
@@ -387,30 +503,39 @@ function updateUI() {
 
 // ── 제출 ──
 async function handleSubmit() {
-  if (selected.length !== 5) return;
+  if (!voteOpen || selected.length !== 5 || submitted) return;
   const btn = document.getElementById('btn-submit');
   btn.disabled = true;
   btn.textContent = '제출 중...';
 
   try {
-    await fetch('/kbo/submit', {
+    const res = await fetch('/kbo/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, groupId, teams: selected })
     });
-  } catch(e) {}
+    const data = await res.json();
+    if (!data.ok) {
+      btn.disabled = false;
+      btn.className = 'btn-submit inactive';
+      btn.textContent = data.error || '오류가 발생했어요. 다시 시도해주세요.';
+      return;
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '오류 발생. 다시 시도해주세요.';
+    return;
+  }
 
-  // 결과 화면 전환
-  document.getElementById('main-content').style.display = 'none';
+  submitted = true;
+  document.getElementById('vote-content').style.display = 'none';
   const rs = document.getElementById('result-screen');
   rs.style.display = 'flex';
 
   const teamRows = selected.map(id => {
     const t = TEAMS.find(x => x.id === id);
     return `<div class="result-team-row">
-      <div class="result-team-logo">
-        <img src="${t.logo}" onerror="this.style.display='none';this.parentNode.innerText='${t.emoji}'">
-      </div>
+      <div class="result-team-logo" style="background:${t.color}">${t.text}</div>
       <span class="result-team-name">${t.name}</span>
       <span class="result-check">✓</span>
     </div>`;
@@ -422,38 +547,61 @@ async function handleSubmit() {
   btn.disabled = false;
 }
 
-// ── 타이머 (18:30 마감 기준) ──
-function updateTimer() {
-  const now = new Date();
-  const kst = new Date(now.getTime() + 9 * 3600 * 1000);
-  const end = new Date(kst);
-  end.setUTCHours(9, 30, 0, 0); // KST 18:30 = UTC 09:30
-  let diff = Math.floor((end - kst) / 1000);
-  if (diff < 0) diff = 0;
-  const h = Math.floor(diff / 3600).toString().padStart(2, '0');
-  const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
-  const s = (diff % 60).toString().padStart(2, '0');
-  document.getElementById('timer-val').textContent = h + ' : ' + m + ' : ' + s;
-}
-setInterval(updateTimer, 1000);
-updateTimer();
-
 // ── 인기팀 로드 ──
 async function loadHotTeams() {
   try {
-    const res = await fetch('/kbo/hot?groupId=' + groupId);
+    const res  = await fetch('/kbo/hot?groupId=' + groupId);
     const data = await res.json();
-    const ranks = ['rank1', 'rank2', 'rank3'];
+    const ranks = ['🥇', '🥈', '🥉'];
     const hotList = document.getElementById('hot-list');
     if (data && data.length > 0) {
-      hotList.innerHTML = data.slice(0, 3).map((item, i) =>
-        `<div class="hot-tag"><span class="${ranks[i] || ''}">${i+1}위</span> ${item.team} ${item.count}명</div>`
+      hotList.innerHTML = data.slice(0,3).map((item,i) =>
+        `<div class="hot-tag">${ranks[i]} ${item.team} ${item.count}명</div>`
       ).join('');
     } else {
       hotList.innerHTML = '<div class="hot-tag">아직 참여자가 없어요</div>';
     }
   } catch(e) {
-    document.getElementById('hot-list').innerHTML = '<div class="hot-tag">로딩 실패</div>';
+    document.getElementById('hot-list').innerHTML = '<div class="hot-tag">-</div>';
+  }
+}
+
+// ── 리스트 로드 ──
+async function loadList() {
+  const el = document.getElementById('list-content');
+  el.innerHTML = '<div class="list-empty">로딩 중...</div>';
+  try {
+    const res  = await fetch('/kbo/list?groupId=' + groupId);
+    const data = await res.json();
+    if (!data || data.length === 0) {
+      el.innerHTML = '<div class="list-empty">오늘 예측에 참여한 사람이 없어요</div>';
+      return;
+    }
+    const today = new Date(new Date().getTime() + 9*3600*1000);
+    const dateStr = today.getUTCFullYear() + '년 ' + (today.getUTCMonth()+1) + '월 ' + today.getUTCDate() + '일';
+
+    let html = `<div class="list-header">
+      <span class="list-date">📅 ${dateStr}</span>
+      <span class="list-count">👥 ${data.length}명 참여</span>
+    </div>`;
+
+    data.forEach(row => {
+      const teamTags = row.teams.map(t => {
+        const team = TEAMS.find(x => x.id === t);
+        return team
+          ? `<span class="list-team-tag" style="background:${team.color}">${team.text} ${team.name}</span>`
+          : `<span class="list-team-tag" style="background:#333">${t}</span>`;
+      }).join('');
+      html += `<div class="list-item">
+        <div class="list-name">👤 ${row.name}</div>
+        <div class="list-teams">${teamTags}</div>
+      </div>`;
+    });
+
+    html += `<button class="list-refresh" onclick="loadList()">🔄 새로고침</button>`;
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="list-empty">불러오기 실패. 새로고침해주세요.</div>';
   }
 }
 
