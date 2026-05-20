@@ -10,7 +10,7 @@ import pytz
 import uuid
 from telebot import types
 from datetime import datetime, timedelta
-from flask import Flask, request, send_from_directory
+from flask import Flask, request, send_from_directory, render_template # render_template 추가
 
 BOT_TOKEN = '8046489365:AAHAFBz4Ca07KcjqI0EJl76aIAu-rlVHw-4'
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -1578,7 +1578,7 @@ def finish_event():
 # ─────────────────────────────────────────────────────────
 @app.route('/vote')
 def serve_vote():
-    return send_from_directory('.', 'vote.html')
+    return render_template('vote.html') # 이 방식으로 변경
 
 @app.route('/vote/room')
 def vote_room():
