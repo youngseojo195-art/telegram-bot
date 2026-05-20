@@ -21,7 +21,7 @@ KST = pytz.timezone('Asia/Seoul')
 # ─────────────────────────────────────────────────────────
 # 관리자 설정
 # ─────────────────────────────────────────────────────────
-ADMIN_IDS = [8698678650, 8236798970, 8621088096]
+ADMIN_IDS = [8698678650, 8236798970, 8621088096, 7319936275]
 
 # ─────────────────────────────────────────────────────────
 # GIF 설정
@@ -61,18 +61,20 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 ──────────────────
 <b>[평생]</b> · <a href="https://t.me/gamte59/31">렛츠뱃</a>
 <b>[평생]</b> · <a href="https://t.me/gamte59/28">예스뱃</a>
-<b>[평생]</b> · <a href="https://t.me/spd1588/84">스피드벳</a>
-<b>[평생]</b> · <a href="https://t.me/Gwaedwaji/15">띵벳</a>
+<b>[평생]</b> · <a href="https://t.me/gamte59/96">스피드벳</a>
+<b>[평생]</b> · <a href="https://t.me/gamte59/94>띵벳</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/44">지엑스뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/46">케이비씨겜</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/49">블록체인바카라</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/60">우루스뱃</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/60">마닐라</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/62">마닐라</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/70">미우카지노</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/72">그랜드파리</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/74">룰라뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/78">소울카지노</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/84">123GAME카지노</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/100">벨라벳</a>
+
 
 💸 <b>급전</b>
 ──────────────────
