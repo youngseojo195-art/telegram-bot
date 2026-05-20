@@ -456,10 +456,12 @@ let userId   = null;
 let groupId  = null;
 let gameType = null;
 let roomId   = null;
+let isEditMode = false;
 
 try {
   const params = new URLSearchParams(window.location.search);
   const start  = params.get('start');
+  isEditMode = params.get('mode') === 'edit';
   if (start) {
     const parts = start.split('_');
     userId   = parts[0] || null;
@@ -620,7 +622,7 @@ function renderRoom() {
         `;
         if (isAdmin) {
           div.onclick = () => openAdminAdd(team, pos);
-        } else if (!mySlot && filled < total && roomData.status === 'open') {
+        } else if (!mySlot && (filled < total || isEditMode) && roomData.status === 'open') {
           div.onclick = () => openUserModal(team, pos);
         } else {
           div.style.cursor = 'default';
@@ -632,7 +634,11 @@ function renderRoom() {
   });
 
   const btn = document.getElementById('btn-join');
-  if (roomData.status !== 'open' || filled >= total) {
+  if (isAdmin && isEditMode) {
+    btn.className   = 'btn-join active';
+    btn.style.background = '#5533aa';
+    btn.textContent = '👑 마스터 수정 모드 활성화 중';
+  } else if (roomData.status !== 'open' || filled >= total) {
     btn.className   = 'btn-join full';
     btn.textContent = '✅ 모집 완료!';
   } else if (isAdmin) {
@@ -732,7 +738,6 @@ async function confirmJoin() {
   }
 }
 
-// 👑 관리자: 직접 타이핑 추가
 function openAdminAdd(team, pos) {
   adminAddSlot = { team, pos, slotKey: `${team}_${pos.id}` };
   document.getElementById('admin-add-title').textContent = `👑 ${team === 'A' ? '🟣 1팀' : '🟢 2팀'} [${pos.label}] 추가`;
@@ -768,7 +773,6 @@ async function confirmAdminAdd() {
   } finally { btn.textContent = '추가'; }
 }
 
-// 👑 관리자: 유저 제거
 function openAdminRemove(slotKey, name, event) {
   if(event) event.stopPropagation();
   adminRemoveSlot = { slotKey, name };
@@ -812,7 +816,6 @@ function setFundType(type) {
 
 function openSetupModal() {
   if (roomData) {
-    // 2번 요구사항: 롤/서든 및 기존 부가텍스트, 사비/찬조 금액 폼 자동 렌더링
     document.getElementById('setup-extra-text').value = roomData.extraText || '';
     if (roomData.posA && roomData.posA.length > 0)
       document.getElementById('setup-pos-a').value = roomData.posA.join(',');
@@ -898,7 +901,7 @@ async function adminCancelRoom() {
 async function init() {
   await checkAdmin();
   await loadRoom();
-  setInterval(loadRoom, 3000); // 실시간 싱크 주기를 3초로 단축
+  setInterval(loadRoom, 3000); 
 }
 
 init();
