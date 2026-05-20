@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>내전 모집</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0a0a1a;
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── 🔥 타임어택 실시간 네온 타이머 바 ── */
+.timer-bar {
+  background: #1a0505;
+  border-bottom: 2px solid #ff4d4d;
+  padding: 12px 16px 10px;
+  text-align: center;
+  position: sticky; top: 0; z-index: 50;
+  display: none; /* 활성화 시 스크립트로 제어 */
+  box-shadow: 0 4px 20px rgba(255, 77, 77, 0.2);
+}
+.timer-label { font-size: 10px; color: #ff8888; letter-spacing: 2px; font-weight: 700; margin-bottom: 2px; }
+.timer-num {
+  font-family: monospace;
+  font-size: 34px;
+  font-weight: 900;
+  color: #ff4d4d;
+  text-shadow: 0 0 12px rgba(255, 77, 77, 0.8);
+  line-height: 1;
+}
+
+/* ── 상단 바 ── */
+.topbar {
+  background: #12122a;
+  padding: 14px 16px 10px;
+  text-align: center;
+  border-bottom: 1px solid #1e1e3a;
+  flex-shrink: 0;
+}
+.top-title { font-size: 16px; font-weight: 700; color: #fff; }
+.top-sub   { font-size: 11px; color: #8888bb; margin-top: 3px; }
+
+/* ── 컨텐츠 ── */
+.content {
+  flex: 1;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 90px;
+  overflow-y: auto;
+}
+
+/* ── 상태 바 ── */
+.status-bar {
+  background: #12122a;
+  border: 1px solid #1e1e3a;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease-out;
+}
+.st-label { color: #8888bb; font-size: 12px; }
+.st-val   { color: #4a9eff; font-size: 14px; font-weight: 700; transition: all 0.2s; }
+.st-full  { color: #1d9e75; text-shadow: 0 0 8px rgba(29, 158, 117, 0.6); }
+
+/* 🔥 게이지 실시간 출렁임 애니메이션 */
+@keyframes pulse-change {
+  0% { transform: scale(1); color: #4a9eff; }
+  50% { transform: scale(1.12); color: #deff9a; }
+  100% { transform: scale(1); color: #4a9eff; }
+}
+.pulse-active { animation: pulse-change 0.4s ease-in-out; }
+
+/* ── 사비/찬조 배너 ── */
+.fund-banner {
+  background: #1a1a10;
+  border: 1px solid #6644aa55;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #ffdd77;
+}
+.fund-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: #33220088;
+  border-radius: 6px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+/* ── 관리자 배너 ── */
+.admin-banner {
+  background: #1a1030;
+  border: 1px solid #5533aa;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.admin-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #bb88ff;
+  background: #2a1050;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+.admin-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.admin-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  background: none;
+}
+.admin-btn:active { opacity: 0.7; }
+.admin-btn-setup  { color: #bb88ff; border-color: #5533aa; }
+.admin-btn-timeattack { color: #ff4d4d; border-color: #ff4d4d; }
+.admin-btn-cancel { color: #ff7777; border-color: #aa3333; }
+
+/* ── 팀 레이아웃 ── */
+.teams-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.team-box {
+  background: #12122a;
+  border: 1px solid #1e1e3a;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.team-header {
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.team-a .team-header { background: #1a1030; color: #aa66ff; }
+.team-b .team-header { background: #0a1a10; color: #44cc88; }
+
+/* ── 슬롯 ── */
+.slot {
+  padding: 9px 10px;
+  border-top: 1px solid #1e1e3a;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: background 0.15s;
+  min-height: 42px;
+}
+.slot:active { background: #1e1e3a; }
+.slot.filled { cursor: default; }
+.slot.filled:active { background: transparent; }
+.slot.mine { background: #0d1a10; }
+
+.admin-mode .slot { cursor: pointer; }
+.admin-mode .slot:active { background: #1e1e3a; }
+.admin-mode .slot:not(.filled) { border-left: 2px dashed #5533aa44; }
+
+/* ── 포지션 배지 ── */
+.pos-badge {
+  font-size: 9px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-weight: 700;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.pos-top { background: #2a1a3a; color: #aa77ff; }
+.pos-jg  { background: #1a2a1a; color: #44bb44; }
+.pos-mid { background: #2a2210; color: #ddaa33; }
+.pos-adc { background: #2a1010; color: #ee5555; }
+.pos-sup { background: #102030; color: #4488ee; }
+.pos-sna { background: #2a1010; color: #ff7777; }
+.pos-rfl { background: #102010; color: #77cc77; }
+
+.slot-name  { font-size: 12px; color: #fff; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot-empty { font-size: 11px; color: #44446688; flex: 1; font-style: italic; }
+.slot-mine-badge {
+  font-size: 9px;
+  color: #44cc88;
+  background: #0a2010;
+  border-radius: 4px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+}
+.slot-admin-tag {
+  font-size: 10px;
+  border-radius: 4px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.slot-admin-tag.add    { color: #bb88ff; background: #1a1030; border-color: #5533aa44; }
+.slot-admin-tag.remove { color: #ff7777; background: #200a0a; border-color: #aa333344; }
+
+/* ── 하단 버튼 ── */
+.btn-wrap {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  padding: 12px 14px 24px;
+  background: #0a0a1a;
+  border-top: 1px solid #1e1e3a;
+}
+.btn-join {
+  width: 100%;
+  padding: 15px;
+  border-radius: 14px;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+.btn-join.active   { background: #4a9eff; color: #fff; }
+.btn-join.inactive { background: #1e1e3a; color: #444466; cursor: default; }
+.btn-join.cancel   { background: #cc3333; color: #fff; }
+.btn-join.full     { background: #1d9e75; color: #fff; cursor: default; }
+
+/* ── 일반 모달 (팀/포지션 선택) ── */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  display: none; align-items: flex-end; justify-content: center;
+  z-index: 100;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #12122a;
+  border-radius: 20px 20px 0 0;
+  padding: 20px 16px 32px;
+  width: 100%; max-width: 480px;
+}
+.modal-title {
+  font-size: 15px; font-weight: 700; color: #fff;
+  text-align: center; margin-bottom: 6px;
+}
+.modal-sub {
+  font-size: 12px; color: #8888bb;
+  text-align: center; margin-bottom: 14px;
+}
+.sec-label { color: #8888bb; font-size: 10px; margin-bottom: 5px; letter-spacing: 0.04em; }
+.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.modal-btn {
+  padding: 12px; border-radius: 10px;
+  border: 1.5px solid #1e1e3a; background: #0a0a1a;
+  color: #ccc; font-size: 13px; font-weight: 600;
+  cursor: pointer; text-align: center; transition: all 0.15s;
+}
+.modal-btn:active { transform: scale(0.97); }
+.modal-btn.disabled { opacity: 0.35; cursor: not-allowed; }
+.modal-btn.sel-team-a { border-color: #aa66ff; background: #1a1030; color: #aa66ff; }
+.modal-btn.sel-team-b { border-color: #44cc88; background: #0a1a10; color: #44cc88; }
+.modal-cancel {
+  width: 100%; padding: 12px; border-radius: 10px;
+  border: 1px solid #1e1e3a; background: transparent;
+  color: #8888bb; font-size: 13px; cursor: pointer; margin-top: 4px;
+}
+
+/* ── 관리자 공용 및 타임어택 모달 ── */
+.admin-modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.8);
+  display: none; align-items: center; justify-content: center;
+  z-index: 200; padding: 20px;
+}
+.admin-modal-overlay.show { display: flex; }
+.admin-modal {
+  background: #12122a;
+  border: 1px solid #5533aa;
+  border-radius: 16px;
+  padding: 20px 18px 18px;
+  width: 100%; max-width: 380px;
+}
+.admin-modal-title {
+  font-size: 14px; font-weight: 700; color: #bb88ff;
+  margin-bottom: 14px; text-align: center;
+}
+.admin-input {
+  width: 100%; background: #0a0a1a;
+  border: 1px solid #3a3a6a; border-radius: 10px;
+  color: #fff; font-size: 14px; padding: 12px 14px;
+  margin-bottom: 10px; outline: none;
+}
+.admin-input:focus { border-color: #5533aa; }
+.admin-input::placeholder { color: #44446699; }
+.admin-modal-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+.admin-confirm-btn {
+  padding: 12px; border-radius: 10px; border: none;
+  background: #5533aa; color: #fff;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.admin-confirm-btn:active { opacity: 0.8; }
+.admin-dismiss-btn {
+  padding: 12px; border-radius: 10px;
+  border: 1px solid #3a3a6a; background: transparent;
+  color: #8888bb; font-size: 13px; cursor: pointer;
+}
+
+/* ── 설정 모달 전용 ── */
+.setup-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0; }
+.fund-select-wrap { display: flex; gap: 8px; margin-bottom: 10px; }
+.fund-type-btn {
+  flex: 1; padding: 10px; border-radius: 10px;
+  border: 1.5px solid #3a3a6a; background: #0a0a1a;
+  color: #888; font-size: 13px; font-weight: 600;
+  cursor: pointer; text-align: center; transition: all 0.15s;
+}
+.fund-type-btn.active-sabi { border-color: #ff9944; background: #1a1000; color: #ff9944; }
+.fund-type-btn.active-chajo { border-color: #44bbff; background: #001a2a; color: #44bbff; }
+.fund-type-btn.active-none { border-color: #666; background: #111; color: #aaa; }
+
+/* ── 토스트 ── */
+.toast {
+  position: fixed; bottom: 100px; left: 50%;
+  transform: translateX(-50%);
+  background: #1d9e75; color: #fff;
+  font-size: 13px; font-weight: 600;
+  padding: 10px 20px; border-radius: 20px;
+  z-index: 300; opacity: 0; transition: opacity 0.2s;
+  white-space: nowrap; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+.toast.error { background: #cc3333; }
+</style>
+</head>
+<body>
+
+<div class="timer-bar" id="timer-bar">
+  <div class="timer-label">⏱️ DOPAMINE TIMEATTACK EVENT</div>
+  <div class="timer-num" id="timer-display">00:00.00</div>
+</div>
+
+<div class="topbar">
+  <div class="top-title" id="top-title">⚔️ 내전 모집</div>
+  <div class="top-sub" id="top-sub">포지션을 선택해서 참여하세요</div>
+</div>
+
+<div class="content" id="main-content">
+  <div class="status-bar" id="status-bar-box">
+    <span class="st-label">참여 현황</span>
+    <span class="st-val" id="status-val">로딩 중...</span>
+  </div>
+
+  <div class="fund-banner" id="fund-banner" style="display:none">
+    <span class="fund-badge" id="fund-badge"></span>
+    <span id="fund-amount-text"></span>
+  </div>
+
+  <div class="admin-banner" id="admin-banner" style="display:none">
+    <span class="admin-badge">👑 관리자 모드</span>
+    <div class="admin-actions">
+      <button class="admin-btn admin-btn-setup" onclick="openSetupModal()">⚙️ 설정</button>
+      <button class="admin-btn admin-btn-timeattack" onclick="openTimeAttackModal()">🔥 타임어택</button>
+      <button class="admin-btn admin-btn-cancel" onclick="adminCancelRoom()">🗑 취소</button>
+    </div>
+  </div>
+
+  <div>
+    <div class="sec-label">팀 구성</div>
+    <div class="teams-wrap" id="teams-wrap"></div>
+  </div>
+</div>
+
+<div class="btn-wrap">
+  <button class="btn-join inactive" id="btn-join" onclick="handleMainBtn()">
+    슬롯을 선택해서 참여하세요
+  </button>
+</div>
+
+<div class="modal-overlay" id="modal" onclick="onModalOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">포지션 선택</div>
+    <div class="modal-sub" id="modal-sub">팀을 선택해주세요</div>
+
+    <div class="sec-label">팀 선택</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div class="modal-btn" id="m-team-a" onclick="selectTeam('A')">🟣 1팀</div>
+      <div class="modal-btn" id="m-team-b" onclick="selectTeam('B')">🟢 2팀</div>
+    </div>
+
+    <div class="sec-label">확인</div>
+    <button class="btn-join inactive" id="modal-confirm" style="border-radius:10px;padding:12px;font-size:14px;margin-bottom:8px" onclick="confirmJoin()">
+      팀을 선택해주세요
+    </button>
+    <button class="modal-cancel" onclick="closeModal()">취소</button>
+  </div>
+</div>
+
+<div class="admin-modal-overlay" id="admin-add-modal">
+  <div class="admin-modal">
+    <div class="admin-modal-title" id="admin-add-title">👑 참여자 추가</div>
+    <input class="admin-input" type="text" id="admin-name-input"
+           placeholder="참여자 이름 직접 입력" maxlength="20"
+           onkeydown="if(event.key==='Enter') confirmAdminAdd()" />
+    <div class="admin-modal-btns">
+      <button class="admin-confirm-btn" onclick="confirmAdminAdd()">추가</button>
+      <button class="admin-dismiss-btn" onclick="closeAdminAddModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<div class="admin-modal-overlay" id="admin-remove-modal">
+  <div class="admin-modal">
+    <div class="admin-modal-title">🗑 참여자 제거</div>
+    <p style="font-size:13px;color:#aaa;text-align:center;margin-bottom:14px" id="admin-remove-sub"></p>
+    <div class="admin-modal-btns">
+      <button class="admin-confirm-btn" style="background:#cc3333" onclick="confirmAdminRemove()">제거</button>
+      <button class="admin-dismiss-btn" onclick="closeAdminRemoveModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<div class="admin-modal-overlay" id="setup-modal">
+  <div class="admin-modal" style="max-width:420px">
+    <div class="admin-modal-title">⚙️ 내전 설정 및 공지</div>
+    <div class="sec-label" style="margin-bottom:6px">💰 금액 유형</div>
+    <div class="fund-select-wrap">
+      <button class="fund-type-btn" id="fund-btn-sabi"  onclick="setFundType('사비')">💸 사비</button>
+      <button class="fund-type-btn" id="fund-btn-chajo" onclick="setFundType('찬조')">🎁 찬조</button>
+      <button class="fund-type-btn active-none" id="fund-btn-none"  onclick="setFundType('')">없음</button>
+    </div>
+    <div id="fund-amount-wrap" style="display:none">
+      <div class="sec-label" style="margin-bottom:6px">금액 입력</div>
+      <input class="admin-input" type="text" id="setup-fund-amount" placeholder="예: 1인당 5,000원 / 판당 3만원" maxlength="30" />
+    </div>
+    <div class="sec-label" style="margin-bottom:6px">게임 정보 / 부가 텍스트</div>
+    <input class="admin-input" type="text" id="setup-extra-text" placeholder="예: 롤 내전 치킨빵 / 서든 헬리오스 매치" maxlength="60" />
+    <div class="setup-row">
+      <div>
+        <div class="sec-label" style="margin-bottom:6px">1팀 포지션 순서</div>
+        <input class="admin-input" type="text" id="setup-pos-a" placeholder="예: 탑,정글,미드,원딜,서폿" style="margin-bottom:0" />
+      </div>
+      <div>
+        <div class="sec-label" style="margin-bottom:6px">2팀 포지션 순서</div>
+        <input class="admin-input" type="text" id="setup-pos-b" placeholder="예: 탑,정글,미드,원딜,서폿" style="margin-bottom:0" />
+      </div>
+    </div>
+    <div class="admin-modal-btns" style="margin-top:14px">
+      <button class="admin-confirm-btn" id="setup-confirm-btn" onclick="confirmSetup()">적용 & 그룹 공지</button>
+      <button class="admin-dismiss-btn" onclick="closeSetupModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<div class="admin-modal-overlay" id="timeattack-modal">
+  <div class="admin-modal">
+    <div class="admin-modal-title" style="color: #ff4d4d;"><i class="fa-solid fa-bolt"></i> 타임어택 이벤트 설정</div>
+    <div class="sec-label">⏱️ 제한 시간 선택 (분)</div>
+    <input class="admin-input" type="number" id="event-mins" value="5" min="1" max="60">
+    <div class="sec-label">👥 랜덤 추첨 당첨 인원수 (명)</div>
+    <input class="admin-input" type="number" id="event-winners" value="1" min="1" max="10">
+    <div class="sec-label">🎁 당첨자 지급 보상 내용</div>
+    <input class="admin-input" type="text" id="event-reward" placeholder="예: 싸이버거 세트 / 10000" maxlength="30">
+    <div class="admin-modal-btns" style="margin-top:14px;">
+      <button class="admin-confirm-btn" style="background: #ff4d4d;" onclick="confirmTimeAttack()">🔥 시작 & 단톡방 알림</button>
+      <button class="admin-dismiss-btn" onclick="closeTimeAttackModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════
+// 파라미터 파싱
+// ════════════════════════════════════
+let userId   = null;
+let groupId  = null;
+let gameType = null;
+let roomId   = null;
+let isEditMode = false;
+
+try {
+  const params = new URLSearchParams(window.location.search);
+  const start  = params.get('start');
+  isEditMode = params.get('mode') === 'edit';
+  if (start) {
+    const parts = start.split('_');
+    userId   = parts[0] || null;
+    groupId  = parts[1] || null;
+    gameType = parts[2] || null;
+    roomId   = parts[3] || null;
+  }
+} catch(e) {}
+
+const GAME_CONFIG = {
+  lol: {
+    name: '리그오브레전드 5v5', total: 10, perTeam: 5,
+    positions: [
+      { id: 'top',  label: '탑',  cls: 'pos-top' },
+      { id: 'jg',   label: '정글', cls: 'pos-jg'  },
+      { id: 'mid',  label: '미드', cls: 'pos-mid' },
+      { id: 'adc',  label: '원딜', cls: 'pos-adc' },
+      { id: 'sup',  label: '서폿', cls: 'pos-sup' },
+    ]
+  },
+  sa5: {
+    name: '서든어택 5v5', total: 10, perTeam: 5,
+    positions: [
+      { id: 'sna',  label: '스나', cls: 'pos-sna' },
+      { id: 'rfl1', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl2', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl3', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl4', label: '라플', cls: 'pos-rfl' },
+    ]
+  },
+  sa6: {
+    name: '서든어택 6v6', total: 12, perTeam: 6,
+    positions: [
+      { id: 'sna1', label: '스나', cls: 'pos-sna' },
+      { id: 'sna2', label: '스나', cls: 'pos-sna' },
+      { id: 'rfl1', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl2', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl3', label: '라플', cls: 'pos-rfl' },
+      { id: 'rfl4', label: '라플', cls: 'pos-rfl' },
+    ]
+  }
+};
+
+let config   = GAME_CONFIG[gameType] || GAME_CONFIG['lol'];
+let roomData = null;
+let isAdmin  = false;
+let mySlot   = null;
+let timerInterval = null;
+
+let selTeam        = null;
+let clickedPos     = null;
+let adminAddSlot   = null;
+let adminRemoveSlot = null;
+let selectedFundType = ''; 
+
+document.getElementById('top-title').textContent = '⚔️ ' + config.name;
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => { t.className = 'toast'; }, 2500);
+}
+
+async function checkAdmin() {
+  if (!userId) return;
+  try {
+    const res  = await fetch(`/naejeon/check_admin?userId=${userId}`);
+    const data = await res.json();
+    isAdmin = data.isAdmin === true;
+    document.getElementById('admin-banner').style.display = isAdmin ? 'flex' : 'none';
+  } catch(e) {
+    isAdmin = false;
+  }
+}
+
+async function loadRoom() {
+  try {
+    const res  = await fetch(`/naejeon/room?roomId=${roomId}`);
+    const data = await res.json();
+    if (data.error) {
+      document.getElementById('main-content').innerHTML =
+        `<div style="text-align:center;padding:40px;color:#8888bb">${data.error}</div>`;
+      return;
+    }
+    roomData = data;
+    config   = GAME_CONFIG[roomData.gameType] || config;
+    document.getElementById('top-title').textContent = '⚔️ ' + config.name;
+    if (roomData.extraText) {
+      document.getElementById('top-sub').textContent = roomData.extraText;
+    }
+    renderRoom();
+    handleEventTimer(roomData.event); // 🔥 타임어택 동기화 코어 작동
+  } catch(e) {}
+}
+
+function renderRoom() {
+  if (!roomData) return;
+  const slots  = roomData.slots || {};
+  const filled = Object.values(slots).filter(Boolean).length;
+  const total  = config.total;
+
+  mySlot = null;
+  for (const [key, slot] of Object.entries(slots)) {
+    if (slot && String(slot.userId) === String(userId)) {
+      mySlot = key;
+      break;
+    }
+  }
+
+  // 사비/찬조 배너 렌더링
+  const fundBanner = document.getElementById('fund-banner');
+  if (roomData.fundType && roomData.fundAmount) {
+    fundBanner.style.display = 'flex';
+    const badge = document.getElementById('fund-badge');
+    badge.textContent = roomData.fundType === '사비' ? '💸 사비' : '🎁 찬조';
+    
+    let amt = roomData.fundAmount;
+    if (!isNaN(amt) && amt.trim() !== '') {
+      amt = Number(amt).toLocaleString() + "원";
+    }
+    document.getElementById('fund-amount-text').textContent = amt;
+  } else {
+    fundBanner.style.display = 'none';
+  }
+
+  // 🔥 게이지 실시간 출렁임 액체 애니메이션 피드백 적용
+  const stVal = document.getElementById('status-val');
+  const targetText = `${filled} / ${total}명`;
+  if (stVal.textContent !== targetText && stVal.textContent !== "로딩 중...") {
+    const box = document.getElementById('status-bar-box');
+    box.classList.add('pulse-active');
+    setTimeout(() => box.classList.remove('pulse-active'), 400);
+  }
+  stVal.textContent = targetText;
+  stVal.className   = filled >= total ? 'st-val st-full' : 'st-val';
+
+  const wrap = document.getElementById('teams-wrap');
+  wrap.className = 'teams-wrap' + (isAdmin ? ' admin-mode' : '');
+  wrap.innerHTML = '';
+
+  ['A', 'B'].forEach(team => {
+    const box  = document.createElement('div');
+    const tcls = team === 'A' ? 'team-a' : 'team-b';
+    box.className = `team-box ${tcls}`;
+    box.innerHTML = `<div class="team-header">${team === 'A' ? '🟣 1팀' : '🟢 2팀'}</div>`;
+
+    config.positions.forEach(pos => {
+      const key    = `${team}_${pos.id}`;
+      const slot   = slots[key];
+      const isMine = slot && String(slot.userId) === String(userId);
+      const div    = document.createElement('div');
+      div.className = 'slot' + (slot ? ' filled' : '') + (isMine ? ' mine' : '');
+
+      if (slot) {
+        div.innerHTML = `
+          <span class="pos-badge ${pos.cls}">${pos.label}</span>
+          <span class="slot-name">${escHtml(slot.name)}</span>
+          ${isMine ? '<span class="slot-mine-badge">나</span>' : ''}
+          ${isAdmin ? `<button class="slot-admin-tag remove" onclick="openAdminRemove('${key}','${escHtml(slot.name)}',event)">제거</button>` : ''}
+        `;
+        if (isAdmin) {
+          div.onclick = (e) => openAdminRemove(key, slot.name, e);
+        } else {
+          div.style.cursor = 'default';
+        }
+      } else {
+        div.innerHTML = `
+          <span class="pos-badge ${pos.cls}">${pos.label}</span>
+          <span class="slot-empty">${isAdmin ? '+ 타이핑 추가' : '비어있음'}</span>
+          ${isAdmin ? '<button class="slot-admin-tag add">추가</button>' : ''}
+        `;
+        if (isAdmin) {
+          div.onclick = () => openAdminAdd(team, pos);
+        } else if (!mySlot && (filled < total || isEditMode) && roomData.status === 'open') {
+          div.onclick = () => openUserModal(team, pos);
+        } else {
+          div.style.cursor = 'default';
+        }
+      }
+      box.appendChild(div);
+    });
+    wrap.appendChild(box);
+  });
+
+  const btn = document.getElementById('btn-join');
+  if (isAdmin && isEditMode) {
+    btn.className   = 'btn-join active';
+    btn.style.background = '#5533aa';
+    btn.textContent = '👑 마스터 수정 모드 활성화 중';
+  } else if (roomData.status !== 'open' || filled >= total) {
+    btn.className   = 'btn-join full';
+    btn.textContent = '✅ 모집 완료!';
+  } else if (isAdmin) {
+    btn.className   = 'btn-join inactive';
+    btn.textContent = '👑 슬롯을 눌러 직접 추가하거나 빼기 가능';
+  } else if (mySlot) {
+    btn.className   = 'btn-join cancel';
+    btn.textContent = '❌ 참여 취소하기';
+  } else {
+    btn.className   = 'btn-join inactive';
+    btn.textContent = '위 슬롯을 탭해서 참여하세요';
+  }
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// 🔥 실시간 밀리초 타임어택 시계 작동 및 자동 종료 장치
+function handleEventTimer(event) {
+  const bar = document.getElementById('timer-bar');
+  if (!event) {
+    bar.style.display = 'none';
+    if(timerInterval) clearInterval(timerInterval);
+    return;
+  }
+
+  bar.style.display = 'block';
+  const endTime = new Date(event.endTime).getTime();
+
+  if (timerInterval) clearInterval(timerInterval);
+
+  timerInterval = setInterval(() => {
+    const now = new Date().getTime();
+    const diff = endTime - now;
+
+    if (diff <= 0) {
+      clearInterval(timerInterval);
+      document.getElementById('timer-display').textContent = "00:00.00";
+      if(isAdmin) triggerEventFinish(); // 관리자 브라우저가 대표로 종료 플래그 요청
+      return;
+    }
+
+    const m = Math.floor(diff / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    const ms = Math.floor((diff % 1000) / 10);
+    
+    document.getElementById('timer-display').textContent = 
+      `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms).padStart(2,'0')}`;
+  }, 40);
+}
+
+// 👑 관리자 타임어택 생성 모달 제어 함수군
+function openTimeAttackModal() { document.getElementById('timeattack-modal').classList.add('show'); }
+function closeTimeAttackModal() { document.getElementById('timeattack-modal').classList.remove('show'); }
+
+async function confirmTimeAttack() {
+  const mins = document.getElementById('event-mins').value;
+  const winners = document.getElementById('event-winners').value;
+  const reward = document.getElementById('event-reward').value.trim();
+
+  if(!reward) { showToast('당첨자 보상을 입력해 주세요!', true); return; }
+
+  try {
+    const res = await fetch('/naejeon/start_event', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ roomId, userId, groupId, mins, winners, reward })
+    });
+    if((await res.json()).ok) {
+      closeTimeAttackModal();
+      showToast('🔥 타임어택 룰렛 오픈 완료!');
+      loadRoom();
+    }
+  } catch(e) { showToast('서버 통신 실패', true); }
+}
+
+async function triggerEventFinish() {
+  if(!isAdmin) return;
+  try {
+    await fetch('/naejeon/finish_event', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ roomId })
+    });
+  } catch(e) {}
+}
+
+async function handleMainBtn() {
+  if (isAdmin || !mySlot) return;
+  const btn = document.getElementById('btn-join');
+  btn.textContent = '취소 중...'; btn.className = 'btn-join inactive';
+  try {
+    const res  = await fetch('/naejeon/leave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId, userId, groupId })
+    });
+    const data = await res.json();
+    if (data.ok) { roomData = data.room; renderRoom(); showToast('참여가 취소됐어요.'); }
+    else showToast(data.error || '오류가 발생했어요.', true);
+  } catch(e) {
+    showToast('오류가 발생했어요.', true);
+    renderRoom();
+  }
+}
+
+function openUserModal(team, pos) {
+  clickedPos = pos;
+  selTeam    = null;
+  const slots = roomData.slots || {};
+  const aFull = config.positions.every(p => slots[`A_${p.id}`]);
+  const bFull = config.positions.every(p => slots[`B_${p.id}`]);
+
+  document.getElementById('modal-title').textContent = `[${pos.label}] 포지션 참여`;
+  document.getElementById('modal-sub').textContent   = '참여할 팀을 선택해주세요';
+  document.getElementById('m-team-a').className = 'modal-btn' + (aFull ? ' disabled' : '');
+  document.getElementById('m-team-b').className = 'modal-btn' + (bFull ? ' disabled' : '');
+  document.getElementById('modal-confirm').className = 'btn-join inactive';
+  document.getElementById('modal-confirm').textContent = '팀을 선택해주세요';
+
+  if (!slots[`${team}_${pos.id}`]) selectTeam(team);
+  document.getElementById('modal').classList.add('show');
+}
+
+function selectTeam(team) {
+  const key = `${team}_${clickedPos?.id}`;
+  if ((roomData.slots || {})[key]) return;
+  selTeam = team;
+  document.getElementById('m-team-a').className = 'modal-btn' + (team === 'A' ? ' sel-team-a' : '');
+  document.getElementById('m-team-b').className = 'modal-btn' + (team === 'B' ? ' sel-team-b' : '');
+  const btn = document.getElementById('modal-confirm');
+  btn.className   = 'btn-join active';
+  btn.textContent = `✅ ${team === 'A' ? '🟣 1팀' : '🟢 2팀'} [${clickedPos.label}]로 참여`;
+}
+
+function onModalOverlayClick(e) {
+  if (e.target === document.getElementById('modal')) closeModal();
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+  selTeam = null; clickedPos = null;
+}
+
+async function confirmJoin() {
+  if (!selTeam || !clickedPos) return;
+  const btn = document.getElementById('modal-confirm');
+  btn.textContent = '참여 중...'; btn.className = 'btn-join inactive';
+  try {
+    const res  = await fetch('/naejeon/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId, userId, groupId,
+        team: selTeam,
+        posId: clickedPos.id,
+        posLabel: clickedPos.label
+      })
+    });
+    const data = await res.json();
+    closeModal();
+    if (data.ok) { roomData = data.room; renderRoom(); showToast('✅ 참여 완료!'); }
+    else showToast(data.error || '오류가 발생했어요.', true);
+  } catch(e) {
+    showToast('오류가 발생했어요.', true);
+    closeModal(); renderRoom();
+  }
+}
+
+function openAdminAdd(team, pos) {
+  adminAddSlot = { team, pos, slotKey: `${team}_${pos.id}` };
+  document.getElementById('admin-add-title').textContent = `👑 ${team === 'A' ? '🟣 1팀' : '🟢 2팀'} [${pos.label}] 추가`;
+  document.getElementById('admin-name-input').value = '';
+  document.getElementById('admin-add-modal').classList.add('show');
+  setTimeout(() => document.getElementById('admin-name-input').focus(), 150);
+}
+function closeAdminAddModal() {
+  document.getElementById('admin-add-modal').classList.remove('show');
+  adminAddSlot = null;
+}
+async function confirmAdminAdd() {
+  const name = document.getElementById('admin-name-input').value.trim();
+  if (!name) { showToast('이름을 입력해주세요!', true); return; }
+  if (!adminAddSlot) return;
+  const btn = document.querySelector('#admin-add-modal .admin-confirm-btn');
+  btn.textContent = '추가 중...';
+  try {
+    const res  = await fetch('/naejeon/admin_add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId, userId: parseInt(userId), groupId: parseInt(groupId),
+        slotKey: adminAddSlot.slotKey, name
+      })
+    });
+    const data = await res.json();
+    closeAdminAddModal();
+    if (data.ok) { roomData = data.room; renderRoom(); showToast(`✅ ${name} 등록 완료!`); }
+    else showToast(data.error || '오류가 발생했어요.', true);
+  } catch(e) {
+    showToast('오류가 발생했어요.', true);
+  } finally { btn.textContent = '추가'; }
+}
+
+function openAdminRemove(slotKey, name, event) {
+  if(event) event.stopPropagation();
+  adminRemoveSlot = { slotKey, name };
+  document.getElementById('admin-remove-sub').textContent = `"${name}" 님을 슬롯에서 뺄까요?`;
+  document.getElementById('admin-remove-modal').classList.add('show');
+}
+function closeAdminRemoveModal() {
+  document.getElementById('admin-remove-modal').classList.remove('show');
+  adminRemoveSlot = null;
+}
+async function confirmAdminRemove() {
+  if (!adminRemoveSlot) return;
+  const btn = document.querySelector('#admin-remove-modal .admin-confirm-btn');
+  btn.textContent = '제거 중...';
+  try {
+    const res  = await fetch('/naejeon/remove', { // 백엔드 라우트 /leave 와 동기화
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId, userId: parseInt(userId), groupId: parseInt(groupId),
+        slotKey: adminRemoveSlot.slotKey
+      })
+    });
+    const data = await res.json();
+    const removedName = adminRemoveSlot.name;
+    closeAdminRemoveModal();
+    if (data.ok) { roomData = data.room; renderRoom(); showToast(`🗑 ${removedName} 제거 완료`); }
+    else showToast(data.error || '오류가 발생했어요.', true);
+  } catch(e) {
+    showToast('오류가 발생했어요.', true);
+  } finally { btn.textContent = '제거'; }
+}
+
+function setFundType(type) {
+  selectedFundType = type;
+  document.getElementById('fund-btn-sabi').className  = 'fund-type-btn' + (type === '사비' ? ' active-sabi' : '');
+  document.getElementById('fund-btn-chajo').className = 'fund-type-btn' + (type === '찬조' ? ' active-chajo' : '');
+  document.getElementById('fund-btn-none').className  = 'fund-type-btn' + (type === '' ? ' active-none' : '');
+  document.getElementById('fund-amount-wrap').style.display = type ? 'block' : 'none';
+}
+
+function openSetupModal() {
+  if (roomData) {
+    document.getElementById('setup-extra-text').value = roomData.extraText || '';
+    if (roomData.posA && roomData.posA.length > 0)
+      document.getElementById('setup-pos-a').value = roomData.posA.join(',');
+    if (roomData.posB && roomData.posB.length > 0)
+      document.getElementById('setup-pos-b').value = roomData.posB.join(',');
+    if (roomData.fundType) {
+      setFundType(roomData.fundType);
+      document.getElementById('setup-fund-amount').value = roomData.fundAmount || '';
+    } else {
+      setFundType('');
+      document.getElementById('setup-fund-amount').value = '';
+    }
+  }
+  document.getElementById('setup-modal').classList.add('show');
+}
+function closeSetupModal() {
+  document.getElementById('setup-modal').classList.remove('show');
+}
+
+async function confirmSetup() {
+  const extraText  = document.getElementById('setup-extra-text').value.trim();
+  const fundAmount = selectedFundType ? document.getElementById('setup-fund-amount').value.trim() : '';
+  const posAStr = document.getElementById('setup-pos-a').value.trim();
+  const posBStr = document.getElementById('setup-pos-b').value.trim();
+  const posA = posAStr ? posAStr.split(',').map(s => s.trim()).filter(Boolean) : config.positions.map(p => p.label);
+  const posB = posBStr ? posBStr.split(',').map(s => s.trim()).filter(Boolean) : config.positions.map(p => p.label);
+
+  if (selectedFundType && !fundAmount) {
+    showToast('금액을 입력해주세요!', true); return;
+  }
+
+  const btn = document.getElementById('setup-confirm-btn');
+  btn.textContent = '적용 중...';
+
+  try {
+    const res  = await fetch('/naejeon/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId, userId: parseInt(userId), groupId: parseInt(groupId),
+        gameType, extraText, fundType: selectedFundType, fundAmount, posA, posB
+      })
+    });
+    const data = await res.json();
+    closeSetupModal();
+    if (data.ok) {
+      roomData = data.room;
+      if (roomData.extraText) {
+        document.getElementById('top-sub').textContent = roomData.extraText;
+      }
+      renderRoom();
+      showToast('✅ 설정 완료! 그룹에 공지됐어요.');
+    } else {
+      showToast(data.error || '오류가 발생했어요.', true);
+    }
+  } catch(e) {
+    showToast('오류가 발생했어요.', true);
+  } finally {
+    btn.textContent = '적용 & 그룹 공지';
+  }
+}
+
+async function adminCancelRoom() {
+  if (!confirm('정말 내전을 취소할까요?')) return;
+  try {
+    const res  = await fetch('/naejeon/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId, userId: parseInt(userId), groupId: parseInt(groupId) })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast('✅ 내전이 취소됐어요.');
+      setTimeout(() => window.location.reload(), 1200);
+    } else {
+      showToast(data.error || '오류가 발생했어요.', true);
+    }
+  } catch(e) {
+    showToast('오류가 발생했어요.', true);
+  }
+}
+
+async function init() {
+  await checkAdmin();
+  await loadRoom();
+}
+
+init();
+setInterval(loadRoom, 3000); 
+</script>
+</body>
+</html>
