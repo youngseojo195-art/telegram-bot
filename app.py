@@ -785,7 +785,7 @@ def handle_all(message):
                 total_count = c.fetchone()[0]
             finally:
                 c.close(); db.close()
-            bot.reply_to(message, f"╔══ 📊 채팅 통계 ══╗\n   👤 {first_name}님\n\n   ☀️ 오늘       {today_count}개\n   Calendar 이번 주   {week_count}개\n   🗓 이번 달   {month_count}개\n   💬 전체      {total_count}개\n\n   🎀 오늘도 열심히 채팅했어요!\n╚══════════════════╝")
+            bot.reply_to(message, f"╔══ 📊 채팅 통계 ══╗\n   👤 {first_name}님\n\n   ☀️ 오늘       {today_count}개\n   이번 주   {week_count}개\n   🗓 이번 달   {month_count}개\n   💬 전체      {total_count}개\n\n   🎀 오늘도 열심히 채팅했어요!\n╚══════════════════╝")
 
         # ── /야구 ──
         elif text.strip().startswith('/야구'):
@@ -882,6 +882,38 @@ def handle_all(message):
                 result += f"   👤 {name}\n  {team_icons}\n  {'─' * 21}\n"
             result += "╚══════════════════╝"
             bot.reply_to(message, result)
+
+        # ── /내전수정 (관리자 전용 마스터 수정 모드) ──
+        elif text.strip().startswith('/내전수정'):
+            if message.chat.type == 'private': return
+            if user_id not in ADMIN_IDS:
+                bot.reply_to(message, "⚠️ 관리자만 내전을 수정할 수 있어요!"); return
+            
+            parts = text.strip().split()
+            game_arg = parts[1] if len(parts) > 1 else ''
+            game_map = {'롤':'lol', '서든':'sa5', 'lol':'lol', 'sa':'sa5', 'sa5':'sa5', 'sa6':'sa6'}
+            game_type = game_map.get(game_arg)
+            
+            if not game_type:
+                bot.reply_to(message, "⚔️ 사용법: /내전수정 롤  또는  /내전수정 서든"); return
+                
+            db = get_db(); c = db.cursor()
+            try:
+                c.execute("SELECT room_id FROM naejeon_rooms WHERE group_id=%s AND game_type=%s ORDER BY created_at DESC LIMIT 1", (group_id, game_type))
+                row = c.fetchone()
+                if not row:
+                    bot.reply_to(message, "⚠️ 수정할 수 있는 최근 내전 기록이 없습니다."); return
+                room_id = row[0]
+            finally:
+                c.close(); db.close()
+                
+            param = f"{user_id}_{group_id}_{game_type}_{room_id}"
+            nj_url = f"{WEBAPP_BASE_URL}/naejeon?start={param}&mode=edit"
+            
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton("🛠 내전 강제 수정하기", url=nj_url))
+            
+            bot.reply_to(message, f"👑 관리자 전용 내전 마스터 수정 링크가 생성되었습니다.\n인원이 가득 차서 잠긴 상태여도 강제 추가 및 내보내기가 가능합니다.", reply_markup=markup)
 
         # ── /내전취소 ──
         elif text.strip().startswith('/내전취소'):
@@ -1062,7 +1094,7 @@ def kbo_hot():
 
 
 # ─────────────────────────────────────────────────────────
-# Flask 라우트 — 내전 (관리자 식별 및 싱크 최적화)
+# Flask 라우트 — 내전 
 # ─────────────────────────────────────────────────────────
 @app.route('/naejeon')
 def serve_naejeon():
