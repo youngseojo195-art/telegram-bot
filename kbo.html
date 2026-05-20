@@ -393,14 +393,14 @@ function checkVoteTime() {
   const total = h * 60 + m;
 
   const VOTE_DAYS  = [2, 3, 4, 5]; // 화,수,목,금
-  const START_MIN  = 18 * 60 + 0;  // 18:00 ← 여기서 시작 시간 수정
-  const END_MIN    = 18 * 60 + 30; // 18:30 ← 여기서 종료 시간 수정
+  const START_MIN  = 10 * 60 + 0;  // 10:00 ← 여기서 시작 시간 수정
+  const END_MIN    = 14 * 60 + 0;  // 14:00 ← 여기서 종료 시간 수정
 
   return VOTE_DAYS.includes(day) && total >= START_MIN && total <= END_MIN;
 }
 
 function getVoteTimeInfo() {
-  return "참여 가능: 화~금 오후 6:00 ~ 6:30"; // ← 여기서 안내 문구 수정
+  return "참여 가능: 화~금 오전 10:00 ~ 오후 2:00"; // ← 여기서 안내 문구 수정
 }
 
 // ── 타이머 ──
@@ -409,7 +409,7 @@ function updateTimer() {
   const kst = new Date(now.getTime() + 9 * 3600 * 1000);
   // 마감 시각: KST 18:30
   const end = new Date(kst);
-  end.setUTCHours(9, 30, 0, 0); // ← 여기서 UTC 마감 시간 수정 (KST-9)
+  end.setUTCHours(5, 0, 0, 0); // ← 여기서 UTC 마감 시간 수정 (KST-9)
   let diff = Math.floor((end - kst) / 1000);
 
   const el = document.getElementById('timer-val');
@@ -589,7 +589,7 @@ async function loadList() {
       const teamTags = row.teams.map(t => {
         const team = TEAMS.find(x => x.id === t);
         return team
-          ? `<span class="list-team-tag" style="background:${team.color}">${team.text} ${team.name}</span>`
+          ? `<span class="list-team-tag" style="background:${team.color}">${team.name}</span>`
           : `<span class="list-team-tag" style="background:#333">${t}</span>`;
       }).join('');
       html += `<div class="list-item">
