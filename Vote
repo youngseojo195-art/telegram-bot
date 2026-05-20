@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>도파민 투표 이벤트</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --neon-red:    #ff4d4d;
+  --neon-purple: #bb88ff;
+  --neon-green:  #44cc88;
+  --neon-blue:   #4a9eff;
+  --neon-gold:   #ffd700;
+  --bg:          #0a0a1a;
+  --bg2:         #12122a;
+  --bg3:         #1a1a3a;
+  --border:      #1e1e3a;
+  --text-sub:    #8888bb;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* ══════════════════════════════
+   타이머 바
+══════════════════════════════ */
+.timer-bar {
+  background: #1a0505;
+  border-bottom: 2px solid var(--neon-red);
+  padding: 10px 16px 8px;
+  text-align: center;
+  position: sticky; top: 0; z-index: 50;
+  display: none;
+  box-shadow: 0 4px 20px rgba(255,77,77,0.25);
+}
+.timer-label { font-size: 9px; color: #ff8888; letter-spacing: 2px; font-weight: 700; margin-bottom: 2px; }
+.timer-num {
+  font-family: monospace;
+  font-size: 36px; font-weight: 900;
+  color: var(--neon-red);
+  text-shadow: 0 0 16px rgba(255,77,77,0.9);
+  line-height: 1;
+}
+.timer-num.urgent { animation: urgentPulse 0.5s ease-in-out infinite; }
+@keyframes urgentPulse {
+  0%,100% { text-shadow: 0 0 16px rgba(255,77,77,0.9); }
+  50%      { text-shadow: 0 0 40px rgba(255,77,77,1), 0 0 60px rgba(255,77,77,0.5); }
+}
+
+/* ══════════════════════════════
+   상단 바
+══════════════════════════════ */
+.topbar {
+  background: var(--bg2);
+  padding: 14px 16px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.top-title { font-size: 17px; font-weight: 800; color: #fff; }
+.top-sub   { font-size: 11px; color: var(--text-sub); margin-top: 4px; }
+
+/* ══════════════════════════════
+   공통 레이아웃
+══════════════════════════════ */
+.screen {
+  flex: 1; display: none;
+  flex-direction: column;
+  padding: 16px 14px 110px;
+  gap: 14px; overflow-y: auto;
+}
+.screen.show { display: flex; }
+
+/* ══════════════════════════════
+   관리자 설정 화면
+══════════════════════════════ */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+}
+.card-title {
+  font-size: 11px; color: var(--text-sub);
+  letter-spacing: 0.05em; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.inp {
+  width: 100%; background: var(--bg);
+  border: 1px solid #3a3a6a; border-radius: 10px;
+  color: #fff; font-size: 14px; padding: 12px 14px;
+  outline: none; transition: border-color 0.2s;
+}
+.inp:focus { border-color: var(--neon-purple); }
+.inp::placeholder { color: #44446699; }
+
+.time-grid {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 8px;
+  margin-bottom: 10px;
+}
+.time-btn {
+  padding: 12px 4px; border-radius: 10px;
+  border: 1.5px solid var(--border); background: var(--bg);
+  color: #aaa; font-size: 13px; font-weight: 600;
+  cursor: pointer; text-align: center; transition: all 0.15s;
+}
+.time-btn.sel { border-color: var(--neon-red); background: #1a0505; color: var(--neon-red); }
+.time-btn:active { transform: scale(0.96); }
+
+.custom-time-row {
+  display: flex; align-items: center; gap: 8px;
+}
+.custom-time-row .inp { margin-bottom: 0; }
+.custom-label { font-size: 13px; color: var(--text-sub); white-space: nowrap; }
+
+/* 추첨 스타일 선택 */
+.anim-grid {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 8px;
+}
+.anim-btn {
+  padding: 14px 8px; border-radius: 12px;
+  border: 1.5px solid var(--border); background: var(--bg);
+  color: #aaa; font-size: 11px; font-weight: 600;
+  cursor: pointer; text-align: center; transition: all 0.15s;
+  line-height: 1.5;
+}
+.anim-btn .anim-icon { font-size: 22px; display: block; margin-bottom: 4px; }
+.anim-btn:active { transform: scale(0.96); }
+.anim-btn.sel-slot   { border-color: var(--neon-gold);   background: #1a1500; color: var(--neon-gold); }
+.anim-btn.sel-roulette { border-color: #ff88ff; background: #1a001a; color: #ff88ff; }
+.anim-btn.sel-highlight { border-color: var(--neon-blue); background: #001525; color: var(--neon-blue); }
+
+/* 당첨자 수 */
+.winner-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.winner-minus, .winner-plus {
+  width: 40px; height: 40px; border-radius: 10px;
+  border: 1.5px solid var(--border); background: var(--bg);
+  color: #fff; font-size: 20px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; flex-shrink: 0;
+}
+.winner-minus:active, .winner-plus:active { background: var(--bg3); }
+.winner-num {
+  flex: 1; text-align: center;
+  font-size: 28px; font-weight: 800; color: var(--neon-purple);
+}
+
+/* 스타트 버튼 */
+.start-btn {
+  width: 100%; padding: 17px;
+  border-radius: 14px; border: none;
+  font-size: 16px; font-weight: 800;
+  cursor: pointer; transition: all 0.2s;
+  background: linear-gradient(135deg, #ff4d4d, #cc2222);
+  color: #fff; letter-spacing: 0.02em;
+}
+.start-btn.inactive {
+  background: var(--border); color: #444466; cursor: default;
+}
+.start-btn:not(.inactive):active { transform: scale(0.98); opacity: 0.9; }
+
+/* ══════════════════════════════
+   대기 화면 (유저용 - 아직 시작 전)
+══════════════════════════════ */
+.waiting-wrap {
+  flex: 1; display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; padding: 40px 20px;
+}
+.waiting-icon {
+  font-size: 64px;
+  animation: floatIcon 2s ease-in-out infinite;
+}
+@keyframes floatIcon {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.waiting-title { font-size: 18px; font-weight: 700; color: #fff; }
+.waiting-sub   { font-size: 13px; color: var(--text-sub); text-align: center; line-height: 1.6; }
+
+/* ══════════════════════════════
+   이벤트 진행 화면 (유저 참여)
+══════════════════════════════ */
+.event-header {
+  background: linear-gradient(135deg, #1a0520, #0a1030);
+  border: 1px solid #5533aa44;
+  border-radius: 14px;
+  padding: 16px;
+  text-align: center;
+}
+.event-reward-label { font-size: 10px; color: var(--text-sub); letter-spacing: 0.05em; margin-bottom: 4px; }
+.event-reward-text  { font-size: 20px; font-weight: 800; color: var(--neon-gold); }
+.event-reward-sub   { font-size: 12px; color: var(--text-sub); margin-top: 4px; }
+
+.participant-count-bar {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.pc-label { color: var(--text-sub); font-size: 12px; }
+.pc-val   { color: var(--neon-blue); font-size: 16px; font-weight: 800; }
+
+/* 참여자 목록 */
+.participants-wrap {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden;
+}
+.participants-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px; color: var(--text-sub); letter-spacing: 0.04em;
+}
+.participant-item {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+  transition: background 0.2s;
+}
+.participant-item:last-child { border-bottom: none; }
+.participant-item.me { background: #0d1a10; }
+.participant-item.highlight-anim {
+  animation: hlPulse 0.3s ease-out;
+}
+@keyframes hlPulse {
+  0%   { background: #2a1a00; }
+  100% { background: transparent; }
+}
+.p-num  { font-size: 11px; color: var(--text-sub); width: 20px; }
+.p-name { font-size: 14px; font-weight: 600; flex: 1; }
+.p-me   { font-size: 10px; color: var(--neon-green); background: #0a2010; border-radius: 4px; padding: 1px 6px; }
+
+.empty-list {
+  padding: 30px; text-align: center;
+  color: var(--text-sub); font-size: 13px;
+}
+
+/* ══════════════════════════════
+   하단 고정 버튼
+══════════════════════════════ */
+.bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  padding: 12px 14px 24px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  display: none;
+}
+.bottom-bar.show { display: block; }
+
+.join-btn {
+  width: 100%; padding: 16px;
+  border-radius: 14px; border: none;
+  font-size: 15px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+.join-btn.join   { background: var(--neon-green); color: #001a10; }
+.join-btn.cancel { background: #cc3333; color: #fff; }
+.join-btn.closed { background: var(--bg3); color: #444466; cursor: default; }
+.join-btn:not(.closed):active { transform: scale(0.98); opacity: 0.9; }
+
+/* ══════════════════════════════
+   추첨 오버레이 (풀스크린)
+══════════════════════════════ */
+.lottery-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.97);
+  z-index: 1000;
+  display: none;
+  flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 0;
+}
+.lottery-overlay.show { display: flex; }
+
+/* ── 슬롯머신 추첨 ── */
+.slot-machine {
+  display: none;
+  flex-direction: column; align-items: center;
+  gap: 20px; width: 100%; padding: 20px;
+}
+.slot-machine.show { display: flex; }
+
+.slot-title {
+  font-size: 14px; color: #ff8888;
+  letter-spacing: 3px; font-weight: 700;
+}
+.slot-display {
+  background: #0a0505;
+  border: 3px solid var(--neon-red);
+  border-radius: 16px;
+  padding: 20px 24px;
+  box-shadow: 0 0 30px rgba(255,77,77,0.4), inset 0 0 20px rgba(0,0,0,0.5);
+  width: 100%; max-width: 320px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.slot-name-roll {
+  font-size: 28px; font-weight: 900;
+  color: var(--neon-gold);
+  text-shadow: 0 0 20px rgba(255,215,0,0.8);
+  min-height: 42px; line-height: 42px;
+  transition: opacity 0.05s;
+}
+.slot-line {
+  position: absolute; left: 0; right: 0;
+  height: 2px; background: rgba(255,77,77,0.4);
+}
+.slot-line.top { top: 50%; margin-top: -22px; }
+.slot-line.bot { top: 50%; margin-top: 22px; }
+
+.slot-speed-label {
+  font-size: 11px; color: var(--text-sub); letter-spacing: 1px;
+}
+.slot-winner-reveal {
+  display: none; flex-direction: column; align-items: center; gap: 12px;
+}
+.slot-winner-reveal.show { display: flex; }
+.slot-winner-name {
+  font-size: 34px; font-weight: 900;
+  color: var(--neon-gold);
+  text-shadow: 0 0 30px rgba(255,215,0,1);
+  animation: winnerGlow 1s ease-in-out infinite;
+}
+@keyframes winnerGlow {
+  0%,100% { text-shadow: 0 0 30px rgba(255,215,0,0.8); transform: scale(1); }
+  50%      { text-shadow: 0 0 60px rgba(255,215,0,1), 0 0 100px rgba(255,215,0,0.5); transform: scale(1.05); }
+}
+
+/* ── 룰렛 추첨 ── */
+.roulette-machine {
+  display: none;
+  flex-direction: column; align-items: center;
+  gap: 16px; width: 100%; padding: 20px;
+}
+.roulette-machine.show { display: flex; }
+
+.roulette-title {
+  font-size: 14px; color: #ff88ff;
+  letter-spacing: 3px; font-weight: 700;
+}
+.roulette-wheel-wrap {
+  position: relative; width: 260px; height: 260px;
+}
+.roulette-canvas { width: 260px; height: 260px; }
+.roulette-pointer {
+  position: absolute; top: -10px; left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 28px solid var(--neon-gold);
+  filter: drop-shadow(0 0 8px rgba(255,215,0,0.8));
+  z-index: 10;
+}
+
+/* ── 하이라이트 추첨 ── */
+.highlight-machine {
+  display: none;
+  flex-direction: column; align-items: center;
+  gap: 16px; width: 100%; padding: 20px;
+}
+.highlight-machine.show { display: flex; }
+
+.highlight-title {
+  font-size: 14px; color: var(--neon-blue);
+  letter-spacing: 3px; font-weight: 700;
+}
+.highlight-list {
+  width: 100%; max-width: 340px;
+  max-height: 340px; overflow: hidden;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.hl-item {
+  padding: 10px 16px; border-radius: 10px;
+  border: 1.5px solid var(--border); background: var(--bg2);
+  font-size: 14px; font-weight: 600; color: #aaa;
+  text-align: center; transition: all 0.1s;
+}
+.hl-item.active {
+  border-color: var(--neon-blue); background: #001525;
+  color: var(--neon-blue);
+  box-shadow: 0 0 16px rgba(74,158,255,0.4);
+  transform: scale(1.03);
+}
+.hl-item.winner {
+  border-color: var(--neon-gold); background: #1a1500;
+  color: var(--neon-gold);
+  box-shadow: 0 0 24px rgba(255,215,0,0.6);
+  transform: scale(1.06);
+  animation: winnerGlow 1s ease-in-out infinite;
+}
+
+/* 공통 당첨자 발표 */
+.winner-announce {
+  display: none; flex-direction: column; align-items: center;
+  gap: 16px; text-align: center; padding: 20px;
+}
+.winner-announce.show { display: flex; }
+.wa-label { font-size: 12px; color: var(--text-sub); letter-spacing: 3px; }
+.wa-names {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.wa-name {
+  font-size: 30px; font-weight: 900; color: var(--neon-gold);
+  text-shadow: 0 0 30px rgba(255,215,0,0.8);
+  animation: winnerGlow 1s ease-in-out infinite;
+}
+.wa-reward { font-size: 15px; color: var(--text-sub); }
+.wa-close-btn {
+  margin-top: 10px; padding: 14px 32px;
+  border-radius: 12px; border: none;
+  background: var(--neon-gold); color: #1a1000;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+}
+
+/* 불꽃 파티클 */
+.confetti-wrap {
+  position: fixed; inset: 0; pointer-events: none; z-index: 1001;
+  display: none;
+}
+.confetti-wrap.show { display: block; }
+.confetti-particle {
+  position: absolute;
+  width: 8px; height: 8px;
+  border-radius: 2px;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+/* ══════════════════════════════
+   토스트
+══════════════════════════════ */
+.toast {
+  position: fixed; bottom: 100px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--neon-green); color: #001a10;
+  font-size: 13px; font-weight: 700;
+  padding: 10px 20px; border-radius: 20px;
+  z-index: 2000; opacity: 0; transition: opacity 0.2s;
+  white-space: nowrap; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+.toast.error { background: #cc3333; color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- 타이머 바 -->
+<div class="timer-bar" id="timer-bar">
+  <div class="timer-label">⏱ DOPAMINE TIMEATTACK</div>
+  <div class="timer-num" id="timer-display">00:00.00</div>
+</div>
+
+<!-- 상단 바 -->
+<div class="topbar">
+  <div class="top-title" id="top-title">🎰 도파민 투표 이벤트</div>
+  <div class="top-sub"  id="top-sub">잠시만 기다려주세요</div>
+</div>
+
+<!-- ══ 관리자 설정 화면 ══ -->
+<div class="screen" id="screen-admin">
+  <div class="card">
+    <div class="card-title">📢 이벤트 내용</div>
+    <input class="inp" type="text" id="cfg-content"
+           placeholder="예: 오늘 저녁 내전 치킨 건다!" maxlength="60" />
+  </div>
+
+  <div class="card">
+    <div class="card-title">⏱ 타임어택 제한 시간</div>
+    <div class="time-grid">
+      <button class="time-btn" onclick="selectTime(3)">3분</button>
+      <button class="time-btn" onclick="selectTime(5)">5분</button>
+      <button class="time-btn" onclick="selectTime(10)">10분</button>
+      <button class="time-btn" onclick="selectTime(0)">없음</button>
+    </div>
+    <div class="custom-time-row">
+      <input class="inp" type="number" id="cfg-custom-mins"
+             placeholder="직접 입력" min="1" max="999"
+             oninput="onCustomTime()" />
+      <span class="custom-label">분</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🎁 당첨자 수</div>
+    <div class="winner-row">
+      <button class="winner-minus" onclick="changeWinners(-1)">−</button>
+      <div class="winner-num" id="winner-num">1</div>
+      <button class="winner-plus"  onclick="changeWinners(+1)">+</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🎬 추첨 애니메이션 스타일</div>
+    <div class="anim-grid">
+      <button class="anim-btn" id="anim-slot"      onclick="selectAnim('slot')">
+        <span class="anim-icon">🎰</span>슬롯머신
+      </button>
+      <button class="anim-btn" id="anim-roulette"  onclick="selectAnim('roulette')">
+        <span class="anim-icon">🎡</span>룰렛
+      </button>
+      <button class="anim-btn" id="anim-highlight" onclick="selectAnim('highlight')">
+        <span class="anim-icon">⚡</span>랜덤 하이라이트
+      </button>
+    </div>
+  </div>
+
+  <button class="start-btn inactive" id="start-btn" onclick="adminStart()">
+    설정을 완료해주세요
+  </button>
+</div>
+
+<!-- ══ 대기 화면 (유저, 시작 전) ══ -->
+<div class="screen" id="screen-waiting">
+  <div class="waiting-wrap">
+    <div class="waiting-icon">🎰</div>
+    <div class="waiting-title">잠시만 기다려주세요!</div>
+    <div class="waiting-sub">관리자가 이벤트를 준비 중이에요.<br>곧 시작됩니다!</div>
+  </div>
+</div>
+
+<!-- ══ 이벤트 진행 화면 ══ -->
+<div class="screen" id="screen-event">
+
+  <div class="event-header" id="event-header">
+    <div class="event-reward-label">🎁 이벤트 보상</div>
+    <div class="event-reward-text" id="event-reward-text">—</div>
+    <div class="event-reward-sub"  id="event-winner-sub">당첨자 1명 추첨</div>
+  </div>
+
+  <div class="participant-count-bar">
+    <span class="pc-label">🙋 현재 참여자</span>
+    <span class="pc-val" id="pc-val">0명</span>
+  </div>
+
+  <div class="participants-wrap">
+    <div class="participants-header">참여자 목록</div>
+    <div id="participant-list">
+      <div class="empty-list">아직 참여자가 없어요 👀</div>
+    </div>
+  </div>
+
+  <!-- 관리자 전용: 수동 종료 -->
+  <div id="admin-end-wrap" style="display:none">
+    <button style="width:100%;padding:14px;border-radius:12px;border:1px solid #aa3333;background:transparent;color:#ff7777;font-size:13px;font-weight:600;cursor:pointer"
+            onclick="adminForceEnd()">🏁 지금 바로 추첨하기</button>
+  </div>
+
+</div>
+
+<!-- ══ 하단 참여 버튼 ══ -->
+<div class="bottom-bar" id="bottom-bar">
+  <button class="join-btn join" id="join-btn" onclick="toggleJoin()">
+    🙋 참여하기
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     추첨 오버레이
+══════════════════════════════════════════ -->
+<div class="lottery-overlay" id="lottery-overlay">
+
+  <!-- 슬롯머신 -->
+  <div class="slot-machine" id="slot-machine">
+    <div class="slot-title">🎰 SLOT MACHINE DRAW</div>
+    <div class="slot-display">
+      <div class="slot-line top"></div>
+      <div class="slot-name-roll" id="slot-roll">???</div>
+      <div class="slot-line bot"></div>
+    </div>
+    <div class="slot-speed-label" id="slot-speed-label">🔄 빠르게 돌아가는 중...</div>
+    <div class="slot-winner-reveal" id="slot-winner-reveal">
+      <!-- 당첨자 순차 표시 -->
+    </div>
+  </div>
+
+  <!-- 룰렛 -->
+  <div class="roulette-machine" id="roulette-machine">
+    <div class="roulette-title">🎡 ROULETTE DRAW</div>
+    <div class="roulette-wheel-wrap">
+      <div class="roulette-pointer"></div>
+      <canvas class="roulette-canvas" id="roulette-canvas" width="260" height="260"></canvas>
+    </div>
+  </div>
+
+  <!-- 하이라이트 -->
+  <div class="highlight-machine" id="highlight-machine">
+    <div class="highlight-title">⚡ RANDOM SELECT</div>
+    <div class="highlight-list" id="highlight-list"></div>
+  </div>
+
+  <!-- 공통 당첨자 발표 -->
+  <div class="winner-announce" id="winner-announce">
+    <div style="font-size:48px">🏆</div>
+    <div class="wa-label">WINNER</div>
+    <div class="wa-names" id="wa-names"></div>
+    <div class="wa-reward" id="wa-reward"></div>
+    <button class="wa-close-btn" onclick="closeLottery()">🎉 확인</button>
+  </div>
+
+</div>
+
+<!-- 파티클 -->
+<div class="confetti-wrap" id="confetti-wrap"></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════
+// 파라미터 파싱
+// ════════════════════════════════════════
+let userId  = null;
+let groupId = null;
+let roomId  = null;
+
+try {
+  const params = new URLSearchParams(window.location.search);
+  const start  = params.get('start');
+  if (start) {
+    const p = start.split('_');
+    userId  = p[0] || null;
+    groupId = p[1] || null;
+    roomId  = p[2] || null;
+  }
+} catch(e) {}
+
+// ════════════════════════════════════════
+// 앱 상태
+// ════════════════════════════════════════
+let isAdmin      = false;
+let eventData    = null;   // 서버에서 받은 이벤트 데이터
+let participants = [];     // [{userId, name}]
+let timerInterval  = null;
+let pollInterval   = null;
+let hasJoined      = false;
+
+// 관리자 설정 상태
+let cfgMins    = null;
+let cfgWinners = 1;
+let cfgAnim    = null;
+
+// ════════════════════════════════════════
+// 유틸
+// ════════════════════════════════════════
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => t.className = 'toast', 2500);
+}
+
+function showScreen(id) {
+  ['screen-admin','screen-waiting','screen-event'].forEach(s => {
+    document.getElementById(s).classList.toggle('show', s === id);
+  });
+}
+
+// ════════════════════════════════════════
+// 관리자 설정 UI
+// ════════════════════════════════════════
+function selectTime(mins) {
+  cfgMins = mins === 0 ? null : mins;
+  document.querySelectorAll('.time-btn').forEach((btn, i) => {
+    btn.className = 'time-btn' + ([3,5,10,0][i] === mins ? ' sel' : '');
+  });
+  document.getElementById('cfg-custom-mins').value = '';
+  updateStartBtn();
+}
+
+function onCustomTime() {
+  const v = parseInt(document.getElementById('cfg-custom-mins').value);
+  cfgMins = (!isNaN(v) && v > 0) ? v : null;
+  document.querySelectorAll('.time-btn').forEach(b => b.className = 'time-btn');
+  updateStartBtn();
+}
+
+function changeWinners(delta) {
+  cfgWinners = Math.max(1, Math.min(99, cfgWinners + delta));
+  document.getElementById('winner-num').textContent = cfgWinners;
+}
+
+function selectAnim(type) {
+  cfgAnim = type;
+  document.getElementById('anim-slot').className      = 'anim-btn' + (type === 'slot'      ? ' sel-slot'      : '');
+  document.getElementById('anim-roulette').className  = 'anim-btn' + (type === 'roulette'  ? ' sel-roulette'  : '');
+  document.getElementById('anim-highlight').className = 'anim-btn' + (type === 'highlight' ? ' sel-highlight' : '');
+  updateStartBtn();
+}
+
+function updateStartBtn() {
+  const content = document.getElementById('cfg-content').value.trim();
+  const btn = document.getElementById('start-btn');
+  if (content && cfgAnim) {
+    btn.className   = 'start-btn';
+    const timeStr   = cfgMins ? `${cfgMins}분 타임어택` : '타임어택 없음';
+    btn.textContent = `🔥 이벤트 시작! (${timeStr})`;
+  } else {
+    btn.className   = 'start-btn inactive';
+    btn.textContent = !content ? '이벤트 내용을 입력해주세요' : '추첨 스타일을 선택해주세요';
+  }
+}
+document.getElementById('cfg-content').addEventListener('input', updateStartBtn);
+
+async function adminStart() {
+  const content = document.getElementById('cfg-content').value.trim();
+  if (!content) { showToast('이벤트 내용을 입력해주세요!', true); return; }
+  if (!cfgAnim)  { showToast('추첨 스타일을 선택해주세요!', true); return; }
+
+  const btn = document.getElementById('start-btn');
+  btn.textContent = '⏳ 시작 중...'; btn.className = 'start-btn inactive';
+
+  try {
+    const res  = await fetch('/vote/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId, userId: parseInt(userId), groupId: parseInt(groupId),
+        content, mins: cfgMins, winners: cfgWinners, animStyle: cfgAnim
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast('🔥 이벤트가 시작됐어요!');
+      await loadEvent();
+    } else {
+      showToast(data.error || '오류 발생', true);
+      updateStartBtn();
+    }
+  } catch(e) {
+    showToast('서버 오류', true);
+    updateStartBtn();
+  }
+}
+
+// ════════════════════════════════════════
+// 이벤트 로드 & 렌더
+// ════════════════════════════════════════
+async function loadEvent() {
+  try {
+    const res  = await fetch(`/vote/room?roomId=${roomId}`);
+    const data = await res.json();
+    if (data.error) return;
+    eventData    = data;
+    participants = data.participants || [];
+    hasJoined    = participants.some(p => String(p.userId) === String(userId));
+    renderEvent();
+  } catch(e) {}
+}
+
+function renderEvent() {
+  if (!eventData) return;
+
+  if (!eventData.started) {
+    // 아직 시작 전
+    if (isAdmin) {
+      showScreen('screen-admin');
+      document.getElementById('bottom-bar').classList.remove('show');
+    } else {
+      showScreen('screen-waiting');
+      document.getElementById('bottom-bar').classList.remove('show');
+    }
+    return;
+  }
+
+  // 이벤트 진행 중 또는 종료
+  showScreen('screen-event');
+  document.getElementById('bottom-bar').classList.add('show');
+
+  // 헤더
+  document.getElementById('top-title').textContent = '🎰 도파민 투표 이벤트';
+  document.getElementById('top-sub').textContent   = eventData.content || '';
+  document.getElementById('event-reward-text').textContent = eventData.content || '';
+  document.getElementById('event-winner-sub').textContent  =
+    `당첨자 ${eventData.winners}명 추첨`;
+
+  // 참여자 수
+  document.getElementById('pc-val').textContent = `${participants.length}명`;
+
+  // 참여자 목록
+  const list = document.getElementById('participant-list');
+  if (participants.length === 0) {
+    list.innerHTML = '<div class="empty-list">아직 참여자가 없어요 👀</div>';
+  } else {
+    list.innerHTML = participants.map((p, i) => {
+      const isMe = String(p.userId) === String(userId);
+      return `
+        <div class="participant-item${isMe ? ' me' : ''}">
+          <span class="p-num">${i+1}</span>
+          <span class="p-name">${escHtml(p.name)}</span>
+          ${isMe ? '<span class="p-me">나</span>' : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 버튼 상태
+  const joinBtn = document.getElementById('join-btn');
+  if (eventData.ended) {
+    joinBtn.className   = 'join-btn closed';
+    joinBtn.textContent = '🏁 이벤트 종료';
+    document.getElementById('admin-end-wrap').style.display = 'none';
+    stopTimer();
+  } else if (hasJoined) {
+    joinBtn.className   = 'join-btn cancel';
+    joinBtn.textContent = '❌ 참여 취소';
+    if (isAdmin) document.getElementById('admin-end-wrap').style.display = 'block';
+  } else {
+    joinBtn.className   = 'join-btn join';
+    joinBtn.textContent = '🙋 참여하기';
+    if (isAdmin) document.getElementById('admin-end-wrap').style.display = 'block';
+  }
+
+  // 타이머
+  if (eventData.endTime && !eventData.ended) {
+    startTimer(eventData.endTime, eventData.animStyle, eventData.winners);
+  }
+}
+
+// ════════════════════════════════════════
+// 타이머
+// ════════════════════════════════════════
+function startTimer(endTimeStr, animStyle, winners) {
+  const bar     = document.getElementById('timer-bar');
+  const display = document.getElementById('timer-display');
+  bar.style.display = 'block';
+
+  if (timerInterval) clearInterval(timerInterval);
+  const endTime = new Date(endTimeStr).getTime();
+
+  timerInterval = setInterval(async () => {
+    const diff = endTime - Date.now();
+    if (diff <= 0) {
+      clearInterval(timerInterval);
+      display.textContent = '00:00.00';
+      bar.style.display   = 'none';
+      // 관리자가 추첨 트리거
+      if (isAdmin) {
+        await triggerDraw();
+      }
+      return;
+    }
+    const m  = Math.floor(diff / 60000);
+    const s  = Math.floor((diff % 60000) / 1000);
+    const ms = Math.floor((diff % 1000) / 10);
+    display.textContent = `${pad(m)}:${pad(s)}.${pad(ms)}`;
+    display.className = diff < 10000 ? 'timer-num urgent' : 'timer-num';
+  }, 40);
+}
+
+function stopTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  document.getElementById('timer-bar').style.display = 'none';
+}
+
+function pad(n) { return String(n).padStart(2,'0'); }
+
+// ════════════════════════════════════════
+// 참여 / 취소
+// ════════════════════════════════════════
+async function toggleJoin() {
+  if (!eventData || eventData.ended) return;
+  try {
+    const endpoint = hasJoined ? '/vote/leave' : '/vote/join';
+    const res  = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId, userId: parseInt(userId), groupId: parseInt(groupId) })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      participants = data.participants;
+      hasJoined   = participants.some(p => String(p.userId) === String(userId));
+      renderEvent();
+      showToast(hasJoined ? '✅ 참여 완료!' : '참여를 취소했어요.');
+    } else {
+      showToast(data.error || '오류가 발생했어요.', true);
+    }
+  } catch(e) {
+    showToast('오류가 발생했어요.', true);
+  }
+}
+
+// ════════════════════════════════════════
+// 추첨 트리거 (관리자)
+// ════════════════════════════════════════
+async function triggerDraw() {
+  try {
+    const res  = await fetch('/vote/draw', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      stopPolling();
+      playLottery(data.animStyle, data.winners, data.content, participants);
+    }
+  } catch(e) {}
+}
+
+async function adminForceEnd() {
+  if (!confirm('지금 바로 추첨할까요?')) return;
+  await triggerDraw();
+}
+
+// ════════════════════════════════════════
+// 🎰 추첨 애니메이션 메인
+// ════════════════════════════════════════
+function playLottery(animStyle, winners, content, allParticipants) {
+  const overlay = document.getElementById('lottery-overlay');
+  overlay.classList.add('show');
+
+  // 패널 초기화
+  ['slot-machine','roulette-machine','highlight-machine','winner-announce'].forEach(id => {
+    document.getElementById(id).classList.remove('show');
+  });
+
+  const names = allParticipants.map(p => p.name);
+
+  if (animStyle === 'slot') {
+    playSlot(names, winners, content);
+  } else if (animStyle === 'roulette') {
+    playRoulette(names, winners, content);
+  } else {
+    playHighlight(names, winners, content);
+  }
+}
+
+// ── 슬롯머신 ──
+function playSlot(names, winnerCount, content) {
+  document.getElementById('slot-machine').classList.add('show');
+  const roll  = document.getElementById('slot-roll');
+  const label = document.getElementById('slot-speed-label');
+  const revealEl = document.getElementById('slot-winner-reveal');
+  revealEl.classList.remove('show');
+  revealEl.innerHTML = '';
+
+  // 당첨자 미리 결정
+  const shuffled = [...names].sort(() => Math.random() - 0.5);
+  const winners  = shuffled.slice(0, Math.min(winnerCount, names.length));
+
+  let idx = 0, speed = 60, total = 0, maxTotal = 120;
+  let phase = 'fast'; // fast → slow → stop
+
+  function tick() {
+    roll.textContent = names[idx % names.length];
+    roll.style.opacity = '1';
+    idx++;
+    total++;
+
+    if (total < 60) {
+      speed = 60; phase = 'fast';
+      label.textContent = '🔄 빠르게 돌아가는 중...';
+    } else if (total < 100) {
+      speed = 120; phase = 'slow';
+      label.textContent = '⏬ 속도가 줄어들고 있어요...';
+    } else if (total < maxTotal) {
+      speed = 200; phase = 'slower';
+      label.textContent = '🎯 곧 멈춥니다...';
+    } else {
+      // 멈춤 — 마지막 당첨자 표시
+      roll.textContent = winners[winners.length - 1];
+      label.textContent = '';
+      setTimeout(() => showSlotWinners(winners, content), 600);
+      return;
+    }
+    setTimeout(tick, speed);
+  }
+  tick();
+}
+
+function showSlotWinners(winners, content) {
+  const revealEl = document.getElementById('slot-winner-reveal');
+  revealEl.innerHTML = '';
+  winners.forEach(name => {
+    const el = document.createElement('div');
+    el.className = 'slot-winner-name';
+    el.textContent = name;
+    revealEl.appendChild(el);
+  });
+  revealEl.classList.add('show');
+  setTimeout(() => showWinnerAnnounce(winners, content), 1500);
+}
+
+// ── 룰렛 ──
+function playRoulette(names, winnerCount, content) {
+  document.getElementById('roulette-machine').classList.add('show');
+  const canvas = document.getElementById('roulette-canvas');
+  const ctx    = canvas.getContext('2d');
+  const W = 260, H = 260, R = 120, cx = W/2, cy = H/2;
+
+  const count  = Math.min(names.length, 12); // 최대 12칸
+  const sliced = names.slice(0, count);
+  const arc    = (Math.PI * 2) / count;
+  const colors = ['#1a1030','#0a1a10','#1a1500','#001525','#1a0505','#0a0520',
+                   '#1a1a0a','#0a1520','#1a0510','#0a1a1a','#150a1a','#1a1510'];
+
+  const winners = [...names].sort(() => Math.random() - 0.5).slice(0, winnerCount);
+  // 룰렛은 1명씩 순차로 돌림
+  let currentWinnerIdx = 0;
+  const finalWinners   = [];
+
+  function spinFor(targetName, onDone) {
+    const targetIdx = sliced.indexOf(targetName) !== -1
+      ? sliced.indexOf(targetName)
+      : Math.floor(Math.random() * count);
+
+    // 최종 각도: targetIdx 칸이 맨 위(포인터)에 오도록
+    const targetAngle = -Math.PI / 2 - arc * targetIdx - arc / 2;
+    const spins = 5 + Math.random() * 3; // 5~8바퀴
+    const endAngle = targetAngle + spins * Math.PI * 2;
+
+    let startTime = null;
+    const duration = 4000;
+
+    function draw(angle) {
+      ctx.clearRect(0, 0, W, H);
+      // 원 테두리
+      ctx.beginPath();
+      ctx.arc(cx, cy, R+2, 0, Math.PI*2);
+      ctx.strokeStyle = '#3a3a6a';
+      ctx.lineWidth   = 3;
+      ctx.stroke();
+
+      sliced.forEach((name, i) => {
+        const start = angle + arc * i;
+        const end   = start + arc;
+        // 섹터
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, R, start, end);
+        ctx.closePath();
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.fill();
+        ctx.strokeStyle = '#3a3a6a33';
+        ctx.lineWidth   = 1;
+        ctx.stroke();
+        // 텍스트
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(start + arc / 2);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ddd';
+        ctx.font = `bold ${Math.min(13, 120 / count)}px sans-serif`;
+        ctx.fillText(name.length > 6 ? name.slice(0,6)+'…' : name, R - 6, 4);
+        ctx.restore();
+      });
+
+      // 중심점
+      ctx.beginPath();
+      ctx.arc(cx, cy, 10, 0, Math.PI*2);
+      ctx.fillStyle = '#0a0a1a';
+      ctx.fill();
+      ctx.strokeStyle = '#5533aa';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function animate(ts) {
+      if (!startTime) startTime = ts;
+      const elapsed  = ts - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // easeOut cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const angle = eased * endAngle;
+      draw(angle);
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setTimeout(() => onDone(targetName), 500);
+      }
+    }
+    requestAnimationFrame(animate);
+  }
+
+  function spinNext() {
+    if (currentWinnerIdx >= winnerCount || currentWinnerIdx >= names.length) {
+      setTimeout(() => showWinnerAnnounce(finalWinners, content), 500);
+      return;
+    }
+    const winner = winners[currentWinnerIdx];
+    spinFor(winner, (name) => {
+      finalWinners.push(name);
+      currentWinnerIdx++;
+      setTimeout(spinNext, 800);
+    });
+  }
+  spinNext();
+}
+
+// ── 랜덤 하이라이트 ──
+function playHighlight(names, winnerCount, content) {
+  document.getElementById('highlight-machine').classList.add('show');
+  const list = document.getElementById('highlight-list');
+  list.innerHTML = names.map((n, i) =>
+    `<div class="hl-item" id="hl-${i}">${escHtml(n)}</div>`
+  ).join('');
+
+  const winners    = [...names].sort(() => Math.random() - 0.5).slice(0, winnerCount);
+  const winnerSet  = new Set(winners);
+  let   activeIdx  = 0;
+  let   speed      = 80;
+  let   elapsed    = 0;
+  const maxElapsed = 3500;
+
+  function tick() {
+    // 이전 하이라이트 제거
+    list.querySelectorAll('.hl-item').forEach(el => el.className = 'hl-item');
+    // 현재 활성화
+    const el = document.getElementById(`hl-${activeIdx % names.length}`);
+    if (el) el.className = 'hl-item active';
+    activeIdx++;
+    elapsed += speed;
+
+    if (elapsed < maxElapsed) {
+      if (elapsed > 2000) speed = 150;
+      if (elapsed > 3000) speed = 250;
+      setTimeout(tick, speed);
+    } else {
+      // 당첨자 표시
+      list.querySelectorAll('.hl-item').forEach(el => el.className = 'hl-item');
+      winners.forEach(name => {
+        const idx = names.indexOf(name);
+        const el  = document.getElementById(`hl-${idx}`);
+        if (el) el.className = 'hl-item winner';
+      });
+      setTimeout(() => showWinnerAnnounce(winners, content), 1500);
+    }
+  }
+  tick();
+}
+
+// ── 공통 당첨자 발표 ──
+function showWinnerAnnounce(winners, content) {
+  ['slot-machine','roulette-machine','highlight-machine'].forEach(id => {
+    document.getElementById(id).classList.remove('show');
+  });
+
+  const announce = document.getElementById('winner-announce');
+  const namesEl  = document.getElementById('wa-names');
+  const rewardEl = document.getElementById('wa-reward');
+
+  namesEl.innerHTML = winners.map(n =>
+    `<div class="wa-name">${escHtml(n)}</div>`
+  ).join('');
+  rewardEl.textContent = `🎁 ${content}`;
+
+  announce.classList.add('show');
+  fireConfetti();
+}
+
+function closeLottery() {
+  document.getElementById('lottery-overlay').classList.remove('show');
+  document.getElementById('confetti-wrap').classList.remove('show');
+  document.getElementById('confetti-wrap').innerHTML = '';
+  loadEvent(); // 최신 상태 갱신
+}
+
+// ── 파티클 ──
+function fireConfetti() {
+  const wrap   = document.getElementById('confetti-wrap');
+  wrap.innerHTML = '';
+  wrap.classList.add('show');
+  const colors = ['#ffd700','#ff4d4d','#4a9eff','#44cc88','#bb88ff','#ff88ff'];
+  for (let i = 0; i < 80; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-particle';
+    el.style.cssText = `
+      left: ${Math.random()*100}%;
+      top: -20px;
+      background: ${colors[Math.floor(Math.random()*colors.length)]};
+      animation-duration: ${1.5 + Math.random()*2}s;
+      animation-delay: ${Math.random()*0.8}s;
+      transform: rotate(${Math.random()*360}deg);
+      width: ${6 + Math.random()*8}px;
+      height: ${6 + Math.random()*8}px;
+      border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+    `;
+    wrap.appendChild(el);
+  }
+  setTimeout(() => wrap.classList.remove('show'), 4000);
+}
+
+// ════════════════════════════════════════
+// 폴링
+// ════════════════════════════════════════
+function startPolling() {
+  if (pollInterval) return;
+  pollInterval = setInterval(loadEvent, 2500);
+}
+function stopPolling() {
+  if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+}
+
+// ════════════════════════════════════════
+// 초기화
+// ════════════════════════════════════════
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function init() {
+  // 관리자 체크
+  try {
+    const res  = await fetch(`/naejeon/check_admin?userId=${userId}`);
+    const data = await res.json();
+    isAdmin = data.isAdmin === true;
+  } catch(e) {}
+
+  await loadEvent();
+
+  if (!eventData || !eventData.started) {
+    if (isAdmin) {
+      showScreen('screen-admin');
+      document.getElementById('top-title').textContent = '⚙️ 이벤트 설정';
+      document.getElementById('top-sub').textContent   = '관리자 전용 설정 화면';
+    } else {
+      showScreen('screen-waiting');
+    }
+  }
+
+  startPolling();
+}
+
+init();
+</script>
+</body>
+</html>
