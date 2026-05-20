@@ -14,7 +14,7 @@ from flask import Flask, request, send_from_directory, render_template # render_
 
 BOT_TOKEN = '8046489365:AAHAFBz4Ca07KcjqI0EJl76aIAu-rlVHw-4'
 bot = telebot.TeleBot(BOT_TOKEN)
-app = Flask(__name__)
+app = Flask(__name__, template_folder='.')  # 👈 이렇게 변경합니다.
 
 KST = pytz.timezone('Asia/Seoul')
 
