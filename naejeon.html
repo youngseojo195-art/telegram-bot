@@ -34,7 +34,6 @@ body {
   overflow-y: auto;
 }
 
-/* 상태 바 */
 .status-bar {
   background: #12122a;
   border: 1px solid #1e1e3a;
@@ -48,7 +47,39 @@ body {
 .st-val   { color: #4a9eff; font-size: 14px; font-weight: 700; }
 .st-full  { color: #1d9e75; }
 
-/* 팀 레이아웃 */
+/* 관리자 배너 */
+.admin-banner {
+  background: #1a1030;
+  border: 1px solid #5533aa;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.admin-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #bb88ff;
+  background: #2a1050;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+.admin-actions { display: flex; gap: 6px; }
+.admin-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.admin-btn:active { opacity: 0.7; }
+.admin-btn-setup  { background: #1a1030; color: #bb88ff; border-color: #5533aa; }
+.admin-btn-cancel { background: #200a0a; color: #ff7777; border-color: #aa3333; }
+
 .teams-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .team-box {
   background: #12122a;
@@ -80,6 +111,11 @@ body {
 .slot.filled:active { background: transparent; }
 .slot.mine { background: #0d1a10; }
 
+/* 관리자 모드에서 슬롯 */
+.admin-mode .slot.filled { cursor: pointer; }
+.admin-mode .slot.filled:active { background: #1e1e3a; }
+.admin-mode .slot:not(.filled) { border: 1px dashed #5533aa44; }
+
 .pos-badge {
   font-size: 9px;
   padding: 2px 5px;
@@ -105,17 +141,23 @@ body {
   border-radius: 4px;
   padding: 1px 5px;
 }
-.slot-cancel {
+.slot-admin-add {
   font-size: 10px;
-  color: #cc4444;
+  color: #bb88ff;
+  background: #1a1030;
+  border-radius: 4px;
+  padding: 2px 6px;
+  border: 1px solid #5533aa44;
+}
+.slot-admin-remove {
+  font-size: 10px;
+  color: #ff7777;
   background: #200a0a;
   border-radius: 4px;
   padding: 2px 6px;
-  cursor: pointer;
-  border: 1px solid #3a1010;
+  border: 1px solid #aa333344;
 }
 
-/* 참여 버튼 */
 .btn-wrap {
   position: fixed;
   bottom: 0; left: 0; right: 0;
@@ -134,12 +176,12 @@ body {
   transition: all 0.2s;
   letter-spacing: 0.02em;
 }
-.btn-join.active   { background: #4a9eff; color: #fff; box-shadow: 0 0 20px #4a9eff44; }
+.btn-join.active   { background: #4a9eff; color: #fff; }
 .btn-join.inactive { background: #1e1e3a; color: #444466; cursor: not-allowed; }
 .btn-join.cancel   { background: #cc3333; color: #fff; }
 .btn-join.full     { background: #1d9e75; color: #fff; cursor: not-allowed; }
 
-/* 포지션 선택 모달 */
+/* 일반 모달 */
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -200,6 +242,68 @@ body {
   margin-top: 4px;
 }
 
+/* 관리자 이름 입력 모달 */
+.admin-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.8);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+.admin-modal-overlay.show { display: flex; }
+.admin-modal {
+  background: #12122a;
+  border: 1px solid #5533aa;
+  border-radius: 16px;
+  padding: 20px 18px 18px;
+  width: 100%;
+  max-width: 360px;
+}
+.admin-modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #bb88ff;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.admin-input {
+  width: 100%;
+  background: #0a0a1a;
+  border: 1px solid #3a3a6a;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 14px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  outline: none;
+}
+.admin-input:focus { border-color: #5533aa; }
+.admin-input::placeholder { color: #44446699; }
+.admin-modal-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.admin-confirm-btn {
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: #5533aa;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.admin-confirm-btn:active { opacity: 0.8; }
+.admin-dismiss-btn {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #3a3a6a;
+  background: transparent;
+  color: #8888bb;
+  font-size: 13px;
+  cursor: pointer;
+}
+
 /* 완료 화면 */
 .done-screen {
   display: none;
@@ -220,6 +324,27 @@ body {
 .done-sub   { font-size: 12px; color: #8888bb; margin-top: 4px; }
 
 .sec-label { color: #8888bb; font-size: 10px; margin-bottom: 5px; letter-spacing: 0.04em; }
+
+/* 토스트 */
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1d9e75;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 20px;
+  z-index: 300;
+  opacity: 0;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+.toast.error { background: #cc3333; }
 </style>
 </head>
 <body>
@@ -233,6 +358,15 @@ body {
   <div class="status-bar">
     <span class="st-label">참여 현황</span>
     <span class="st-val" id="status-val">로딩 중...</span>
+  </div>
+
+  <!-- 관리자 배너 (관리자만 표시) -->
+  <div class="admin-banner" id="admin-banner" style="display:none">
+    <span class="admin-badge">👑 관리자 모드</span>
+    <div class="admin-actions">
+      <button class="admin-btn admin-btn-setup" onclick="openSetupModal()">⚙️ 내전 설정</button>
+      <button class="admin-btn admin-btn-cancel" onclick="adminCancelRoom()">🗑 내전 취소</button>
+    </div>
   </div>
 
   <div>
@@ -256,7 +390,7 @@ body {
   </button>
 </div>
 
-<!-- 포지션 선택 모달 -->
+<!-- 포지션 선택 모달 (일반 유저) -->
 <div class="modal-overlay" id="modal" onclick="closeModal(event)">
   <div class="modal">
     <div class="modal-title" id="modal-title">포지션 & 팀 선택</div>
@@ -275,10 +409,58 @@ body {
   </div>
 </div>
 
+<!-- 관리자: 이름 직접 입력 모달 -->
+<div class="admin-modal-overlay" id="admin-add-modal">
+  <div class="admin-modal">
+    <div class="admin-modal-title" id="admin-add-title">👑 슬롯에 참여자 추가</div>
+    <input class="admin-input" type="text" id="admin-name-input"
+           placeholder="참여자 이름 입력" maxlength="20" />
+    <div class="admin-modal-btns">
+      <button class="admin-confirm-btn" onclick="confirmAdminAdd()">추가</button>
+      <button class="admin-dismiss-btn" onclick="closeAdminAddModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 관리자: 강제 제거 확인 모달 -->
+<div class="admin-modal-overlay" id="admin-remove-modal">
+  <div class="admin-modal">
+    <div class="admin-modal-title" id="admin-remove-title">🗑 참여자 강제 제거</div>
+    <p style="font-size:13px;color:#aaa;text-align:center;margin-bottom:14px" id="admin-remove-sub"></p>
+    <div class="admin-modal-btns">
+      <button class="admin-confirm-btn" style="background:#cc3333" onclick="confirmAdminRemove()">제거</button>
+      <button class="admin-dismiss-btn" onclick="closeAdminRemoveModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 관리자: 내전 설정 모달 -->
+<div class="admin-modal-overlay" id="setup-modal">
+  <div class="admin-modal" style="max-width:400px">
+    <div class="admin-modal-title">⚙️ 내전 설정</div>
+    <div style="font-size:12px;color:#8888bb;margin-bottom:10px">부가 텍스트 (선택)</div>
+    <input class="admin-input" type="text" id="setup-extra-text"
+           placeholder="예: 승리팀 10만원 찬조" maxlength="50" />
+    <div style="font-size:12px;color:#8888bb;margin-bottom:6px">1팀 포지션 순서</div>
+    <input class="admin-input" type="text" id="setup-pos-a"
+           placeholder="예: 탑,정글,미드,원딜,서폿" />
+    <div style="font-size:12px;color:#8888bb;margin-bottom:6px">2팀 포지션 순서</div>
+    <input class="admin-input" type="text" id="setup-pos-b"
+           placeholder="예: 탑,정글,미드,원딜,서폿" />
+    <div class="admin-modal-btns">
+      <button class="admin-confirm-btn" onclick="confirmSetup()">적용 & 시작</button>
+      <button class="admin-dismiss-btn" onclick="closeSetupModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div class="toast" id="toast"></div>
+
 <script>
 // ── 파라미터 파싱 ──
-let userId  = null;
-let groupId = null;
+let userId   = null;
+let groupId  = null;
 let gameType = null;
 let roomId   = null;
 
@@ -289,10 +471,16 @@ try {
     const parts = start.split('_');
     userId   = parts[0] || null;
     groupId  = parts[1] || null;
-    gameType = parts[2] || null; // lol / sa5 / sa6
+    gameType = parts[2] || null;
     roomId   = parts[3] || null;
   }
 } catch(e) {}
+
+// ── 관리자 판별 ──
+// 서버에서 ADMIN_IDS를 직접 확인하는 방식으로 처리
+// 클라이언트에서는 /naejeon/room 응답에 isAdmin 포함시킬 수도 있지만
+// 현재 구조상 userId로 체크 (서버에서 403 반환으로 보호됨)
+let isAdmin = false;
 
 // ── 게임 설정 ──
 const GAME_CONFIG = {
@@ -301,11 +489,11 @@ const GAME_CONFIG = {
     total: 10,
     perTeam: 5,
     positions: [
-      { id: 'top', label: '탑',  cls: 'pos-top' },
-      { id: 'jg',  label: '정글', cls: 'pos-jg'  },
-      { id: 'mid', label: '미드', cls: 'pos-mid' },
-      { id: 'adc', label: '원딜', cls: 'pos-adc' },
-      { id: 'sup', label: '서폿', cls: 'pos-sup' },
+      { id: 'top',  label: '탑',  cls: 'pos-top' },
+      { id: 'jg',   label: '정글', cls: 'pos-jg'  },
+      { id: 'mid',  label: '미드', cls: 'pos-mid' },
+      { id: 'adc',  label: '원딜', cls: 'pos-adc' },
+      { id: 'sup',  label: '서폿', cls: 'pos-sup' },
     ]
   },
   sa5: {
@@ -313,7 +501,7 @@ const GAME_CONFIG = {
     total: 10,
     perTeam: 5,
     positions: [
-      { id: 'sna', label: '스나', cls: 'pos-sna' },
+      { id: 'sna',  label: '스나', cls: 'pos-sna' },
       { id: 'rfl1', label: '라플', cls: 'pos-rfl' },
       { id: 'rfl2', label: '라플', cls: 'pos-rfl' },
       { id: 'rfl3', label: '라플', cls: 'pos-rfl' },
@@ -337,24 +525,53 @@ const GAME_CONFIG = {
 
 let config   = GAME_CONFIG[gameType] || GAME_CONFIG['lol'];
 let roomData = null;
-let mySlot   = null; // { team, posId }
+let mySlot   = null;
 let selTeam  = null;
 let selPos   = null;
-let clickedSlot = null;
+let clickedSlot    = null;
+let adminAddSlot   = null;  // { team, posId, slotKey }
+let adminRemoveSlot = null; // { slotKey, name }
 
-// ── 초기화 ──
 document.getElementById('top-title').textContent = '⚔️ ' + config.name;
+
+// ── 토스트 ──
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => { t.className = 'toast'; }, 2200);
+}
+
+// ── 관리자 여부 서버 확인 ──
+async function checkAdmin() {
+  try {
+    // admin_add 엔드포인트에 더미 요청으로 403 여부 확인 대신
+    // room 데이터 로드 후 서버에서 isAdmin 플래그 받는 방식으로 처리
+    // 현재 서버 구조상: /naejeon/room 응답에 isAdmin 없음
+    // → /naejeon/admin_add 로 빈 요청 보내서 403이면 비관리자
+    const res = await fetch('/naejeon/admin_add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId, userId: parseInt(userId), groupId: parseInt(groupId), slotKey: '_ping', name: '' })
+    });
+    // 400은 name 비어있어서 / 403은 권한 없음
+    isAdmin = (res.status !== 403);
+  } catch(e) {
+    isAdmin = false;
+  }
+}
 
 // ── 데이터 로드 ──
 async function loadRoom() {
   try {
-    const res  = await fetch(`/naejeon/room?roomId=${roomId}&userId=${userId}`);
-    roomData   = await res.json();
-    if (roomData.error) {
+    const res = await fetch(`/naejeon/room?roomId=${roomId}&userId=${userId}`);
+    const data = await res.json();
+    if (data.error) {
       document.getElementById('main-content').innerHTML =
-        `<div style="text-align:center;padding:40px;color:#8888bb">${roomData.error}</div>`;
+        `<div style="text-align:center;padding:40px;color:#8888bb">${data.error}</div>`;
       return;
     }
+    roomData = data;
     config   = GAME_CONFIG[roomData.gameType] || config;
     document.getElementById('top-title').textContent = '⚔️ ' + config.name;
     renderRoom();
@@ -371,13 +588,20 @@ function renderRoom() {
   const filled = Object.values(slots).filter(s => s).length;
   const total  = config.total;
 
-  // 내 슬롯 찾기
   mySlot = null;
   for (const [key, slot] of Object.entries(slots)) {
-    if (slot && slot.userId == userId) {
-      mySlot = key; // "A_top" 형식
+    if (slot && String(slot.userId) === String(userId)) {
+      mySlot = key;
     }
   }
+
+  // 관리자 배너
+  const banner = document.getElementById('admin-banner');
+  banner.style.display = isAdmin ? 'flex' : 'none';
+
+  // 관리자 모드 클래스
+  const wrap = document.getElementById('teams-wrap');
+  wrap.className = 'teams-wrap' + (isAdmin ? ' admin-mode' : '');
 
   // 상태 바
   const stVal = document.getElementById('status-val');
@@ -385,7 +609,6 @@ function renderRoom() {
   stVal.className   = filled === total ? 'st-val st-full' : 'st-val';
 
   // 팀 렌더
-  const wrap = document.getElementById('teams-wrap');
   wrap.innerHTML = '';
   ['A', 'B'].forEach(team => {
     const teamEl   = document.createElement('div');
@@ -397,22 +620,29 @@ function renderRoom() {
     config.positions.forEach(pos => {
       const key  = `${team}_${pos.id}`;
       const slot = slots[key];
-      const isMine = slot && slot.userId == userId;
+      const isMine = slot && String(slot.userId) === String(userId);
       const div  = document.createElement('div');
       div.className = 'slot' + (slot ? ' filled' : '') + (isMine ? ' mine' : '');
 
       if (slot) {
+        // 채워진 슬롯
         div.innerHTML = `
           <span class="pos-badge ${pos.cls}">${pos.label}</span>
           <span class="slot-name">${slot.name}</span>
           ${isMine ? '<span class="slot-mine-badge">나</span>' : ''}
+          ${isAdmin ? `<span class="slot-admin-remove" onclick="openAdminRemove('${key}','${slot.name}',event)">제거</span>` : ''}
         `;
       } else {
+        // 빈 슬롯
         div.innerHTML = `
           <span class="pos-badge ${pos.cls}">${pos.label}</span>
-          <span class="slot-empty">비어있음</span>
+          <span class="slot-empty">${isAdmin ? '+ 추가' : '비어있음'}</span>
+          ${isAdmin ? `<span class="slot-admin-add">추가</span>` : ''}
         `;
-        if (!mySlot && filled < total) {
+        // 클릭 이벤트
+        if (isAdmin) {
+          div.onclick = () => openAdminAdd(team, pos);
+        } else if (!mySlot && filled < total) {
           div.onclick = () => openModal(team, pos);
         }
       }
@@ -421,13 +651,14 @@ function renderRoom() {
     wrap.appendChild(teamEl);
   });
 
-  // 버튼
+  // 하단 버튼
   const btn = document.getElementById('btn-join');
-  if (filled === total) {
+  if (roomData.status === 'closed' || filled === total) {
     btn.className   = 'btn-join full';
     btn.textContent = '✅ 모집 완료!';
-    document.getElementById('done-screen').style.display = 'flex';
-    document.getElementById('main-content').style.paddingBottom = '14px';
+  } else if (isAdmin) {
+    btn.className   = 'btn-join inactive';
+    btn.textContent = '👑 관리자 모드 — 슬롯을 탭해 직접 추가';
   } else if (mySlot) {
     btn.className   = 'btn-join cancel';
     btn.textContent = '❌ 참여 취소하기';
@@ -437,9 +668,206 @@ function renderRoom() {
   }
 }
 
-// ── 모달 열기 ──
+// ══════════════════════════════════════
+// 관리자: 슬롯 추가
+// ══════════════════════════════════════
+function openAdminAdd(team, pos) {
+  adminAddSlot = { team, pos, slotKey: `${team}_${pos.id}` };
+  document.getElementById('admin-add-title').textContent
+    = `👑 ${team === 'A' ? '1팀' : '2팀'} [${pos.label}] 에 추가`;
+  document.getElementById('admin-name-input').value = '';
+  document.getElementById('admin-add-modal').classList.add('show');
+  setTimeout(() => document.getElementById('admin-name-input').focus(), 100);
+}
+
+function closeAdminAddModal() {
+  document.getElementById('admin-add-modal').classList.remove('show');
+  adminAddSlot = null;
+}
+
+async function confirmAdminAdd() {
+  const name = document.getElementById('admin-name-input').value.trim();
+  if (!name) { showToast('이름을 입력해주세요!', true); return; }
+  if (!adminAddSlot) return;
+
+  const btn = document.querySelector('#admin-add-modal .admin-confirm-btn');
+  btn.textContent = '추가 중...';
+
+  try {
+    const res  = await fetch('/naejeon/admin_add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId,
+        userId: parseInt(userId),
+        groupId: parseInt(groupId),
+        slotKey: adminAddSlot.slotKey,
+        name
+      })
+    });
+    const data = await res.json();
+    closeAdminAddModal();
+    if (data.ok) {
+      roomData = data.room;
+      renderRoom();
+      showToast(`✅ ${name} 추가 완료!`);
+    } else {
+      showToast(data.error || '오류가 발생했어요.', true);
+    }
+  } catch(e) {
+    showToast('오류가 발생했어요. 다시 시도해주세요.', true);
+  } finally {
+    btn.textContent = '추가';
+  }
+}
+
+// ══════════════════════════════════════
+// 관리자: 슬롯 강제 제거
+// ══════════════════════════════════════
+function openAdminRemove(slotKey, name, event) {
+  event.stopPropagation();
+  adminRemoveSlot = { slotKey, name };
+  document.getElementById('admin-remove-title').textContent = '🗑 참여자 강제 제거';
+  document.getElementById('admin-remove-sub').textContent
+    = `"${name}" 님을 정말 제거할까요?`;
+  document.getElementById('admin-remove-modal').classList.add('show');
+}
+
+function closeAdminRemoveModal() {
+  document.getElementById('admin-remove-modal').classList.remove('show');
+  adminRemoveSlot = null;
+}
+
+async function confirmAdminRemove() {
+  if (!adminRemoveSlot) return;
+  const btn = document.querySelector('#admin-remove-modal .admin-confirm-btn');
+  btn.textContent = '제거 중...';
+
+  try {
+    const res  = await fetch('/naejeon/admin_remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId,
+        userId: parseInt(userId),
+        groupId: parseInt(groupId),
+        slotKey: adminRemoveSlot.slotKey
+      })
+    });
+    const data = await res.json();
+    closeAdminRemoveModal();
+    if (data.ok) {
+      roomData = data.room;
+      renderRoom();
+      showToast(`🗑 ${adminRemoveSlot.name} 제거 완료`);
+    } else {
+      showToast(data.error || '오류가 발생했어요.', true);
+    }
+  } catch(e) {
+    showToast('오류가 발생했어요. 다시 시도해주세요.', true);
+  } finally {
+    btn.textContent = '제거';
+  }
+}
+
+// ══════════════════════════════════════
+// 관리자: 내전 설정 (setup)
+// ══════════════════════════════════════
+function openSetupModal() {
+  // 기존 extra_text 자동 채우기
+  if (roomData && roomData.extraText) {
+    document.getElementById('setup-extra-text').value = roomData.extraText;
+  }
+  // 기본 포지션 힌트
+  const posHint = config.positions.map(p => p.label).join(',');
+  document.getElementById('setup-pos-a').placeholder = posHint;
+  document.getElementById('setup-pos-b').placeholder = posHint;
+  if (roomData && roomData.posA && roomData.posA.length > 0) {
+    document.getElementById('setup-pos-a').value = roomData.posA.join(',');
+    document.getElementById('setup-pos-b').value = (roomData.posB || []).join(',');
+  }
+  document.getElementById('setup-modal').classList.add('show');
+}
+
+function closeSetupModal() {
+  document.getElementById('setup-modal').classList.remove('show');
+}
+
+async function confirmSetup() {
+  const extraText = document.getElementById('setup-extra-text').value.trim();
+  const posAStr   = document.getElementById('setup-pos-a').value.trim();
+  const posBStr   = document.getElementById('setup-pos-b').value.trim();
+  const posA = posAStr ? posAStr.split(',').map(s => s.trim()).filter(Boolean) : config.positions.map(p => p.label);
+  const posB = posBStr ? posBStr.split(',').map(s => s.trim()).filter(Boolean) : config.positions.map(p => p.label);
+
+  const btn = document.querySelector('#setup-modal .admin-confirm-btn');
+  btn.textContent = '적용 중...';
+
+  try {
+    const res  = await fetch('/naejeon/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId,
+        userId: parseInt(userId),
+        groupId: parseInt(groupId),
+        gameType,
+        extraText,
+        posA,
+        posB
+      })
+    });
+    const data = await res.json();
+    closeSetupModal();
+    if (data.ok) {
+      roomData = data.room;
+      renderRoom();
+      showToast('✅ 내전 설정 완료! 그룹에 공지됐어요.');
+    } else {
+      showToast(data.error || '오류가 발생했어요.', true);
+    }
+  } catch(e) {
+    showToast('오류가 발생했어요. 다시 시도해주세요.', true);
+  } finally {
+    btn.textContent = '적용 & 시작';
+  }
+}
+
+// ══════════════════════════════════════
+// 관리자: 내전 취소
+// ══════════════════════════════════════
+async function adminCancelRoom() {
+  if (!confirm('정말 내전을 취소할까요?')) return;
+  try {
+    // 서버 내전취소는 봇 명령어(/내전취소)로만 처리됨
+    // 웹에서는 status를 cancelled로 변경하는 별도 API 필요
+    // 현재 구조상 아래 엔드포인트 호출
+    const res = await fetch('/naejeon/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId,
+        userId: parseInt(userId),
+        groupId: parseInt(groupId)
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast('✅ 내전이 취소됐어요.');
+      setTimeout(() => { window.location.reload(); }, 1500);
+    } else {
+      showToast(data.error || '오류가 발생했어요.', true);
+    }
+  } catch(e) {
+    showToast('오류가 발생했어요. 다시 시도해주세요.', true);
+  }
+}
+
+// ══════════════════════════════════════
+// 일반 유저 모달
+// ══════════════════════════════════════
 function openModal(team, pos) {
-  if (mySlot) return;
+  if (mySlot || isAdmin) return;
   clickedSlot = { team, pos };
   selTeam = null;
   selPos  = pos.id;
@@ -447,7 +875,6 @@ function openModal(team, pos) {
   document.getElementById('modal-title').textContent = pos.label + ' 포지션';
   document.getElementById('modal-sub').textContent   = '팀을 선택해주세요';
 
-  // 팀 버튼 상태
   const slots = roomData.slots || {};
   const aFull = config.positions.every(p => slots[`A_${p.id}`]);
   const bFull = config.positions.every(p => slots[`B_${p.id}`]);
@@ -457,35 +884,28 @@ function openModal(team, pos) {
   mA.className = 'modal-btn' + (aFull ? ' disabled' : '');
   mB.className = 'modal-btn' + (bFull ? ' disabled' : '');
 
-  // 팀 미리 선택 (클릭한 쪽으로)
   selectTeam(team);
-
   document.getElementById('modal').classList.add('show');
 }
 
 function selectTeam(team) {
   const slots = roomData.slots || {};
   const key   = `${team}_${clickedSlot?.pos?.id}`;
-  if (slots[key]) return; // 이미 차있음
+  if (slots[key]) return;
 
   selTeam = team;
   document.getElementById('m-team-a').className = 'modal-btn' + (team === 'A' ? ' sel-team-a' : '');
   document.getElementById('m-team-b').className = 'modal-btn' + (team === 'B' ? ' sel-team-b' : '');
-
   updateConfirmBtn();
 }
 
 function updateConfirmBtn() {
-  // modal-grid에 확인 버튼 추가
   let confirmEl = document.getElementById('modal-confirm');
   if (!confirmEl) {
     confirmEl = document.createElement('button');
     confirmEl.id        = 'modal-confirm';
     confirmEl.className = 'btn-join active';
-    confirmEl.style.marginBottom = '8px';
-    confirmEl.style.borderRadius = '10px';
-    confirmEl.style.padding      = '12px';
-    confirmEl.style.fontSize     = '14px';
+    confirmEl.style.cssText = 'margin-bottom:8px;border-radius:10px;padding:12px;font-size:14px;';
     confirmEl.onclick = confirmJoin;
     document.querySelector('.modal').insertBefore(
       confirmEl,
@@ -505,7 +925,6 @@ function closeModal(e) {
   if (c) c.remove();
 }
 
-// ── 참여 확정 ──
 async function confirmJoin() {
   if (!selTeam || !clickedSlot) return;
   const btn = document.getElementById('modal-confirm');
@@ -528,16 +947,17 @@ async function confirmJoin() {
     if (data.ok) {
       roomData = data.room;
       renderRoom();
+      showToast('✅ 참여 완료!');
     } else {
-      alert(data.error || '오류가 발생했어요.');
+      showToast(data.error || '오류가 발생했어요.', true);
     }
   } catch(e) {
-    alert('오류가 발생했어요. 다시 시도해주세요.');
+    showToast('오류가 발생했어요. 다시 시도해주세요.', true);
   }
 }
 
-// ── 참여 취소 ──
 async function handleJoin() {
+  if (isAdmin) return;
   if (!mySlot) return;
   const btn = document.getElementById('btn-join');
   btn.textContent = '취소 중...';
@@ -552,17 +972,23 @@ async function handleJoin() {
     if (data.ok) {
       roomData = data.room;
       renderRoom();
+      showToast('참여가 취소됐어요.');
     } else {
-      alert(data.error || '오류가 발생했어요.');
+      showToast(data.error || '오류가 발생했어요.', true);
     }
   } catch(e) {
-    alert('오류가 발생했어요. 다시 시도해주세요.');
+    showToast('오류가 발생했어요. 다시 시도해주세요.', true);
   }
 }
 
-// ── 폴링 (5초마다 갱신) ──
-loadRoom();
-setInterval(loadRoom, 5000);
+// ── 초기화 ──
+async function init() {
+  await checkAdmin();
+  await loadRoom();
+  setInterval(loadRoom, 5000);
+}
+
+init();
 </script>
 </body>
 </html>
