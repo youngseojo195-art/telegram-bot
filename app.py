@@ -104,7 +104,7 @@ KBO_TEAMS_DISPLAY = {
     '롯데': '🔴 롯데',
     '키움': '🟣 키움',
 }
-WEBAPP_BASE_URL = os.environ.get('WEBAPP_URL', 'https://telegram-bot-14vg.onrender.com')
+
 VOTE_START = "10:00"
 VOTE_END   = "14:00"
 
@@ -710,23 +710,35 @@ def handle_all(message):
         # ── /야구 ──
         elif text.strip().startswith('/야구'):
             if message.chat.type == 'private': return
+            # 그룹에는 GIF + 안내 문구만
             send_baseball_gif(group_id)
-            param = f"{user_id}_{group_id}"
-            kbo_url = f"{WEBAPP_BASE_URL}/kbo?start={param}"
-            markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton(
-                "⚾ KBO 승 예측 참여하기",
-                url=kbo_url
-            ))
             bot.reply_to(message,
                 f"⚾ KBO 승 예측 안내\n"
                 f"{'─' * 23}\n\n"
                 f"📅 참여 요일: 화 / 수 / 목 / 금\n"
-                f"⏰ 참여 시간: PM {VOTE_START} ~ {VOTE_END}\n"
+                f"⏰ 참여 시간: {VOTE_START} ~ {VOTE_END}\n"
                 f"📌 10개 팀 중 5개 선택\n"
                 f"📌 하루 1회 참여 (수정 가능)\n\n"
-                f"아래 버튼을 눌러 참여하세요!",
-                reply_markup=markup)
+                f"📩 참여 링크를 DM으로 전달드렸습니다!")
+            # 본인 DM으로만 버튼 전송
+            try:
+                param   = f"{user_id}_{group_id}"
+                kbo_url = f"{WEBAPP_BASE_URL}/kbo?start={param}"
+                markup  = types.InlineKeyboardMarkup()
+                markup.add(types.InlineKeyboardButton(
+                    "⚾ KBO 승 예측 참여하기",
+                    url=kbo_url
+                ))
+                bot.send_message(user_id,
+                    f"⚾ KBO 승 예측 참여 링크\n\n"
+                    f"📅 참여 요일: 화 / 수 / 목 / 금\n"
+                    f"⏰ 참여 시간: {VOTE_START} ~ {VOTE_END}\n\n"
+                    f"아래 버튼을 눌러 참여하세요!",
+                    reply_markup=markup)
+            except Exception as e:
+                bot.send_message(group_id,
+                    f"⚠️ {first_name}님, DM을 보낼 수 없어요!\n"
+                    f"@dopamin_ranking_bot 을 눌러 START 를 먼저 눌러주세요!")
 
         # ── /승 ──
         elif text.strip().startswith('/승'):
