@@ -951,7 +951,7 @@ def handle_all(message):
             parts    = text.strip().split()
             game_arg = parts[1] if len(parts) > 1 else ''
             if game_arg not in ['롤', '서든']:
-                bot.reply_to(message, "⚔️ 내전 사용법\n\n/내전 롤 [부가텍스트]  — 리그오브레전드 5v5\n/내전 서든 [부가텍스트] — 서든어택 (5v5 / 6v6 선택)\n\n예시: /내전 롤 10만원 찬조\n예시: /내전 서든 승리 시 3만원"); return
+                bot.reply_to(message, "⚔️ 내전 사용법 (관리자만 가능해요)\n\n/예시: 내전 롤 5v5\n/예시: 내전 서든(5v5 / 6v6 선택)\n\n예시: /내전취소 롤\n예시: /내전취소 서든\n\n예시: /내전수정 롤\n예시: /내전수정 서든"); return
 
             extra_text = ' '.join(parts[2:]) if len(parts) > 2 else ''
 
