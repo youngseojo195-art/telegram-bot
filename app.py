@@ -104,7 +104,7 @@ KBO_TEAMS_DISPLAY = {
     '롯데': '🔴 롯데',
     '키움': '🟣 키움',
 }
-WEBAPP_BASE_URL = os.environ.get('WEBAPP_URL', 'https://telegram-bot-14vg.onrender.com')
+
 VOTE_START = "18:00"
 VOTE_END   = "18:30"
 
@@ -896,6 +896,32 @@ def kbo_submit():
         import traceback
         print(f"kbo_submit error: {e}\n{traceback.format_exc()}")
         return {'ok': False}, 500
+
+@app.route('/kbo/list')
+def kbo_list():
+    try:
+        group_id = int(request.args.get('groupId', 0))
+        today = datetime.now(KST).date()
+        db = get_db(); c = db.cursor()
+        c.execute("SELECT user_id, first_name, username, teams FROM kbo_votes WHERE group_id=%s AND vote_date=%s ORDER BY created_at",
+                  (group_id, today))
+        rows = c.fetchall(); c.close(); db.close()
+        result = []
+        for row in rows:
+            uid   = row[0]
+            first = clean_name(row[1] or '')
+            uname = row[2] or ''
+            if first:
+                name = first
+            elif uname:
+                name = '@' + uname
+            else:
+                name = 'id:' + str(uid)
+            teams = row[3].split(',')
+            result.append({'name': name, 'teams': teams})
+        return result, 200
+    except Exception as e:
+        return [], 500
 
 @app.route('/kbo/hot')
 def kbo_hot():
