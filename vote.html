@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>도파민 투표 이벤트</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>  
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
@@ -359,6 +358,38 @@ body {
 }
 .toast.show { opacity: 1; }
 .toast.error { background: #cc3333; color: #fff; }
+
+.name-modal {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 500;
+  display: none;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.name-modal.show { display: flex; }
+.name-modal-box {
+  background: var(--bg2);
+  border: 1px solid var(--neon-purple);
+  border-radius: 16px;
+  padding: 24px 20px;
+  width: 100%; max-width: 320px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.name-modal-title { font-size: 15px; font-weight: 700; text-align: center; }
+.name-modal-sub   { font-size: 12px; color: var(--text-sub); text-align: center; line-height: 1.6; }
+.name-confirm-btn {
+  width: 100%; padding: 14px;
+  border-radius: 12px; border: none;
+  background: var(--neon-green); color: #001a10;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.name-cancel-btn {
+  width: 100%; padding: 12px;
+  border-radius: 12px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-sub);
+  font-size: 13px; cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -499,6 +530,18 @@ body {
     <div class="wa-names" id="wa-names"></div>
     <div class="wa-reward" id="wa-reward"></div>
     <button class="wa-close-btn" onclick="closeLottery()">🎉 확인</button>
+  </div>
+</div>
+
+<div class="name-modal" id="name-modal">
+  <div class="name-modal-box">
+    <div class="name-modal-title">🙋 참여 닉네임 입력</div>
+    <div class="name-modal-sub">참여자 목록에 표시될 이름을 입력해주세요.<br>@dopamin_ranking_bot 없이도 참여 가능해요!</div>
+    <input class="inp" type="text" id="name-input"
+           placeholder="닉네임 입력" maxlength="20"
+           onkeydown="if(event.key==='Enter') confirmJoin()" />
+    <button class="name-confirm-btn" onclick="confirmJoin()">✅ 참여하기</button>
+    <button class="name-cancel-btn"  onclick="closeNameModal()">취소</button>
   </div>
 </div>
 
@@ -769,40 +812,63 @@ function stopTimer() {
 // ════════════════════════════════════════
 async function toggleJoin() {
   if (!eventData || eventData.ended) return;
-  try {
-    const endpoint = hasJoined ? '/vote/leave' : '/vote/join';
 
-    // ★ 텔레그램 WebApp에서 이름 가져오기, 없으면 userId
-    let userName = null;
+  if (hasJoined) {
+    // 취소는 바로 실행
     try {
-      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      if (tgUser) {
-        userName = tgUser.first_name || tgUser.username || null;
+      const res  = await fetch('/vote/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, userId: parseInt(userId), groupId: parseInt(groupId) })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        participants = data.participants;
+        hasJoined   = participants.some(p => String(p.userId) === String(userId));
+        renderEvent();
+        showToast('참여를 취소했어요.');
+      } else {
+        showToast(data.error || '오류가 발생했어요.', true);
       }
-    } catch(e) {}
+    } catch(e) { showToast('오류가 발생했어요.', true); }
+    return;
+  }
 
-    const res = await fetch(endpoint, {
+  // 참여는 닉네임 입력 모달 먼저
+  document.getElementById('name-input').value = '';
+  document.getElementById('name-modal').classList.add('show');
+  setTimeout(() => document.getElementById('name-input').focus(), 100);
+}
+
+function closeNameModal() {
+  document.getElementById('name-modal').classList.remove('show');
+}
+
+async function confirmJoin() {
+  const nameVal = document.getElementById('name-input').value.trim();
+  if (!nameVal) { showToast('닉네임을 입력해주세요!', true); return; }
+  closeNameModal();
+  try {
+    const res  = await fetch('/vote/join', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         roomId,
         userId:   parseInt(userId),
         groupId:  parseInt(groupId),
-        userName: userName   // ★ 추가
+        userName: nameVal
       })
     });
     const data = await res.json();
     if (data.ok) {
       participants = data.participants;
-      hasJoined    = participants.some(p => String(p.userId) === String(userId));
+      hasJoined   = participants.some(p => String(p.userId) === String(userId));
       renderEvent();
-      showToast(hasJoined ? '✅ 참여 완료!' : '참여를 취소했어요.');
+      showToast('✅ 참여 완료!');
     } else {
       showToast(data.error || '오류가 발생했어요.', true);
     }
-  } catch(e) {
-    showToast('오류가 발생했어요.', true);
-  }
+  } catch(e) { showToast('오류가 발생했어요.', true); }
 }
 
 // ════════════════════════════════════════
