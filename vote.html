@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>도파민 투표 이벤트</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>  
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
@@ -770,13 +771,24 @@ async function toggleJoin() {
   if (!eventData || eventData.ended) return;
   try {
     const endpoint = hasJoined ? '/vote/leave' : '/vote/join';
-    const res  = await fetch(endpoint, {
+
+    // ★ 텔레그램 WebApp에서 이름 가져오기, 없으면 userId
+    let userName = null;
+    try {
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      if (tgUser) {
+        userName = tgUser.first_name || tgUser.username || null;
+      }
+    } catch(e) {}
+
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         roomId,
-        userId:  parseInt(userId),
-        groupId: parseInt(groupId)
+        userId:   parseInt(userId),
+        groupId:  parseInt(groupId),
+        userName: userName   // ★ 추가
       })
     });
     const data = await res.json();
