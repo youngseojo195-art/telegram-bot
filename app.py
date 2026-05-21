@@ -710,7 +710,6 @@ def handle_all(message):
             vote_url = f"{WEBAPP_BASE_URL}/vote?start={param}"
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("⚙️ 이벤트 설정하기", url=vote_url))
-            send_naejeon_gif(group_id)
             bot.reply_to(message,
                 "🎰 <b>도파민 투표 이벤트</b>\n──────────────────\n"
                 "아래 버튼을 눌러 이벤트 내용, 타임어택 시간,\n추첨 스타일을 설정하고 스타트를 눌러주세요!\n\n"
@@ -1160,12 +1159,11 @@ def vote_start():
         vote_url = f"{WEBAPP_BASE_URL}/vote?start={param}"
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton("🙋 이벤트 참여하기", url=vote_url))
-        send_naejeon_gif(group_id)
         bot.send_message(group_id,
             f"🎰 <b>도파민 투표 이벤트 시작!</b>\n──────────────────\n"
             f"📢 <b>이벤트:</b> {content}\n⏱ <b>시간:</b> {time_str}\n"
             f"👥 <b>당첨자:</b> {winners}명\n🎬 <b>추첨 방식:</b> {anim_label}\n──────────────────\n"
-            f"아래 버튼을 눌러 참여하세요!\n⚠️ 처음 참여하시는 분은 @dopamin_ranking_bot 을 눌러 START 를 먼저 눌러주세요!",
+            f"아래 버튼을 눌러 참여하세요!",
             reply_markup=markup, parse_mode='HTML')
         return {'ok': True}, 200
     except Exception as e:
@@ -1177,54 +1175,29 @@ def vote_start():
 def vote_join():
     db = get_db(); c = db.cursor()
     try:
-        data     = request.get_json()
-        room_id  = data.get('roomId')
-        user_id  = int(data.get('userId'))
-        group_id = int(data.get('groupId'))
-        user_name_from_client = data.get('userName', '').strip() if data.get('userName') else ''
-
+        data = request.get_json(); room_id = data.get('roomId')
+        user_id = int(data.get('userId')); group_id = int(data.get('groupId'))
+        user_name_from_client = (data.get('userName') or '').strip()
         c.execute("SELECT started, ended FROM vote_rooms WHERE room_id=%s", (room_id,))
         row = c.fetchone()
         if not row: return {'ok': False, 'error': '이벤트를 찾을 수 없어요.'}, 404
         if not row[0]: return {'ok': False, 'error': '아직 시작되지 않은 이벤트예요.'}, 400
         if row[1]: return {'ok': False, 'error': '이미 종료된 이벤트예요.'}, 400
-
-        # ★ 이름 결정 우선순위: 클라이언트 전송값 → points 테이블 → id:숫자
-        name = None
-        if user_name_from_client:
-            name = clean_name(user_name_from_client)
-
+        # ★ 이름 우선순위: 직접 입력 → points 테이블 → id:숫자
+        name = clean_name(user_name_from_client) if user_name_from_client else None
         if not name:
-            c.execute("SELECT first_name, username FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
-            ur = c.fetchone()
-            if ur and ur[0]:
-                name = clean_name(ur[0])
-            elif ur and ur[1]:
-                name = f"@{ur[1]}"
-
-        if not name:
-            # points 테이블 전체에서 user_id로 검색 (다른 그룹이라도)
             c.execute("SELECT first_name, username FROM points WHERE user_id=%s ORDER BY id DESC LIMIT 1", (user_id,))
-            ur2 = c.fetchone()
-            if ur2 and ur2[0]:
-                name = clean_name(ur2[0])
-            elif ur2 and ur2[1]:
-                name = f"@{ur2[1]}"
-
-        if not name:
-            name = f"id:{user_id}"
-
-        c.execute("""INSERT INTO vote_participants (room_id, user_id, name)
-            VALUES (%s,%s,%s) ON CONFLICT (room_id, user_id) DO NOTHING""",
-            (room_id, user_id, name))
+            ur = c.fetchone()
+            if ur and ur[0]: name = clean_name(ur[0])
+            elif ur and ur[1]: name = f"@{ur[1]}"
+        if not name: name = f"id:{user_id}"
+        c.execute("INSERT INTO vote_participants (room_id, user_id, name) VALUES (%s,%s,%s) ON CONFLICT (room_id, user_id) DO NOTHING", (room_id, user_id, name))
         db.commit()
         c.execute("SELECT user_id, name FROM vote_participants WHERE room_id=%s ORDER BY joined_at", (room_id,))
         parts = [{'userId': r[0], 'name': r[1]} for r in c.fetchall()]
         return {'ok': True, 'participants': parts}, 200
-    except Exception as e:
-        return {'ok': False, 'error': str(e)}, 500
-    finally:
-        c.close(); db.close()
+    except Exception as e: return {'ok': False, 'error': str(e)}, 500
+    finally: c.close(); db.close()
 
 @app.route('/vote/leave', methods=['POST'])
 def vote_leave():
