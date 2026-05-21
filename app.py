@@ -1177,23 +1177,54 @@ def vote_start():
 def vote_join():
     db = get_db(); c = db.cursor()
     try:
-        data = request.get_json(); room_id = data.get('roomId')
-        user_id = int(data.get('userId')); group_id = int(data.get('groupId'))
+        data     = request.get_json()
+        room_id  = data.get('roomId')
+        user_id  = int(data.get('userId'))
+        group_id = int(data.get('groupId'))
+        user_name_from_client = data.get('userName', '').strip() if data.get('userName') else ''
+
         c.execute("SELECT started, ended FROM vote_rooms WHERE room_id=%s", (room_id,))
         row = c.fetchone()
         if not row: return {'ok': False, 'error': '이벤트를 찾을 수 없어요.'}, 404
         if not row[0]: return {'ok': False, 'error': '아직 시작되지 않은 이벤트예요.'}, 400
         if row[1]: return {'ok': False, 'error': '이미 종료된 이벤트예요.'}, 400
-        c.execute("SELECT first_name, username FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
-        ur = c.fetchone()
-        name = clean_name(ur[0]) if ur and ur[0] else (f"@{ur[1]}" if ur and ur[1] else f"id:{user_id}")
-        c.execute("INSERT INTO vote_participants (room_id, user_id, name) VALUES (%s,%s,%s) ON CONFLICT (room_id, user_id) DO NOTHING", (room_id, user_id, name))
+
+        # ★ 이름 결정 우선순위: 클라이언트 전송값 → points 테이블 → id:숫자
+        name = None
+        if user_name_from_client:
+            name = clean_name(user_name_from_client)
+
+        if not name:
+            c.execute("SELECT first_name, username FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
+            ur = c.fetchone()
+            if ur and ur[0]:
+                name = clean_name(ur[0])
+            elif ur and ur[1]:
+                name = f"@{ur[1]}"
+
+        if not name:
+            # points 테이블 전체에서 user_id로 검색 (다른 그룹이라도)
+            c.execute("SELECT first_name, username FROM points WHERE user_id=%s ORDER BY id DESC LIMIT 1", (user_id,))
+            ur2 = c.fetchone()
+            if ur2 and ur2[0]:
+                name = clean_name(ur2[0])
+            elif ur2 and ur2[1]:
+                name = f"@{ur2[1]}"
+
+        if not name:
+            name = f"id:{user_id}"
+
+        c.execute("""INSERT INTO vote_participants (room_id, user_id, name)
+            VALUES (%s,%s,%s) ON CONFLICT (room_id, user_id) DO NOTHING""",
+            (room_id, user_id, name))
         db.commit()
         c.execute("SELECT user_id, name FROM vote_participants WHERE room_id=%s ORDER BY joined_at", (room_id,))
         parts = [{'userId': r[0], 'name': r[1]} for r in c.fetchall()]
         return {'ok': True, 'participants': parts}, 200
-    except Exception as e: return {'ok': False, 'error': str(e)}, 500
-    finally: c.close(); db.close()
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}, 500
+    finally:
+        c.close(); db.close()
 
 @app.route('/vote/leave', methods=['POST'])
 def vote_leave():
