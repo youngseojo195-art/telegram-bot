@@ -611,70 +611,37 @@ def handle_all(message):
         elif text.strip().startswith('/야구'):
             if message.chat.type == 'private': return
             send_baseball_gif(group_id)
-            bot.reply_to(message, f"⚾ KBO 승 예측 안내\n{'─'*23}\n\n📅 참여 요일: 화/수/목/금\n⏰ 참여 시간: {VOTE_START} ~ {VOTE_END}\n📌 10개 팀 중 5개 선택\n\n📩 참여 링크를 DM으로 전달드렸습니다!")
-            try:
-                markup = types.InlineKeyboardMarkup()
-                markup.add(types.InlineKeyboardButton("⚾ KBO 승 예측 참여하기", url=f"{WEBAPP_BASE_URL}/kbo?start={user_id}_{group_id}"))
-                bot.send_message(user_id, f"⚾ KBO 승 예측 참여 링크\n\n아래 버튼을 눌러 참여하세요!", reply_markup=markup)
-            except Exception as e:
-                print(f"DM 전송 실패: {e}")
-                bot.send_message(group_id, f"⚠️ {first_name}님, DM을 보낼 수 없어요!\n@dopamin_ranking_bot 을 눌러 START 를 먼저 눌러주세요!")
+            kbo_url = f"{WEBAPP_BASE_URL}/kbo?start={user_id}_{group_id}"
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton("⚾ KBO 승 예측 참여하기", url=kbo_url))
+            bot.reply_to(message,
+                f"⚾ <b>KBO 승 예측</b>\n──────────────────\n"
+                f"📅 참여 요일: 화 / 수 / 목 / 금\n"
+                f"⏰ 참여 시간: {VOTE_START} ~ {VOTE_END}\n"
+                f"📌 10개 팀 중 5개 선택\n──────────────────\n"
+                f"아래 버튼을 눌러 바로 참여하세요!",
+                reply_markup=markup, parse_mode='HTML')
 
         elif text.strip().startswith('/승'):
             if message.chat.type == 'private': return
-            if not is_vote_time(now_kst): bot.reply_to(message, f"🚫 지금은 참여할 수 없어요.\n\n📅 화/수/목/금 PM {VOTE_START}~{VOTE_END}"); return
-            db = get_db(); c = db.cursor()
-            try:
-                c.execute("SELECT teams FROM kbo_votes WHERE user_id=%s AND group_id=%s AND vote_date=%s", (user_id, group_id, today))
-                existing = c.fetchone()
-            finally: c.close(); db.close()
-            if existing:
-                existing_teams = existing[0].split(',')
-                team_str = "\n".join([f"   {i+1}. {KBO_TEAMS_DISPLAY.get(t,t)}" for i,t in enumerate(existing_teams)])
-                try: bot.send_message(user_id, f"⚠️ 이미 오늘 예측에 참여하셨어요!\n\n선택하신 팀:\n{team_str}\n\n수정하려면 /수정 을 사용하세요.")
-                except: bot.reply_to(message, "⚠️ 이미 오늘 예측에 참여하셨어요!")
-                return
-            try:
-                send_baseball_gif(user_id); selected = []; set_pending(user_id, group_id, selected)
-                sent = bot.send_message(user_id, build_vote_message(selected), reply_markup=build_team_keyboard(selected))
-                set_pending(user_id, group_id, selected, sent.message_id)
-                bot.reply_to(message, f"📩 {first_name}님, DM으로 팀 선택 메시지를 보내드렸어요!")
-            except: bot.reply_to(message, "⚠️ DM을 보낼 수 없어요!\n@dopamin_ranking_bot 을 눌러 START 버튼을 눌러주세요!")
+            kbo_url = f"{WEBAPP_BASE_URL}/kbo?start={user_id}_{group_id}"
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton("⚾ KBO 승 예측 참여하기", url=kbo_url))
+            bot.reply_to(message, "⚾ 아래 버튼을 눌러 KBO 승 예측에 참여하세요!", reply_markup=markup)
 
         elif text.strip().startswith('/수정'):
             if message.chat.type == 'private': return
-            if not is_vote_time(now_kst): bot.reply_to(message, f"🚫 지금은 수정할 수 없어요."); return
-            db = get_db(); c = db.cursor()
-            try:
-                c.execute("SELECT teams FROM kbo_votes WHERE user_id=%s AND group_id=%s AND vote_date=%s", (user_id, group_id, today))
-                existing = c.fetchone()
-            finally: c.close(); db.close()
-            if not existing: bot.reply_to(message, "⚠️ 오늘 예측에 참여하지 않으셨어요!"); return
-            try:
-                send_baseball_gif(user_id); current_teams = existing[0].split(',')
-                set_pending(user_id, group_id, current_teams)
-                sent = bot.send_message(user_id, build_vote_message(current_teams), reply_markup=build_team_keyboard(current_teams))
-                set_pending(user_id, group_id, current_teams, sent.message_id)
-                bot.reply_to(message, f"📩 {first_name}님, DM으로 수정 메시지를 보내드렸어요!")
-            except: bot.reply_to(message, "⚠️ DM을 보낼 수 없어요!\n@dopamin_ranking_bot 을 눌러 START 버튼을 눌러주세요!")
+            kbo_url = f"{WEBAPP_BASE_URL}/kbo?start={user_id}_{group_id}"
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton("⚾ KBO 승 예측 수정하기", url=kbo_url))
+            bot.reply_to(message, "⚾ 아래 버튼을 눌러 예측을 수정하세요!", reply_markup=markup)
 
         elif text.strip().startswith('/리스트'):
             if message.chat.type == 'private': return
-            db = get_db(); c = db.cursor()
-            try:
-                c.execute("SELECT user_id, first_name, username, teams FROM kbo_votes WHERE group_id=%s AND vote_date=%s ORDER BY created_at", (group_id, today))
-                rows = c.fetchall()
-            finally: c.close(); db.close()
-            if not rows: bot.reply_to(message, "📋 오늘 예측에 참여한 사람이 없어요!"); return
-            send_baseball_gif(group_id)
-            result = f"╔══ ⚾ KBO 승 예측 리스트 ══╗\n   📅 {today.strftime('%Y년 %m월 %d일')}\n   👥 참여자: {len(rows)}명\n   {'─'*21}\n"
-            for row in rows:
-                uid = row[0]; first = row[1] or ''; uname = row[2] or ''
-                teams_picked = row[3].split(',')
-                team_icons = "  ".join([KBO_TEAMS_DISPLAY.get(t, t) for t in teams_picked])
-                name = first if first else (f"@{uname}" if uname else f"id:{uid}")
-                result += f"   👤 {name}\n  {team_icons}\n  {'─'*21}\n"
-            bot.reply_to(message, result + "╚══════════════════╝")
+            kbo_url = f"{WEBAPP_BASE_URL}/kbo?start={user_id}_{group_id}"
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton("📋 참여 목록 보기", url=kbo_url))
+            bot.reply_to(message, "⚾ 아래 버튼을 눌러 오늘 참여 목록을 확인하세요!", reply_markup=markup)
 
         elif text.strip().startswith('/내전수정'):
             if message.chat.type == 'private': return
@@ -792,9 +759,15 @@ def kbo_submit():
         today = datetime.now(KST).date()
         c.execute("SELECT first_name, username FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
         row = c.fetchone()
-        first_name = clean_name(row[0]) if row and row[0] else ''
-        username = row[1] if row else ''
-        if not first_name: first_name = f"@{username}" if username else f"id:{user_id}"
+        # ★ userName 우선 (웹앱에서 직접 입력), 없으면 points 테이블
+        user_name_from_client = (data.get('userName') or '').strip()
+        if user_name_from_client:
+            first_name = clean_name(user_name_from_client)
+            username = row[1] if row else ''
+        else:
+            first_name = clean_name(row[0]) if row and row[0] else ''
+            username = row[1] if row else ''
+            if not first_name: first_name = f"@{username}" if username else f"id:{user_id}"
         teams_str = ','.join(teams)
         c.execute("SELECT id FROM kbo_votes WHERE user_id=%s AND group_id=%s AND vote_date=%s", (user_id, group_id, today))
         existing = c.fetchone()
@@ -845,6 +818,31 @@ def kbo_hot():
         return [{'team': t, 'count': v} for t, v in cnt.most_common(3)], 200
     except: return [], 500
     finally: c.close(); db.close()
+
+@app.route('/kbo/my')
+def kbo_my():
+    """오늘 내 예측 조회 + 참여 가능 시간 여부 반환"""
+    db = get_db(); c = db.cursor()
+    try:
+        user_id  = int(request.args.get('userId', 0))
+        group_id = int(request.args.get('groupId', 0))
+        now_kst  = datetime.now(KST)
+        today    = now_kst.date()
+        vote_ok  = is_vote_time(now_kst)
+
+        c.execute("SELECT first_name, username, teams FROM kbo_votes WHERE user_id=%s AND group_id=%s AND vote_date=%s",
+                  (user_id, group_id, today))
+        row = c.fetchone()
+        if row:
+            name  = clean_name(row[0]) if row[0] else (f"@{row[1]}" if row[1] else f"id:{user_id}")
+            teams = row[2].split(',')
+            return {'voted': True, 'name': name, 'teams': teams, 'isVoteTime': vote_ok}, 200
+        else:
+            return {'voted': False, 'isVoteTime': vote_ok}, 200
+    except Exception as e:
+        return {'voted': False, 'isVoteTime': False, 'error': str(e)}, 500
+    finally:
+        c.close(); db.close()
 
 @app.route('/naejeon')
 def serve_naejeon(): return send_from_directory('.', 'naejeon.html')
