@@ -3,610 +3,661 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>KBO 승 예측</title>
+<title>도파민 KBO 승 예측</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --neon-red:    #ff4d4d;
+  --neon-purple: #bb88ff;
+  --neon-green:  #44cc88;
+  --neon-blue:   #4a9eff;
+  --neon-gold:   #ffd700;
+  --bg:          #0a0a1a;
+  --bg2:         #12122a;
+  --bg3:         #1a1a3a;
+  --border:      #1e1e3a;
+  --text-sub:    #8888bb;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #0a0a1a;
+  background: var(--bg);
   color: #fff;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
-.topbar {
-  background: #12122a;
-  padding: 14px 16px 10px;
-  text-align: center;
-  border-bottom: 1px solid #1e1e3a;
-  flex-shrink: 0;
-}
-.top-title { font-size: 16px; font-weight: 700; color: #fff; }
-.top-sub   { font-size: 11px; color: #8888bb; margin-top: 3px; }
 
-/* 탭 */
+/* ══ 상단 바 ══ */
+.topbar {
+  background: var(--bg2);
+  padding: 14px 16px 0;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+}
+.top-title { font-size: 17px; font-weight: 800; text-align: center; padding-bottom: 10px; }
+
+/* ══ 탭 ══ */
 .tabs {
   display: flex;
-  background: #12122a;
-  border-bottom: 1px solid #1e1e3a;
+  border-top: 1px solid var(--border);
 }
-.tab {
-  flex: 1;
-  padding: 10px;
-  text-align: center;
-  font-size: 13px;
-  color: #8888bb;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
+.tab-btn {
+  flex: 1; padding: 10px;
+  background: transparent; border: none;
+  color: var(--text-sub); font-size: 13px; font-weight: 600;
+  cursor: pointer; border-bottom: 2px solid transparent;
   transition: all 0.15s;
 }
-.tab.active { color: #4a9eff; border-bottom-color: #4a9eff; }
+.tab-btn.active { color: var(--neon-blue); border-bottom-color: var(--neon-blue); }
 
-.page { display: none; flex: 1; flex-direction: column; }
-.page.active { display: flex; }
-
-.content {
-  flex: 1;
-  padding: 14px;
-  display: flex;
+/* ══ 화면 ══ */
+.screen {
+  flex: 1; display: none;
   flex-direction: column;
-  gap: 12px;
-  padding-bottom: 90px;
-  overflow-y: auto;
+  padding: 16px 14px 100px;
+  gap: 14px; overflow-y: auto;
+}
+.screen.show { display: flex; }
+
+/* ══ 카드 ══ */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+}
+.card-title {
+  font-size: 11px; color: var(--text-sub);
+  letter-spacing: 0.05em; margin-bottom: 12px;
 }
 
-/* 타이머 */
-.timer-box {
-  background: #16102a;
-  border: 1px solid #3a1a5a;
-  border-radius: 10px;
-  padding: 9px 14px;
-  display: flex;
-  align-items: center;
+/* ══ 입력 ══ */
+.inp {
+  width: 100%; background: var(--bg);
+  border: 1px solid #3a3a6a; border-radius: 10px;
+  color: #fff; font-size: 15px; padding: 13px 14px;
+  outline: none; transition: border-color 0.2s;
+}
+.inp:focus { border-color: var(--neon-purple); }
+.inp::placeholder { color: #44446699; }
+
+/* ══ 팀 그리드 ══ */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
-.timer-label { color: #9966cc; font-size: 12px; flex: 1; }
-.timer-val   { color: #cc88ff; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.05em; }
-
-/* 마감 안내 */
-.closed-box {
-  background: #2a1010;
-  border: 1px solid #5a1a1a;
-  border-radius: 10px;
-  padding: 12px 14px;
-  text-align: center;
-  font-size: 13px;
-  color: #ff8888;
-  display: none;
-}
-
-/* 인기팀 */
-.hot-box {
-  background: #12122a;
-  border: 1px solid #1e1e3a;
-  border-radius: 10px;
-  padding: 9px 12px;
-}
-.hot-title { font-size: 10px; color: #8888bb; margin-bottom: 6px; letter-spacing: 0.04em; }
-.hot-list  { display: flex; gap: 6px; flex-wrap: wrap; }
-.hot-tag {
-  background: #1e1e3a;
-  border-radius: 20px;
-  padding: 4px 10px;
-  font-size: 11px;
-  color: #ccc;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* 팀 그리드 */
-.sec-label { color: #8888bb; font-size: 11px; margin-bottom: 6px; letter-spacing: 0.04em; }
-.team-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-.tc {
-  background: #12122a;
-  border: 1.5px solid #1e1e3a;
+.team-btn {
+  padding: 13px 8px;
   border-radius: 12px;
-  padding: 10px 10px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: #aaa; font-size: 14px; font-weight: 600;
+  cursor: pointer; text-align: center;
   transition: all 0.15s;
-  user-select: none;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
 }
-.tc:active { transform: scale(0.97); }
-.tc.sel { border-color: #4a9eff; background: #0d1a30; }
-.tc.disabled { opacity: 0.4; cursor: not-allowed; }
+.team-btn:active { transform: scale(0.96); }
+.team-btn.selected {
+  border-color: var(--neon-green);
+  background: #0a1a10;
+  color: var(--neon-green);
+}
+.team-btn.disabled {
+  opacity: 0.4; cursor: default;
+}
 
-/* 팀 로고 — 색상 원 */
-.tc-logo {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  flex-shrink: 0;
-  color: #fff;
+/* 선택 카운터 */
+.select-counter {
+  text-align: center;
+  font-size: 13px; color: var(--text-sub);
+  padding: 8px 0;
 }
-.tc-name { font-size: 13px; font-weight: 500; color: #ccc; flex: 1; }
-.tc.sel .tc-name { color: #fff; }
-.tc-check {
-  width: 18px; height: 18px;
-  border-radius: 50%;
-  background: #4a9eff;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  color: #fff;
-  flex-shrink: 0;
-}
-.tc.sel .tc-check { display: flex; }
-
-/* 카운터 */
-.count-bar {
-  background: #12122a;
-  border: 1px solid #1e1e3a;
-  border-radius: 10px;
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.count-label { color: #8888bb; font-size: 12px; }
-.count-pills { display: flex; gap: 4px; }
-.pill { width: 28px; height: 8px; border-radius: 4px; background: #1e1e3a; transition: background 0.2s; }
-.pill.filled { background: #4a9eff; }
+.select-counter span { color: var(--neon-gold); font-weight: 700; font-size: 16px; }
 
 /* 제출 버튼 */
-.btn-wrap {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  padding: 12px 14px 24px;
-  background: #0a0a1a;
-  border-top: 1px solid #1e1e3a;
-}
-.btn-submit {
-  width: 100%;
-  padding: 16px;
-  border-radius: 14px;
-  border: none;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  letter-spacing: 0.02em;
-  transition: all 0.2s;
-}
-.btn-submit.inactive { background: #1e1e3a; color: #444466; cursor: not-allowed; }
-.btn-submit.active   { background: #4a9eff; color: #fff; box-shadow: 0 0 20px #4a9eff55; }
-.btn-submit.done     { background: #1d9e75; color: #fff; }
-
-/* 리스트 탭 */
-.list-content {
-  flex: 1;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
-}
-.list-header {
-  background: #12122a;
-  border: 1px solid #1e1e3a;
-  border-radius: 10px;
-  padding: 10px 14px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.list-date  { color: #8888bb; font-size: 12px; }
-.list-count { color: #4a9eff; font-size: 13px; font-weight: 600; }
-.list-item {
-  background: #12122a;
-  border: 1px solid #1e1e3a;
-  border-radius: 12px;
-  padding: 12px 14px;
-}
-.list-name { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 8px; }
-.list-teams { display: flex; flex-wrap: wrap; gap: 6px; }
-.list-team-tag {
-  border-radius: 20px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 500;
+.submit-btn {
+  width: 100%; padding: 16px;
+  border-radius: 14px; border: none;
+  font-size: 15px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s;
+  background: linear-gradient(135deg, var(--neon-blue), #2266cc);
   color: #fff;
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
-.list-empty { text-align: center; color: #8888bb; font-size: 13px; padding: 40px 0; }
-.list-refresh {
-  background: #1e1e3a;
-  border: none;
-  border-radius: 8px;
-  padding: 10px;
-  color: #8888bb;
-  font-size: 13px;
-  cursor: pointer;
-  width: 100%;
+.submit-btn.inactive {
+  background: var(--border); color: #444466; cursor: default;
+}
+.submit-btn:not(.inactive):active { transform: scale(0.98); opacity: 0.9; }
+
+/* 리셋 버튼 */
+.reset-btn {
+  width: 100%; padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: transparent; color: var(--text-sub);
+  font-size: 13px; cursor: pointer;
 }
 
-/* 결과 화면 */
-.result-screen {
-  display: none;
-  flex: 1;
-  flex-direction: column;
-  gap: 14px;
-  padding: 14px;
-  padding-bottom: 90px;
+/* ══ 완료 화면 ══ */
+.done-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; padding: 20px 0; text-align: center;
 }
-.result-header {
-  background: #12122a;
-  border: 1px solid #1e1e3a;
-  border-radius: 14px;
-  padding: 24px;
-  text-align: center;
+.done-icon { font-size: 56px; }
+.done-title { font-size: 18px; font-weight: 800; }
+.done-sub   { font-size: 13px; color: var(--text-sub); line-height: 1.6; }
+.done-teams {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 20px;
+  width: 100%; text-align: left;
 }
-.result-icon  { font-size: 44px; margin-bottom: 10px; }
-.result-title { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-.result-sub   { font-size: 12px; color: #8888bb; }
-.result-teams {
-  background: #12122a;
-  border: 1px solid #1e1e3a;
-  border-radius: 14px;
-  overflow: hidden;
+.done-team-item {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
 }
-.result-team-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.done-team-item:last-child { border-bottom: none; }
+.change-btn {
+  width: 100%; padding: 13px;
+  border-radius: 12px;
+  border: 1px solid var(--neon-blue);
+  background: transparent; color: var(--neon-blue);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+}
+
+/* ══ 리스트 탭 ══ */
+.list-header {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.list-date { font-size: 12px; color: var(--text-sub); }
+.list-count { font-size: 15px; font-weight: 700; color: var(--neon-blue); }
+
+.list-wrap {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden;
+}
+.list-item {
   padding: 12px 14px;
-  border-bottom: 1px solid #1e1e3a;
+  border-bottom: 1px solid var(--border);
 }
-.result-team-row:last-child { border-bottom: none; }
-.result-team-logo {
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
+.list-item:last-child { border-bottom: none; }
+.list-item-name {
+  font-size: 14px; font-weight: 700; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
 }
-.result-team-name { font-size: 14px; font-weight: 500; color: #fff; flex: 1; }
-.result-check { color: #4a9eff; font-size: 16px; }
+.list-item-me {
+  font-size: 10px; color: var(--neon-green);
+  background: #0a2010; border-radius: 4px; padding: 1px 6px;
+}
+.list-item-teams {
+  display: flex; flex-wrap: wrap; gap: 5px;
+}
+.team-tag {
+  font-size: 11px; padding: 3px 8px;
+  border-radius: 6px; background: var(--bg3);
+  color: #ccc; font-weight: 600;
+}
+.empty-list {
+  padding: 40px; text-align: center;
+  color: var(--text-sub); font-size: 13px;
+}
+
+.refresh-btn {
+  width: 100%; padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: transparent; color: var(--text-sub);
+  font-size: 13px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+
+/* ══ 닉네임 모달 ══ */
+.name-modal {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.88);
+  z-index: 200;
+  display: none;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.name-modal.show { display: flex; }
+.name-modal-box {
+  background: var(--bg2);
+  border: 1px solid var(--neon-purple);
+  border-radius: 16px;
+  padding: 24px 20px;
+  width: 100%; max-width: 320px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.name-modal-title { font-size: 16px; font-weight: 800; text-align: center; }
+.name-modal-sub   { font-size: 12px; color: var(--text-sub); text-align: center; line-height: 1.6; }
+.name-confirm-btn {
+  width: 100%; padding: 14px;
+  border-radius: 12px; border: none;
+  background: var(--neon-green); color: #001a10;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.name-cancel-btn {
+  width: 100%; padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: transparent; color: var(--text-sub);
+  font-size: 13px; cursor: pointer;
+}
+
+/* ══ 토스트 ══ */
+.toast {
+  position: fixed; bottom: 90px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--neon-green); color: #001a10;
+  font-size: 13px; font-weight: 700;
+  padding: 10px 20px; border-radius: 20px;
+  z-index: 2000; opacity: 0; transition: opacity 0.2s;
+  white-space: nowrap; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+.toast.error { background: #cc3333; color: #fff; }
+
+/* ══ 하단 고정 버튼 ══ */
+.bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  padding: 12px 14px 24px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
 </style>
 </head>
 <body>
 
 <div class="topbar">
   <div class="top-title">⚾ KBO 승 예측</div>
-  <div class="top-sub">5경기 모두 맞추면 3만원!</div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('vote')" id="tab-vote">🗳️ 예측 참여</button>
+    <button class="tab-btn" onclick="switchTab('list')" id="tab-list">📋 참여 목록</button>
+  </div>
 </div>
 
-<div class="tabs">
-  <div class="tab active" id="tab-vote" onclick="switchTab('vote')">예측 참여</div>
-  <div class="tab" id="tab-list" onclick="switchTab('list')">오늘 리스트</div>
-</div>
+<!-- ══ 예측 참여 탭 ══ -->
+<div class="screen show" id="screen-vote">
 
-<!-- 예측 참여 페이지 -->
-<div class="page active" id="page-vote">
-  <div class="content" id="vote-content">
-    <div class="timer-box">
-      <span class="timer-label">⏰ 마감까지</span>
-      <span class="timer-val" id="timer-val">-- : -- : --</span>
-    </div>
-
-    <div class="closed-box" id="closed-box">
-      🚫 현재 예측 참여 시간이 아닙니다<br>
-      <span style="font-size:11px; color:#cc6666; margin-top:4px; display:block" id="vote-time-info"></span>
-    </div>
-
-    <div class="hot-box">
-      <div class="hot-title">🔥 오늘 많이 선택된 팀</div>
-      <div class="hot-list" id="hot-list">
-        <div class="hot-tag">로딩중...</div>
-      </div>
-    </div>
-
-    <div>
-      <div class="sec-label">승리할 팀 5개를 선택하세요</div>
-      <div class="team-grid" id="team-grid"></div>
-    </div>
-
-    <div class="count-bar">
-      <span class="count-label" id="count-label">0개 선택됨</span>
-      <div class="count-pills">
-        <div class="pill" id="p0"></div>
-        <div class="pill" id="p1"></div>
-        <div class="pill" id="p2"></div>
-        <div class="pill" id="p3"></div>
-        <div class="pill" id="p4"></div>
+  <!-- 미시작 안내 (시간 외) -->
+  <div id="closed-notice" style="display:none">
+    <div class="card" style="text-align:center; padding: 30px 20px;">
+      <div style="font-size:48px; margin-bottom:12px">⏰</div>
+      <div style="font-size:16px; font-weight:700; margin-bottom:8px">지금은 참여할 수 없어요</div>
+      <div style="font-size:13px; color:var(--text-sub); line-height:1.6">
+        📅 참여 요일: 화 / 수 / 목 / 금<br>
+        ⏰ 참여 시간: 오후 6:00 ~ 6:30
       </div>
     </div>
   </div>
 
-  <div class="result-screen" id="result-screen">
-    <div class="result-header">
-      <div class="result-icon">✅</div>
-      <div class="result-title">예측 완료!</div>
-      <div class="result-sub">선택한 팀 5개가 제출됐어요</div>
+  <!-- 닉네임 입력 단계 -->
+  <div id="step-name" style="display:none">
+    <div class="card">
+      <div class="card-title">👤 닉네임 입력</div>
+      <input class="inp" type="text" id="name-input"
+             placeholder="참여자 목록에 표시될 이름"
+             maxlength="20"
+             onkeydown="if(event.key==='Enter') goToTeamSelect()" />
     </div>
-    <div class="result-teams" id="result-teams"></div>
-  </div>
-
-  <div class="btn-wrap" id="btn-wrap">
-    <button class="btn-submit inactive" id="btn-submit" onclick="handleSubmit()">
-      5개 팀을 선택해주세요
+    <button class="submit-btn" onclick="goToTeamSelect()" style="margin-top:4px">
+      다음 → 팀 선택
     </button>
   </div>
+
+  <!-- 팀 선택 단계 -->
+  <div id="step-teams" style="display:none">
+    <div class="card">
+      <div class="card-title">📊 예측 팀 선택 <span style="color:var(--text-sub)">(5개 선택)</span></div>
+      <div class="select-counter">
+        <span id="select-count">0</span> / 5 선택됨
+      </div>
+      <div style="height:10px"></div>
+      <div class="team-grid" id="team-grid"></div>
+    </div>
+    <button class="reset-btn" onclick="resetTeams()">🔄 선택 초기화</button>
+    <button class="submit-btn inactive" id="submit-btn" onclick="submitVote()">
+      5개를 선택해주세요
+    </button>
+  </div>
+
+  <!-- 완료 단계 -->
+  <div id="step-done" style="display:none">
+    <div class="done-wrap">
+      <div class="done-icon">✅</div>
+      <div class="done-title" id="done-title">예측 완료!</div>
+      <div class="done-sub" id="done-sub">오늘도 행운을 빌어요! 🍀</div>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 내가 선택한 팀</div>
+      <div class="done-teams" id="done-teams"></div>
+    </div>
+    <button class="change-btn" onclick="startChange()">✏️ 예측 수정하기</button>
+  </div>
+
 </div>
 
-<!-- 리스트 페이지 -->
-<div class="page" id="page-list">
-  <div class="list-content" id="list-content">
-    <div class="list-empty" id="list-loading">로딩 중...</div>
+<!-- ══ 참여 목록 탭 ══ -->
+<div class="screen" id="screen-list">
+  <div class="list-header">
+    <span class="list-date" id="list-date">오늘 날짜</span>
+    <span class="list-count" id="list-count">0명 참여</span>
+  </div>
+  <div class="list-wrap" id="list-wrap">
+    <div class="empty-list">불러오는 중...</div>
+  </div>
+  <button class="refresh-btn" onclick="loadList()">🔄 새로고침</button>
+</div>
+
+<!-- 닉네임 모달 (수정용) -->
+<div class="name-modal" id="name-modal">
+  <div class="name-modal-box">
+    <div class="name-modal-title">✏️ 닉네임 수정</div>
+    <div class="name-modal-sub">수정할 닉네임을 입력해주세요</div>
+    <input class="inp" type="text" id="modal-name-input"
+           placeholder="닉네임" maxlength="20"
+           onkeydown="if(event.key==='Enter') confirmChangeName()" />
+    <button class="name-confirm-btn" onclick="confirmChangeName()">확인</button>
+    <button class="name-cancel-btn" onclick="closeNameModal()">취소</button>
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
-// ── 파라미터 파싱 ──
+// ════════════════════════════════════════
+// 파라미터 파싱
+// ════════════════════════════════════════
 let userId  = null;
 let groupId = null;
+
 try {
   const params = new URLSearchParams(window.location.search);
   const start  = params.get('start');
   if (start) {
-    const parts = start.split('_');
-    userId  = parts[0] || null;
-    groupId = parts[1] || null;
+    const p = start.split('_');
+    userId  = p[0] || null;
+    groupId = p[1] || null;
   }
 } catch(e) {}
 
-// ── 팀 데이터 (색상 + 이니셜) ──
+// ════════════════════════════════════════
+// 팀 데이터
+// ════════════════════════════════════════
 const TEAMS = [
-  { id: 'KT',   name: 'KT',   color: '#E8003D', text: 'KT'  },
-  { id: '삼성', name: '삼성', color: '#074CA1', text: '삼'  },
-  { id: 'LG',   name: 'LG',   color: '#C30452', text: 'LG'  },
-  { id: 'SSG',  name: 'SSG',  color: '#CE0A0A', text: 'SSG' },
-  { id: 'KIA',  name: 'KIA',  color: '#EA0029', text: 'KIA' },
-  { id: '한화', name: '한화', color: '#FC4E00', text: '한'  },
-  { id: '두산', name: '두산', color: '#131230', text: '두'  },
-  { id: 'NC',   name: 'NC',   color: '#071D5B', text: 'NC'  },
-  { id: '롯데', name: '롯데', color: '#041E42', text: '롯'  },
-  { id: '키움', name: '키움', color: '#570514', text: '키'  },
+  { id: 'KT',   label: '🔴 KT'   },
+  { id: '삼성', label: '🔵 삼성' },
+  { id: 'LG',   label: '🔴 LG'   },
+  { id: 'SSG',  label: '🟡 SSG'  },
+  { id: 'KIA',  label: '🔴 KIA'  },
+  { id: '한화', label: '🟠 한화' },
+  { id: '두산', label: '🔵 두산' },
+  { id: 'NC',   label: '🔵 NC'   },
+  { id: '롯데', label: '🔴 롯데' },
+  { id: '키움', label: '🟣 키움' },
 ];
 
+// ════════════════════════════════════════
+// 상태
+// ════════════════════════════════════════
+let myName     = '';
 let selected   = [];
-let voteOpen   = false;
-let submitted  = false;
+let myVote     = null;   // 오늘 이미 제출한 팀 목록
+let isVoteTime = false;
+let currentTab = 'vote';
 
-// ── 참여 시간 체크 (KST 기준) ──
-function checkVoteTime() {
-  const now  = new Date();
-  // KST = UTC+9
-  const kst  = new Date(now.getTime() + 9 * 3600 * 1000);
-  const day  = kst.getUTCDay(); // 0=일,1=월,2=화,3=수,4=목,5=금,6=토
-  const h    = kst.getUTCHours();
-  const m    = kst.getUTCMinutes();
-  const total = h * 60 + m;
-
-  const VOTE_DAYS  = [2, 3, 4, 5]; // 화,수,목,금
-  const START_MIN  = 18 * 60 + 0;  // 18:00 ← 여기서 시작 시간 수정
-  const END_MIN    = 18 * 60 + 30; // 18:30 ← 여기서 종료 시간 수정
-
-  return VOTE_DAYS.includes(day) && total >= START_MIN && total <= END_MIN;
+// ════════════════════════════════════════
+// 유틸
+// ════════════════════════════════════════
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => t.className = 'toast', 2500);
 }
 
-function getVoteTimeInfo() {
-  return "참여 가능: 화~금 오후 6:00 ~ 6:30"; // ← 여기서 안내 문구 수정
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── 타이머 ──
-function updateTimer() {
-  const now = new Date();
-  const kst = new Date(now.getTime() + 9 * 3600 * 1000);
-  // 마감 시각: KST 18:30
-  const end = new Date(kst);
-  end.setUTCHours(9, 30, 0, 0); // ← 여기서 UTC 마감 시간 수정 (KST-9)
-  let diff = Math.floor((end - kst) / 1000);
-
-  const el = document.getElementById('timer-val');
-  if (diff <= 0) {
-    el.textContent = '마감됨';
-    el.style.color = '#ff6666';
-    return;
-  }
-  const h = Math.floor(diff / 3600).toString().padStart(2,'0');
-  const m = Math.floor((diff % 3600) / 60).toString().padStart(2,'0');
-  const s = (diff % 60).toString().padStart(2,'0');
-  el.textContent = h + ' : ' + m + ' : ' + s;
-}
-setInterval(updateTimer, 1000);
-updateTimer();
-
-// ── 탭 전환 ──
 function switchTab(tab) {
-  document.getElementById('tab-vote').className = 'tab' + (tab==='vote' ? ' active' : '');
-  document.getElementById('tab-list').className = 'tab' + (tab==='list' ? ' active' : '');
-  document.getElementById('page-vote').className = 'page' + (tab==='vote' ? ' active' : '');
-  document.getElementById('page-list').className = 'page' + (tab==='list' ? ' active' : '');
+  currentTab = tab;
+  document.getElementById('tab-vote').className = 'tab-btn' + (tab === 'vote' ? ' active' : '');
+  document.getElementById('tab-list').className = 'tab-btn' + (tab === 'list' ? ' active' : '');
+  document.getElementById('screen-vote').classList.toggle('show', tab === 'vote');
+  document.getElementById('screen-list').classList.toggle('show', tab === 'list');
   if (tab === 'list') loadList();
 }
 
-// ── 팀 카드 렌더 ──
-function renderTeams() {
-  voteOpen = checkVoteTime();
-  const grid   = document.getElementById('team-grid');
-  const closed = document.getElementById('closed-box');
+// ════════════════════════════════════════
+// 팀 그리드 렌더
+// ════════════════════════════════════════
+function renderTeamGrid() {
+  const grid = document.getElementById('team-grid');
+  grid.innerHTML = TEAMS.map(t => {
+    const isSel = selected.includes(t.id);
+    const isDisabled = !isSel && selected.length >= 5;
+    return `<button
+      class="team-btn${isSel ? ' selected' : ''}${isDisabled ? ' disabled' : ''}"
+      onclick="toggleTeam('${t.id}')"
+    >${t.label}</button>`;
+  }).join('');
 
-  grid.innerHTML = '';
-  TEAMS.forEach(t => {
-    const div = document.createElement('div');
-    div.className = 'tc' + (voteOpen ? '' : ' disabled');
-    div.id = 'tc-' + t.id;
-    if (voteOpen) div.onclick = () => toggle(t.id);
-    div.innerHTML = `
-      <div class="tc-logo" style="background:${t.color}">${t.text}</div>
-      <span class="tc-name">${t.name}</span>
-      <span class="tc-check">✓</span>
-    `;
-    grid.appendChild(div);
-  });
+  const count = selected.length;
+  document.getElementById('select-count').textContent = count;
 
-  if (!voteOpen) {
-    closed.style.display = 'block';
-    document.getElementById('vote-time-info').textContent = getVoteTimeInfo();
-    document.getElementById('btn-submit').className = 'btn-submit inactive';
-    document.getElementById('btn-submit').textContent = '지금은 참여 시간이 아니에요';
-  }
-}
-
-// ── 토글 ──
-function toggle(id) {
-  if (!voteOpen || submitted) return;
-  const el = document.getElementById('tc-' + id);
-  if (el.classList.contains('sel')) {
-    el.classList.remove('sel');
-    selected = selected.filter(t => t !== id);
-  } else {
-    if (selected.length >= 5) {
-      el.style.borderColor = '#ff4444';
-      setTimeout(() => el.style.borderColor = '', 400);
-      return;
-    }
-    el.classList.add('sel');
-    selected.push(id);
-  }
-  updateUI();
-}
-
-// ── UI 업데이트 ──
-function updateUI() {
-  const n = selected.length;
-  document.getElementById('count-label').textContent = n + '개 선택됨';
-  for (let i = 0; i < 5; i++) {
-    const p = document.getElementById('p' + i);
-    if (p) p.className = 'pill' + (i < n ? ' filled' : '');
-  }
-  const btn = document.getElementById('btn-submit');
-  if (!voteOpen) return;
-  if (n === 5) {
-    btn.className = 'btn-submit active';
+  const btn = document.getElementById('submit-btn');
+  if (count === 5) {
+    btn.className = 'submit-btn';
     btn.textContent = '✅ 예측 제출하기';
   } else {
-    btn.className = 'btn-submit inactive';
-    btn.textContent = (5 - n) + '개 더 선택해주세요';
+    btn.className = 'submit-btn inactive';
+    btn.textContent = `${5 - count}개 더 선택해주세요`;
   }
 }
 
-// ── 제출 ──
-async function handleSubmit() {
-  if (!voteOpen || selected.length !== 5 || submitted) return;
-  const btn = document.getElementById('btn-submit');
-  btn.disabled = true;
-  btn.textContent = '제출 중...';
+function toggleTeam(teamId) {
+  if (selected.includes(teamId)) {
+    selected = selected.filter(t => t !== teamId);
+  } else {
+    if (selected.length >= 5) return;
+    selected.push(teamId);
+  }
+  renderTeamGrid();
+}
+
+function resetTeams() {
+  selected = [];
+  renderTeamGrid();
+}
+
+// ════════════════════════════════════════
+// 단계 전환
+// ════════════════════════════════════════
+function showStep(step) {
+  ['closed-notice','step-name','step-teams','step-done'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById(step).style.display = 'block';
+}
+
+function goToTeamSelect() {
+  const nameVal = document.getElementById('name-input').value.trim();
+  if (!nameVal) { showToast('닉네임을 입력해주세요!', true); return; }
+  myName = nameVal;
+  selected = myVote ? [...myVote] : [];
+  renderTeamGrid();
+  showStep('step-teams');
+}
+
+function startChange() {
+  // 수정 시 바로 팀 선택으로
+  selected = myVote ? [...myVote] : [];
+  renderTeamGrid();
+  showStep('step-teams');
+}
+
+// ════════════════════════════════════════
+// 제출
+// ════════════════════════════════════════
+async function submitVote() {
+  if (selected.length !== 5) return;
+
+  const btn = document.getElementById('submit-btn');
+  btn.className = 'submit-btn inactive';
+  btn.textContent = '⏳ 제출 중...';
 
   try {
-    const res = await fetch('/kbo/submit', {
+    const res  = await fetch('/kbo/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, groupId, teams: selected })
+      body: JSON.stringify({
+        userId:   parseInt(userId),
+        groupId:  parseInt(groupId),
+        teams:    selected,
+        userName: myName
+      })
     });
     const data = await res.json();
-    if (!data.ok) {
-      btn.disabled = false;
-      btn.className = 'btn-submit inactive';
-      btn.textContent = data.error || '오류가 발생했어요. 다시 시도해주세요.';
-      return;
+    if (data.ok) {
+      myVote = [...selected];
+      showDone(data.action || '완료');
+      showToast('✅ 예측 제출 완료!');
+    } else {
+      showToast(data.error || '오류가 발생했어요.', true);
+      renderTeamGrid();
     }
   } catch(e) {
-    btn.disabled = false;
-    btn.textContent = '오류 발생. 다시 시도해주세요.';
+    showToast('서버 오류가 발생했어요.', true);
+    renderTeamGrid();
+  }
+}
+
+function showDone(action) {
+  const teamsEl = document.getElementById('done-teams');
+  teamsEl.innerHTML = myVote.map((t, i) => {
+    const team = TEAMS.find(tm => tm.id === t);
+    return `<div class="done-team-item">
+      <span style="color:var(--text-sub);font-size:12px">${i+1}</span>
+      ${escHtml(team ? team.label : t)}
+    </div>`;
+  }).join('');
+
+  const isEdit = action === '수정';
+  document.getElementById('done-title').textContent = isEdit ? '예측 수정 완료! ✅' : '예측 제출 완료! ✅';
+  document.getElementById('done-sub').textContent = `${escHtml(myName)}님, 오늘도 행운을 빌어요! 🍀`;
+  showStep('step-done');
+}
+
+// ════════════════════════════════════════
+// 닉네임 모달 (수정용)
+// ════════════════════════════════════════
+function closeNameModal() {
+  document.getElementById('name-modal').classList.remove('show');
+}
+function confirmChangeName() {
+  const v = document.getElementById('modal-name-input').value.trim();
+  if (!v) { showToast('닉네임을 입력해주세요!', true); return; }
+  myName = v;
+  closeNameModal();
+  startChange();
+}
+
+// ════════════════════════════════════════
+// 리스트 로드
+// ════════════════════════════════════════
+async function loadList() {
+  const wrap = document.getElementById('list-wrap');
+  wrap.innerHTML = '<div class="empty-list">불러오는 중...</div>';
+
+  try {
+    const res  = await fetch(`/kbo/list?groupId=${groupId}`);
+    const data = await res.json();
+
+    // 날짜 표시
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth()+1).padStart(2,'0');
+    const d = String(now.getDate()).padStart(2,'0');
+    document.getElementById('list-date').textContent = `${y}년 ${m}월 ${d}일`;
+    document.getElementById('list-count').textContent = `${data.length}명 참여`;
+
+    if (data.length === 0) {
+      wrap.innerHTML = '<div class="empty-list">오늘 아직 참여자가 없어요 ⚾</div>';
+      return;
+    }
+
+    wrap.innerHTML = data.map((item, i) => {
+      const isMe = item.userId && String(item.userId) === String(userId);
+      const teamTags = item.teams.map(t => {
+        const team = TEAMS.find(tm => tm.id === t);
+        return `<span class="team-tag">${escHtml(team ? team.label : t)}</span>`;
+      }).join('');
+      return `<div class="list-item">
+        <div class="list-item-name">
+          <span style="color:var(--text-sub);font-size:11px">${i+1}</span>
+          ${escHtml(item.name)}
+          ${isMe ? '<span class="list-item-me">나</span>' : ''}
+        </div>
+        <div class="list-item-teams">${teamTags}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    wrap.innerHTML = '<div class="empty-list">불러오기 실패. 새로고침을 눌러주세요.</div>';
+  }
+}
+
+// ════════════════════════════════════════
+// 초기화
+// ════════════════════════════════════════
+async function init() {
+  if (!userId || !groupId) {
+    showStep('closed-notice');
     return;
   }
 
-  submitted = true;
-  document.getElementById('vote-content').style.display = 'none';
-  const rs = document.getElementById('result-screen');
-  rs.style.display = 'flex';
-
-  const teamRows = selected.map(id => {
-    const t = TEAMS.find(x => x.id === id);
-    return `<div class="result-team-row">
-      <div class="result-team-logo" style="background:${t.color}">${t.text}</div>
-      <span class="result-team-name">${t.name}</span>
-      <span class="result-check">✓</span>
-    </div>`;
-  }).join('');
-  document.getElementById('result-teams').innerHTML = teamRows;
-
-  btn.className = 'btn-submit done';
-  btn.textContent = '✅ 제출 완료!';
-  btn.disabled = false;
-}
-
-// ── 인기팀 로드 ──
-async function loadHotTeams() {
+  // 오늘 이미 제출했는지 확인
   try {
-    const res  = await fetch('/kbo/hot?groupId=' + groupId);
+    const res  = await fetch(`/kbo/my?userId=${userId}&groupId=${groupId}`);
     const data = await res.json();
-    const ranks = ['🥇', '🥈', '🥉'];
-    const hotList = document.getElementById('hot-list');
-    if (data && data.length > 0) {
-      hotList.innerHTML = data.slice(0,3).map((item,i) =>
-        `<div class="hot-tag">${ranks[i]} ${item.team} ${item.count}명</div>`
-      ).join('');
+
+    if (data.voted) {
+      // 이미 제출함 → 완료 화면
+      myName = data.name || '';
+      myVote = data.teams || [];
+      isVoteTime = data.isVoteTime;
+
+      if (isVoteTime) {
+        // 수정 가능
+        showDone('완료');
+      } else {
+        // 수정 불가 - 완료만 보여줌
+        showDone('완료');
+        document.querySelector('.change-btn').style.display = 'none';
+      }
+    } else if (data.isVoteTime) {
+      // 참여 가능 시간 → 닉네임 입력
+      isVoteTime = true;
+      showStep('step-name');
     } else {
-      hotList.innerHTML = '<div class="hot-tag">아직 참여자가 없어요</div>';
+      // 참여 불가 시간
+      showStep('closed-notice');
     }
   } catch(e) {
-    document.getElementById('hot-list').innerHTML = '<div class="hot-tag">-</div>';
+    showStep('closed-notice');
   }
 }
 
-// ── 리스트 로드 ──
-async function loadList() {
-  const el = document.getElementById('list-content');
-  el.innerHTML = '<div class="list-empty">로딩 중...</div>';
-  try {
-    const res  = await fetch('/kbo/list?groupId=' + groupId);
-    const data = await res.json();
-    if (!data || data.length === 0) {
-      el.innerHTML = '<div class="list-empty">오늘 예측에 참여한 사람이 없어요</div>';
-      return;
-    }
-    const today = new Date(new Date().getTime() + 9*3600*1000);
-    const dateStr = today.getUTCFullYear() + '년 ' + (today.getUTCMonth()+1) + '월 ' + today.getUTCDate() + '일';
-
-    let html = `<div class="list-header">
-      <span class="list-date">📅 ${dateStr}</span>
-      <span class="list-count">👥 ${data.length}명 참여</span>
-    </div>`;
-
-    data.forEach(row => {
-      const teamTags = row.teams.map(t => {
-        const team = TEAMS.find(x => x.id === t);
-        return team
-          ? `<span class="list-team-tag" style="background:${team.color}">${team.name}</span>`
-          : `<span class="list-team-tag" style="background:#333">${t}</span>`;
-      }).join('');
-      html += `<div class="list-item">
-        <div class="list-name">👤 ${row.name}</div>
-        <div class="list-teams">${teamTags}</div>
-      </div>`;
-    });
-
-    html += `<button class="list-refresh" onclick="loadList()">🔄 새로고침</button>`;
-    el.innerHTML = html;
-  } catch(e) {
-    el.innerHTML = '<div class="list-empty">불러오기 실패. 새로고침해주세요.</div>';
-  }
-}
-
-renderTeams();
-if (groupId) loadHotTeams();
+init();
 </script>
 </body>
 </html>
