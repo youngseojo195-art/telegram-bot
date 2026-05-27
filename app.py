@@ -47,6 +47,8 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 <b>[평생]</b> · <a href="https://t.me/gamte59/96">스피드벳</a>
 <b>[평생]</b> · <a href="https://t.me/gamte59/94">띵벳</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/44">지엑스뱃</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/46">케이비씨겜</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/49">블록체인바카라</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/60">우루스뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/62">마닐라</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/70">미우카지노</a>
@@ -55,7 +57,7 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/78">소울카지노</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/84">123GAME카지노</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/100">벨라벳</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/102">부자벳</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/100">부자벳</a>
 
 💸 <b>급전</b>
 ──────────────────
@@ -79,11 +81,7 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 
 💼 <b>이체 알바</b>
 ──────────────────
-<b>[도파민]</b> · <a href="https://t.me/gamte59/87">창비팀 대면이체알바</a>
-
-📱 <b>유심</b>
-──────────────────
-<b>[도파민]</b> · <a href="https://t.me/gamte59/104">친구유심</a>"""
+<b>[도파민]</b> · <a href="https://t.me/gamte59/87">창비팀 대면이체알바</a>"""
 
 KBO_TEAMS = ['KT', '삼성', 'LG', 'SSG', 'KIA', '한화', '두산', 'NC', '롯데', '키움']
 KBO_TEAMS_DISPLAY = {
@@ -755,21 +753,39 @@ def serve_kbo(): return send_from_directory('.', 'kbo.html')
 def kbo_submit():
     db = get_db(); c = db.cursor()
     try:
-        data = request.get_json(); user_id = int(data.get('userId')); group_id = int(data.get('groupId'))
-        teams = data.get('teams', [])
-        if len(teams) != 5: return {'ok': False}, 400
+        data          = request.get_json()
+        user_id       = int(data.get('userId'))
+        group_id      = int(data.get('groupId'))
+        teams         = data.get('teams', [])
+        is_admin_req  = data.get('isAdmin', False)
+        admin_user_id = data.get('adminUserId')
+
+        if len(teams) != 5: return {'ok': False, 'error': '5개 팀을 선택해주세요.'}, 400
+
+        # ★ 관리자 검증: isAdmin=True면 adminUserId가 실제 관리자인지 확인
+        if is_admin_req:
+            if not admin_user_id or int(admin_user_id) not in ADMIN_IDS:
+                return {'ok': False, 'error': '관리자 권한이 없어요.'}, 403
+        else:
+            # 일반 유저: 참여 가능 시간 체크
+            now_kst = datetime.now(KST)
+            if not is_vote_time(now_kst):
+                return {'ok': False, 'error': '참여 가능 시간이 아니에요.'}, 403
+
         today = datetime.now(KST).date()
         c.execute("SELECT first_name, username FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
         row = c.fetchone()
-        # ★ userName 우선 (웹앱에서 직접 입력), 없으면 points 테이블
+
+        # ★ userName 우선 (직접 입력), 없으면 points 테이블
         user_name_from_client = (data.get('userName') or '').strip()
         if user_name_from_client:
             first_name = clean_name(user_name_from_client)
-            username = row[1] if row else ''
+            username   = row[1] if row else ''
         else:
             first_name = clean_name(row[0]) if row and row[0] else ''
-            username = row[1] if row else ''
+            username   = row[1] if row else ''
             if not first_name: first_name = f"@{username}" if username else f"id:{user_id}"
+
         teams_str = ','.join(teams)
         c.execute("SELECT id FROM kbo_votes WHERE user_id=%s AND group_id=%s AND vote_date=%s", (user_id, group_id, today))
         existing = c.fetchone()
@@ -777,18 +793,21 @@ def kbo_submit():
             c.execute("UPDATE kbo_votes SET teams=%s, first_name=%s, username=%s WHERE user_id=%s AND group_id=%s AND vote_date=%s",
                       (teams_str, first_name, username, user_id, group_id, today))
             action_label = "수정 완료"
+            action       = "수정"
         else:
             c.execute("INSERT INTO kbo_votes (user_id, group_id, first_name, username, teams, vote_date) VALUES (%s,%s,%s,%s,%s,%s)",
                       (user_id, group_id, first_name, username, teams_str, today))
             action_label = "예측 완료"
+            action       = "완료"
         c.execute("SELECT COUNT(*) FROM kbo_votes WHERE group_id=%s AND vote_date=%s", (group_id, today))
         total = c.fetchone()[0]; db.commit()
         team_display = '\n'.join([f"   {i+1}. {t}" for i, t in enumerate(teams)])
-        bot.send_message(group_id, f"⚾ KBO 승 {action_label}\n   👤 {first_name}님\n\n   선택한 팀 (5개):\n{team_display}\n\n   👥 오늘 참여자: {total}명")
-        return {'ok': True}, 200
+        admin_tag = " (관리자 수정)" if is_admin_req else ""
+        bot.send_message(group_id, f"⚾ KBO 승 {action_label}{admin_tag}\n   👤 {first_name}님\n\n   선택한 팀 (5개):\n{team_display}\n\n   👥 오늘 참여자: {total}명")
+        return {'ok': True, 'action': action}, 200
     except Exception as e:
         import traceback; print(f"kbo_submit error: {e}\n{traceback.format_exc()}")
-        return {'ok': False}, 500
+        return {'ok': False, 'error': str(e)}, 500
     finally: c.close(); db.close()
 
 @app.route('/kbo/list')
@@ -802,7 +821,7 @@ def kbo_list():
         for row in rows:
             uid = row[0]; first = clean_name(row[1] or ''); uname = row[2] or ''
             name = first if first else (('@' + uname) if uname else ('id:' + str(uid)))
-            result.append({'name': name, 'teams': row[3].split(',')})
+            result.append({'userId': uid, 'name': name, 'teams': row[3].split(',')})  # ★ userId 추가
         return result, 200
     except: return [], 500
     finally: c.close(); db.close()
