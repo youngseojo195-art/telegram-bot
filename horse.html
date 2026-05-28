@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>도파민 카지노 — 경마</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+KR:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --gold:#d4a843;--gold2:#f0c96a;--gold3:#8b6914;
+  --bg:#080810;--bg2:#0e0e1c;--bg3:#161628;--bg4:#1e1e35;
+  --border:#2a2a45;--text:#e8e0cc;--sub:#6a6a8a;
+}
+html,body{height:100%;width:100%;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;}
+
+.topbar{background:linear-gradient(180deg,#0e0e1e,#080810);border-bottom:1px solid var(--border);padding:12px 16px 10px;text-align:center;position:sticky;top:0;z-index:50;}
+.casino-label{font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:var(--gold3);margin-bottom:3px;}
+.top-title{font-family:'Cinzel',serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.point-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;justify-content:space-between;}
+.point-val{font-size:16px;font-weight:700;color:var(--gold);}
+.status-row{padding:10px 14px;display:flex;align-items:center;justify-content:space-between;}
+.status-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;}
+.s-idle{background:#1a1a2a;color:var(--sub);border:1px solid var(--border);}
+.s-betting{background:#1a1500;color:var(--gold);border:1px solid var(--gold3);animation:blink 1.5s infinite;}
+.s-running{background:#0a1a10;color:#44ee88;border:1px solid #22aa55;animation:blink 1s infinite;}
+.s-closed{background:#1a0a0a;color:#ee4444;border:1px solid #aa2222;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.6}}
+
+.main{flex:1;overflow-y:auto;padding:0 14px 120px;display:flex;flex-direction:column;gap:12px;}
+
+/* 경마 트랙 */
+.horse-track{background:linear-gradient(180deg,#060e04,#081006);border:1px solid #1a3a12;border-radius:14px;padding:12px;overflow:hidden;}
+.track-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.track-title{font-family:'Cinzel',serif;font-size:11px;color:var(--gold);letter-spacing:1px;}
+
+.horse-lane{
+  position:relative;height:48px;border-radius:8px;
+  background:linear-gradient(90deg,#060e04,#081206);
+  border:1px solid rgba(255,255,255,0.05);
+  margin-bottom:6px;overflow:hidden;
+}
+.horse-lane:last-child{margin-bottom:0;}
+.horse-lane::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,transparent,transparent 30px,rgba(255,255,255,0.015) 30px,rgba(255,255,255,0.015) 31px);
+}
+.lane-num{
+  position:absolute;left:6px;top:50%;transform:translateY(-50%);
+  width:20px;height:20px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:900;z-index:2;
+}
+.finish-line{position:absolute;right:0;top:0;bottom:0;width:12px;background:repeating-linear-gradient(180deg,#fff 0px,#fff 6px,#000 6px,#000 12px);opacity:0.4;}
+.horse-racer{
+  position:absolute;top:50%;transform:translateY(-50%);
+  left:24px;font-size:20px;z-index:3;
+  transition:left 0.08s linear;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+}
+.horse-racer.winner-pulse{animation:wp 0.4s ease-in-out infinite;}
+@keyframes wp{0%,100%{transform:translateY(-50%) scale(1)}50%{transform:translateY(-50%) scale(1.15)}}
+.horse-name-tag{
+  position:absolute;right:18px;top:50%;transform:translateY(-50%);
+  font-size:10px;font-weight:700;opacity:0.6;z-index:2;
+}
+
+/* 말 선택 */
+.horse-grid{display:flex;flex-direction:column;gap:8px;}
+.horse-opt{
+  border-radius:12px;border:1.5px solid var(--border);
+  background:var(--bg2);padding:12px 14px;
+  cursor:pointer;transition:all 0.18s;
+  display:flex;align-items:center;gap:12px;
+}
+.horse-opt:active{transform:scale(0.98);}
+.horse-opt.selected{border-width:2px;}
+.horse-emoji{font-size:28px;width:40px;text-align:center;}
+.horse-info{flex:1;}
+.horse-opt-name{font-size:14px;font-weight:800;}
+.horse-opt-odds{font-size:12px;color:var(--gold);}
+.horse-pool{font-size:10px;color:var(--sub);margin-top:2px;}
+.horse-bar-bg{flex-shrink:0;width:60px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;}
+.horse-bar-fill{height:100%;border-radius:3px;transition:width 0.4s;}
+
+.card-inner{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;}
+.card-title{font-family:'Cinzel',serif;font-size:11px;color:var(--gold);letter-spacing:1px;margin-bottom:12px;}
+.presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
+.preset{padding:9px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;text-align:center;}
+.preset:active{background:var(--bg4);}
+.amt-row{display:flex;gap:8px;align-items:center;}
+.amt-inp{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;padding:11px 14px;outline:none;}
+.amt-inp:focus{border-color:var(--gold3);}
+.bet-btn{width:100%;padding:16px;border-radius:14px;border:none;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,var(--gold),var(--gold3));color:#0a0800;box-shadow:0 4px 16px rgba(212,168,67,0.2);margin-top:10px;}
+.bet-btn.off{background:var(--border);color:#333;cursor:default;box-shadow:none;}
+.bet-btn:not(.off):active{transform:scale(0.98);}
+.my-bet-card{background:#0a1520;border:1px solid rgba(74,158,255,0.2);border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;}
+.idle-msg{text-align:center;padding:28px 20px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;}
+.overlay.show{display:flex;}
+.ov-emoji{font-size:64px;animation:pop 0.4s ease-out;}
+@keyframes pop{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+.ov-title{font-family:'Cinzel',serif;font-size:24px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.ov-sub{font-size:13px;color:var(--sub);line-height:1.7;}
+.ov-payout{font-size:28px;font-weight:900;}
+.ov-close{padding:13px 30px;border-radius:12px;border:1px solid var(--gold3);background:transparent;color:var(--gold);font-size:14px;font-weight:600;cursor:pointer;}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--gold);color:#0a0800;font-size:13px;font-weight:700;padding:10px 20px;border-radius:20px;z-index:500;opacity:0;transition:opacity 0.2s;white-space:nowrap;pointer-events:none;}
+.toast.show{opacity:1;}
+.toast.err{background:#cc3333;color:#fff;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="casino-label">DOPAMINE CASINO</div>
+  <div class="top-title">🐴 HORSE RACING</div>
+</div>
+<div class="point-bar">
+  <span style="font-size:11px;color:var(--sub)">💰 내 포인트</span>
+  <span class="point-val" id="my-point">— P</span>
+</div>
+<div class="status-row">
+  <div class="status-badge s-idle" id="status-badge">⏳ 대기 중</div>
+</div>
+
+<div class="main">
+  <!-- 경마 트랙 -->
+  <div class="horse-track">
+    <div class="track-title-row">
+      <span class="track-title">RACE TRACK</span>
+      <span style="font-size:11px;color:var(--sub)" id="track-st">대기 중</span>
+    </div>
+    <div id="horse-lanes"></div>
+  </div>
+
+  <!-- 내 베팅 -->
+  <div class="my-bet-card" id="my-bet-card" style="display:none">
+    <div>
+      <div style="font-size:11px;color:var(--sub)">내 베팅</div>
+      <div style="font-size:14px;font-weight:700" id="my-bet-detail">—</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;color:var(--sub)">예상 당첨</div>
+      <div style="font-size:14px;font-weight:700;color:var(--gold)" id="my-bet-exp">—</div>
+    </div>
+  </div>
+
+  <!-- 베팅 -->
+  <div id="bet-section" style="display:none">
+    <div class="card-inner">
+      <div class="card-title">— 출전마 선택 —</div>
+      <div class="horse-grid" id="horse-opts"></div>
+      <div style="height:12px"></div>
+      <div class="presets">
+        <button class="preset" onclick="setAmt(100)">100</button>
+        <button class="preset" onclick="setAmt(500)">500</button>
+        <button class="preset" onclick="setAmt(1000)">1,000</button>
+        <button class="preset" onclick="setMax()">MAX</button>
+      </div>
+      <div class="amt-row">
+        <input class="amt-inp" type="number" id="amt" placeholder="베팅 금액" min="10" oninput="refreshBtn()"/>
+        <span style="font-size:13px;color:var(--sub)">P</span>
+      </div>
+      <button class="bet-btn off" id="bet-btn" onclick="doBet()">말을 선택해주세요</button>
+    </div>
+  </div>
+
+  <div class="idle-msg" id="idle-msg">
+    <div style="font-size:44px;margin-bottom:10px" id="idle-icon">🐴</div>
+    <div style="font-family:'Cinzel',serif;font-size:16px;color:var(--gold);margin-bottom:6px" id="idle-title">경마 대기 중</div>
+    <div style="font-size:12px;color:var(--sub);line-height:1.7" id="idle-sub">관리자가 경주를 시작하면<br>베팅할 수 있어요</div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="ov-emoji" id="ov-emoji">🏆</div>
+  <div class="ov-title" id="ov-title">우승!</div>
+  <div class="ov-sub" id="ov-sub"></div>
+  <div class="ov-payout" id="ov-payout"></div>
+  <button class="ov-close" onclick="closeOverlay()">확인</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const p=new URLSearchParams(location.search);
+const userId=p.get('userId')||p.get('start')?.split('_')[0];
+const groupId=p.get('groupId')||p.get('start')?.split('_')[1];
+let state=null,picked=null,myPt=0,prevSt=null;
+let raceAnim=null,racing=false;
+let horsePos={};
+
+const HORSE_COLORS=['#4a9eff','#ff6644','#44cc88','#cc88ff','#ffd700'];
+const HORSE_EMOJIS=['🐎','🐎','🐎','🐎','🐎'];
+const DEFAULT_HORSES=[
+  {id:1,name:'번개',emoji:'⚡',win_rate:30,base_odds:2.5},
+  {id:2,name:'폭풍',emoji:'🌪️',win_rate:20,base_odds:3.5},
+  {id:3,name:'황금',emoji:'⭐',win_rate:15,base_odds:5.0},
+  {id:4,name:'다이아',emoji:'💎',win_rate:10,base_odds:7.0},
+  {id:5,name:'불꽃',emoji:'🔥',win_rate:25,base_odds:3.0},
+];
+
+function toast(msg,err=false){
+  const t=document.getElementById('toast');t.textContent=msg;
+  t.className='toast show'+(err?' err':'');setTimeout(()=>t.className='toast',2500);
+}
+function fmt(n){return Number(n||0).toLocaleString();}
+
+function buildLanes(horses){
+  const el=document.getElementById('horse-lanes');
+  el.innerHTML=horses.map((h,i)=>`
+    <div class="horse-lane" id="lane-${h.id}">
+      <div class="lane-num" style="background:${HORSE_COLORS[i]+'33'};color:${HORSE_COLORS[i]};border:1px solid ${HORSE_COLORS[i]+'66'}">${h.id}</div>
+      <div class="horse-racer" id="racer-${h.id}">${h.emoji}</div>
+      <div class="horse-name-tag" style="color:${HORSE_COLORS[i]}">${h.name}</div>
+      <div class="finish-line"></div>
+    </div>`).join('');
+  horses.forEach(h=>{ horsePos[h.id]=24; });
+}
+
+function setHorsePos(id,pct){
+  const el=document.getElementById('racer-'+id);
+  if(!el) return;
+  const lane=document.getElementById('lane-'+id);
+  if(!lane) return;
+  const laneW=lane.offsetWidth;
+  const max=laneW-40;
+  el.style.left=Math.min(max,Math.max(24,(pct/100)*max))+'px';
+}
+
+function resetHorses(horses){
+  horses.forEach(h=>{ horsePos[h.id]=0; setHorsePos(h.id,0); });
+  document.querySelectorAll('.horse-racer').forEach(el=>el.classList.remove('winner-pulse'));
+}
+
+function animHorse(winner,horses,onDone){
+  racing=true;
+  let step=0,total=120;
+  const winnerH=horses.find(h=>h.id===winner||h.name===winner);
+  if(!winnerH){if(onDone)onDone();return;}
+
+  function tick(){
+    if(step>=total){
+      racing=false;
+      horses.forEach(h=>{
+        const isWin=(h.id===winnerH.id);
+        setHorsePos(h.id,isWin?96:60+Math.random()*20);
+        if(isWin){
+          const el=document.getElementById('racer-'+h.id);
+          if(el) el.classList.add('winner-pulse');
+        }
+      });
+      if(onDone)setTimeout(onDone,600);
+      return;
+    }
+    const prog=step/total;
+    const ease=1-Math.pow(1-prog,2);
+    horses.forEach(h=>{
+      const isWin=(h.id===winnerH.id);
+      const j=(Math.random()-0.5)*3;
+      const target=isWin?ease*93:ease*(55+Math.random()*15);
+      horsePos[h.id]=Math.max(0,Math.min(93,horsePos[h.id]+(target-horsePos[h.id])*0.08+j));
+      setHorsePos(h.id,horsePos[h.id]);
+    });
+    step++;
+    raceAnim=requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+function buildHorseOpts(horses,bets){
+  const el=document.getElementById('horse-opts');
+  const totalPool=Object.values(bets||{}).reduce((a,b)=>a+(b.total||0),0);
+  el.innerHTML=horses.map((h,i)=>{
+    const pool=bets?.[h.id]?.total||bets?.[String(h.id)]?.total||0;
+    const pct=totalPool>0?pool/totalPool*100:0;
+    const odds=h.base_odds||2.5;
+    return `<div class="horse-opt" id="hopt-${h.id}" onclick="pick(${h.id})" style="border-color:${HORSE_COLORS[i]+'44'}">
+      <div class="horse-emoji">${h.emoji}</div>
+      <div class="horse-info">
+        <div class="horse-opt-name" style="color:${HORSE_COLORS[i]}">${h.name}</div>
+        <div class="horse-opt-odds">배당 x${odds.toFixed(2)}</div>
+        <div class="horse-pool">${fmt(pool)}P · ${bets?.[h.id]?.count||bets?.[String(h.id)]?.count||0}명</div>
+      </div>
+      <div>
+        <div class="horse-bar-bg"><div class="horse-bar-fill" style="width:${pct}%;background:${HORSE_COLORS[i]}"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function pick(id){
+  picked=id;
+  document.querySelectorAll('.horse-opt').forEach(el=>el.classList.remove('selected'));
+  const opt=document.getElementById('hopt-'+id);
+  if(opt){
+    const horses=state?.settings?.horses||DEFAULT_HORSES;
+    const idx=horses.findIndex(h=>h.id===id);
+    opt.classList.add('selected');
+    opt.style.borderColor=HORSE_COLORS[idx]||'var(--gold)';
+    opt.style.background=HORSE_COLORS[idx]+'11'||'var(--bg3)';
+  }
+  refreshBtn();
+}
+function setAmt(v){document.getElementById('amt').value=v;refreshBtn();}
+function setMax(){setAmt(Math.min(myPt,state?.settings?.max_bet||10000));}
+function refreshBtn(){
+  const btn=document.getElementById('bet-btn');
+  const amt=parseInt(document.getElementById('amt').value)||0;
+  const minB=state?.settings?.min_bet||10;
+  if(!picked){btn.className='bet-btn off';btn.textContent='말을 선택해주세요';return;}
+  if(amt<minB){btn.className='bet-btn off';btn.textContent=`최소 ${fmt(minB)}P 이상`;return;}
+  if(amt>myPt){btn.className='bet-btn off';btn.textContent='포인트 부족';return;}
+  const horses=state?.settings?.horses||DEFAULT_HORSES;
+  const h=horses.find(hh=>hh.id===picked);
+  const odds=h?.base_odds||2.5;
+  btn.className='bet-btn';
+  btn.textContent=`${h?.emoji||'🐎'} ${h?.name||picked} · ${fmt(amt)}P → 예상 +${fmt(Math.floor(amt*odds))}P`;
+}
+
+function render(s){
+  state=s;
+  const horses=s.settings?.horses||DEFAULT_HORSES;
+  const statusMap={idle:['s-idle','⏳ 대기 중'],betting:['s-betting','🔴 베팅 진행 중'],running:['s-running','🏇 경마 중'],closed:['s-closed','🏁 종료']};
+  const [cls,lbl]=statusMap[s.status]||statusMap.idle;
+  document.getElementById('status-badge').className='status-badge '+cls;
+  document.getElementById('status-badge').textContent=lbl;
+  document.getElementById('track-st').textContent=lbl;
+
+  buildLanes(horses);
+  const betSec=document.getElementById('bet-section');
+  const myBetCard=document.getElementById('my-bet-card');
+  const idleMsg=document.getElementById('idle-msg');
+  betSec.style.display='none'; myBetCard.style.display='none'; idleMsg.style.display='none';
+
+  if(s.status==='betting'){
+    if(s.myBet){
+      const h=horses.find(hh=>hh.id===s.myBet.betOn||String(hh.id)===String(s.myBet.betOn));
+      const odds=h?.base_odds||2.5;
+      document.getElementById('my-bet-detail').textContent=`${h?.emoji||'🐎'} ${h?.name||s.myBet.betOn} · ${fmt(s.myBet.amount)} P`;
+      document.getElementById('my-bet-exp').textContent=`+${fmt(Math.floor(s.myBet.amount*odds))} P`;
+      myBetCard.style.display='flex';
+    } else {
+      buildHorseOpts(horses,s.bets||{});
+      betSec.style.display='block';
+    }
+  } else if(s.status==='idle'||s.status==='closed'){
+    idleMsg.style.display='block';
+    document.getElementById('idle-title').textContent=s.status==='closed'?'경주 종료':'경마 대기 중';
+    document.getElementById('idle-sub').textContent=s.status==='closed'?'다음 경주를 기다려주세요':'관리자가 경주를 시작하면\n베팅할 수 있어요';
+    resetHorses(horses);
+  }
+  refreshBtn();
+}
+
+async function doBet(){
+  if(!picked||!state) return;
+  const amt=parseInt(document.getElementById('amt').value)||0;
+  if(amt<(state.settings?.min_bet||10)||amt>myPt) return;
+  const btn=document.getElementById('bet-btn');
+  btn.className='bet-btn off'; btn.textContent='⏳ 처리 중...';
+  try{
+    const res=await fetch('/casino/horse/bet',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({roundId:state.roundId,groupId:parseInt(groupId),userId:parseInt(userId),betOn:picked,amount:amt})
+    });
+    const data=await res.json();
+    if(data.ok){
+      toast(`✅ 베팅 완료!`); myPt-=amt;
+      document.getElementById('my-point').textContent=fmt(myPt)+' P';
+      await load();
+    } else { toast(data.error||'오류',true); refreshBtn(); }
+  } catch(e){ toast('서버 오류',true); refreshBtn(); }
+}
+
+function showResult(s){
+  const winner=s.result;
+  const horses=s.settings?.horses||DEFAULT_HORSES;
+  const winH=horses.find(h=>h.id===winner||String(h.id)===String(winner));
+  const myBetOn=s.myBet?.betOn;
+  const won=myBetOn&&String(myBetOn)===String(winner);
+  const odds=winH?.base_odds||2.5;
+  const payout=won?Math.floor((s.myBet?.amount||0)*odds):0;
+
+  animHorse(winner,horses,()=>{
+    document.getElementById('ov-emoji').textContent=won?'🏆':'💸';
+    document.getElementById('ov-title').textContent=`${winH?.emoji||'🐎'} ${winH?.name||winner} 우승!`;
+    if(!myBetOn){
+      document.getElementById('ov-sub').textContent='이번 라운드는 베팅하지 않으셨어요.';
+      document.getElementById('ov-payout').textContent='';
+    } else if(won){
+      document.getElementById('ov-sub').textContent='🎉 베팅 성공!';
+      document.getElementById('ov-payout').textContent=`+${fmt(payout)} P 획득!`;
+      document.getElementById('ov-payout').style.color='#44ee88';
+      myPt+=payout; document.getElementById('my-point').textContent=fmt(myPt)+' P';
+    } else {
+      document.getElementById('ov-sub').textContent='아쉬워요. 다음 기회에!';
+      document.getElementById('ov-payout').textContent=`-${fmt(s.myBet?.amount||0)} P`;
+      document.getElementById('ov-payout').style.color='#ee4444';
+    }
+    document.getElementById('overlay').classList.add('show');
+  });
+}
+
+function closeOverlay(){ document.getElementById('overlay').classList.remove('show'); load(); }
+
+async function load(){
+  try{
+    const res=await fetch(`/casino/horse/state?groupId=${groupId}&userId=${userId}`);
+    const data=await res.json();
+    if(data.error) return;
+    if(prevSt==='running'&&data.status==='closed'&&data.result&&!racing) showResult(data);
+    prevSt=data.status;
+    render(data);
+  } catch(e){}
+}
+
+async function loadPt(){
+  try{
+    const res=await fetch(`/casino/users?groupId=${groupId}`);
+    const users=await res.json();
+    const me=users.find(u=>String(u.userId)===String(userId));
+    if(me){ myPt=me.point; document.getElementById('my-point').textContent=fmt(myPt)+' P'; }
+  } catch(e){}
+}
+
+async function init(){ await loadPt(); await load(); setInterval(load,3000); }
+init();
+</script>
+</body>
+</html>
