@@ -48,6 +48,7 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 <b>[평생]</b> · <a href="https://t.me/gamte59/94">띵벳</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/44">지엑스뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/46">케이비씨겜</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/49">블록체인바카라</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/60">우루스뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/62">마닐라</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/70">미우카지노</a>
@@ -1820,6 +1821,276 @@ def race_result():
 # ─────────────────────────────────────────────────────────
 # /카지노 커맨드
 # ─────────────────────────────────────────────────────────
+
+
+# ─────────────────────────────────────────────────────────
+# 바카라
+# ─────────────────────────────────────────────────────────
+@app.route('/casino/baccarat')
+def serve_baccarat(): return send_from_directory('.','baccarat.html')
+
+@app.route('/casino/baccarat/state')
+def baccarat_state():
+    db=get_db();c=db.cursor()
+    try:
+        group_id=int(request.args.get('groupId',0))
+        user_id=int(request.args.get('userId',0))
+        c.execute("SELECT id,status,result,settings FROM casino_games WHERE group_id=%s AND game_id='baccarat' ORDER BY id DESC LIMIT 1",(group_id,))
+        row=c.fetchone()
+        if not row: return {'status':'idle','roundId':None,'myBet':None,'settings':get_casino_settings(group_id,'baccarat')},200
+        round_id,status,result,settings=row
+        my_bet=None
+        if user_id:
+            c.execute("SELECT bet_on,amount FROM casino_bets WHERE round_id=%s AND user_id=%s",(round_id,user_id))
+            mb=c.fetchone()
+            if mb: my_bet={'betOn':mb[0],'amount':mb[1]}
+        return {'status':status,'roundId':round_id,'result':result,'myBet':my_bet,'settings':get_casino_settings(group_id,'baccarat')},200
+    except Exception as e: return {'error':str(e)},500
+    finally: c.close();db.close()
+
+@app.route('/casino/baccarat/open',methods=['POST'])
+def baccarat_open():
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json(); admin_id=int(data.get('adminId',0)); group_id=int(data.get('groupId',0))
+        if admin_id not in ADMIN_IDS: return {'ok':False,'error':'관리자만 시작할 수 있어요.'},403
+        c.execute("SELECT id FROM casino_games WHERE group_id=%s AND game_id='baccarat' AND status NOT IN ('closed','cancelled')",(group_id,))
+        if c.fetchone(): return {'ok':False,'error':'이미 진행 중인 게임이 있어요.'},400
+        settings=get_casino_settings(group_id,'baccarat')
+        c.execute("INSERT INTO casino_games (game_id,group_id,status,settings) VALUES ('baccarat',%s,'betting',%s) RETURNING id",(group_id,json.dumps(settings)))
+        round_id=c.fetchone()[0]; db.commit()
+        casino_url=f"{WEBAPP_BASE_URL}/casino/baccarat?groupId={group_id}"
+        markup=types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("🃏 바카라 베팅하기",url=casino_url))
+        bot.send_message(group_id,f"🃏 <b>바카라 베팅 시작!</b>\n──────────────────\n🔵 PLAYER vs 🔴 BANKER\n아래 버튼을 눌러 베팅하세요!",reply_markup=markup,parse_mode='HTML')
+        return {'ok':True,'roundId':round_id},200
+    except Exception as e: return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
+@app.route('/casino/baccarat/bet',methods=['POST'])
+def baccarat_bet():
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json(); round_id=int(data.get('roundId',0)); group_id=int(data.get('groupId',0))
+        user_id=int(data.get('userId',0)); bet_on=data.get('betOn',''); amount=int(data.get('amount',0))
+        if bet_on not in ['player','banker','tie']: return {'ok':False,'error':'올바른 베팅 대상을 선택해주세요.'},400
+        if is_casino_blacklisted(group_id,user_id): return {'ok':False,'error':'게임 이용이 제한된 계정이에요.'},403
+        settings=get_casino_settings(group_id,'baccarat')
+        if amount<settings.get('min_bet',10): return {'ok':False,'error':f"최소 {settings['min_bet']:,}P 이상 베팅해주세요."},400
+        if amount>settings.get('max_bet',10000): return {'ok':False,'error':f"최대 {settings['max_bet']:,}P까지 베팅 가능해요."},400
+        c.execute("SELECT status FROM casino_games WHERE id=%s",(round_id,))
+        row=c.fetchone()
+        if not row or row[0]!='betting': return {'ok':False,'error':'베팅 시간이 아니에요.'},400
+        c.execute("SELECT id FROM casino_bets WHERE round_id=%s AND user_id=%s",(round_id,user_id))
+        if c.fetchone(): return {'ok':False,'error':'이미 베팅하셨어요.'},400
+        c.execute("SELECT point FROM points WHERE user_id=%s AND group_id=%s",(user_id,group_id))
+        pt=c.fetchone()
+        if not pt or pt[0]<amount: return {'ok':False,'error':'포인트가 부족해요.'},400
+        c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s",(amount,user_id,group_id))
+        c.execute("INSERT INTO casino_bets (game_id,round_id,group_id,user_id,bet_on,amount) VALUES ('baccarat',%s,%s,%s,%s,%s)",(round_id,group_id,user_id,bet_on,amount))
+        db.commit()
+        return {'ok':True},200
+    except Exception as e: return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
+@app.route('/casino/baccarat/result',methods=['POST'])
+def baccarat_result():
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json(); admin_id=int(data.get('adminId',0)); round_id=int(data.get('roundId',0)); group_id=int(data.get('groupId',0))
+        if admin_id not in ADMIN_IDS: return {'ok':False,'error':'관리자만 결과를 처리할 수 있어요.'},403
+        settings=get_casino_settings(group_id,'baccarat')
+        force=settings.get('force_result'); p_rate=settings.get('player_win_rate',45); b_rate=settings.get('banker_win_rate',46)
+        if force in ['player','banker','tie']: result=force
+        else:
+            r=random.randint(1,100)
+            if r<=p_rate: result='player'
+            elif r<=p_rate+b_rate: result='banker'
+            else: result='tie'
+        odds_map={'player':1.95,'banker':1.95,'tie':8.0}
+        c.execute("SELECT id,user_id,bet_on,amount FROM casino_bets WHERE round_id=%s",(round_id,))
+        bets=c.fetchall()
+        winners=[]
+        for bet in bets:
+            if bet[2]==result:
+                payout=int(bet[3]*odds_map.get(result,2))
+                c.execute("UPDATE casino_bets SET won=TRUE,payout=%s WHERE id=%s",(payout,bet[0]))
+                c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s",(payout,bet[1],group_id))
+                winners.append(payout)
+            else:
+                c.execute("UPDATE casino_bets SET won=FALSE,payout=0 WHERE id=%s",(bet[0],))
+        c.execute("UPDATE casino_games SET status='closed',result=%s,ended_at=NOW() WHERE id=%s",(result,round_id))
+        db.commit()
+        labels={'player':'🔵 PLAYER WIN','banker':'🔴 BANKER WIN','tie':'🟢 TIE'}
+        total_pool=sum(b[3] for b in bets); total_payout=sum(winners)
+        bot.send_message(group_id,f"🃏 <b>바카라 결과!</b>\n──────────────────\n🏆 <b>{labels.get(result,result)}</b>\n💰 총 베팅: {total_pool:,}P\n🎁 총 지급: {total_payout:,}P\n👥 참여자: {len(bets)}명",parse_mode='HTML')
+        return {'ok':True,'result':result},200
+    except Exception as e: return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
+# ─────────────────────────────────────────────────────────
+# 경마
+# ─────────────────────────────────────────────────────────
+@app.route('/casino/horse')
+def serve_horse(): return send_from_directory('.','horse.html')
+
+@app.route('/casino/horse/state')
+def horse_state():
+    db=get_db();c=db.cursor()
+    try:
+        group_id=int(request.args.get('groupId',0)); user_id=int(request.args.get('userId',0))
+        c.execute("SELECT id,status,result,settings FROM casino_games WHERE group_id=%s AND game_id='horse' ORDER BY id DESC LIMIT 1",(group_id,))
+        row=c.fetchone()
+        settings=get_casino_settings(group_id,'horse')
+        if not row: return {'status':'idle','roundId':None,'myBet':None,'bets':{},'settings':settings},200
+        round_id,status,result,_=row
+        c.execute("SELECT bet_on,SUM(amount),COUNT(*) FROM casino_bets WHERE round_id=%s GROUP BY bet_on",(round_id,))
+        bets={str(r[0]):{'total':r[1],'count':r[2]} for r in c.fetchall()}
+        my_bet=None
+        if user_id:
+            c.execute("SELECT bet_on,amount FROM casino_bets WHERE round_id=%s AND user_id=%s",(round_id,user_id))
+            mb=c.fetchone()
+            if mb: my_bet={'betOn':mb[0],'amount':mb[1]}
+        return {'status':status,'roundId':round_id,'result':result,'bets':bets,'myBet':my_bet,'settings':settings},200
+    except Exception as e: return {'error':str(e)},500
+    finally: c.close();db.close()
+
+@app.route('/casino/horse/open',methods=['POST'])
+def horse_open():
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json(); admin_id=int(data.get('adminId',0)); group_id=int(data.get('groupId',0))
+        if admin_id not in ADMIN_IDS: return {'ok':False,'error':'관리자만 시작할 수 있어요.'},403
+        c.execute("SELECT id FROM casino_games WHERE group_id=%s AND game_id='horse' AND status NOT IN ('closed','cancelled')",(group_id,))
+        if c.fetchone(): return {'ok':False,'error':'이미 진행 중인 경마가 있어요.'},400
+        settings=get_casino_settings(group_id,'horse')
+        c.execute("INSERT INTO casino_games (game_id,group_id,status,settings) VALUES ('horse',%s,'betting',%s) RETURNING id",(group_id,json.dumps(settings)))
+        round_id=c.fetchone()[0]; db.commit()
+        horses=settings.get('horses',[])
+        horse_list="\n".join([f"{h['emoji']} {h['name']} (배당 x{h.get('base_odds',2.5)})" for h in horses])
+        casino_url=f"{WEBAPP_BASE_URL}/casino/horse?groupId={group_id}"
+        markup=types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("🐴 경마 베팅하기",url=casino_url))
+        bot.send_message(group_id,f"🐴 <b>경마 베팅 시작!</b>\n──────────────────\n{horse_list}\n──────────────────\n아래 버튼을 눌러 베팅하세요!",reply_markup=markup,parse_mode='HTML')
+        return {'ok':True,'roundId':round_id},200
+    except Exception as e: return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
+@app.route('/casino/horse/bet',methods=['POST'])
+def horse_bet():
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json(); round_id=int(data.get('roundId',0)); group_id=int(data.get('groupId',0))
+        user_id=int(data.get('userId',0)); bet_on=data.get('betOn'); amount=int(data.get('amount',0))
+        if is_casino_blacklisted(group_id,user_id): return {'ok':False,'error':'게임 이용이 제한된 계정이에요.'},403
+        settings=get_casino_settings(group_id,'horse')
+        if amount<settings.get('min_bet',10): return {'ok':False,'error':f"최소 {settings['min_bet']:,}P 이상 베팅해주세요."},400
+        if amount>settings.get('max_bet',10000): return {'ok':False,'error':f"최대 {settings['max_bet']:,}P까지 베팅 가능해요."},400
+        c.execute("SELECT status FROM casino_games WHERE id=%s",(round_id,))
+        row=c.fetchone()
+        if not row or row[0]!='betting': return {'ok':False,'error':'베팅 시간이 아니에요.'},400
+        c.execute("SELECT id FROM casino_bets WHERE round_id=%s AND user_id=%s",(round_id,user_id))
+        if c.fetchone(): return {'ok':False,'error':'이미 베팅하셨어요.'},400
+        c.execute("SELECT point FROM points WHERE user_id=%s AND group_id=%s",(user_id,group_id))
+        pt=c.fetchone()
+        if not pt or pt[0]<amount: return {'ok':False,'error':'포인트가 부족해요.'},400
+        c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s",(amount,user_id,group_id))
+        c.execute("INSERT INTO casino_bets (game_id,round_id,group_id,user_id,bet_on,amount) VALUES ('horse',%s,%s,%s,%s,%s)",(round_id,group_id,user_id,str(bet_on),amount))
+        db.commit()
+        return {'ok':True},200
+    except Exception as e: return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
+@app.route('/casino/horse/result',methods=['POST'])
+def horse_result():
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json(); admin_id=int(data.get('adminId',0)); round_id=int(data.get('roundId',0)); group_id=int(data.get('groupId',0))
+        if admin_id not in ADMIN_IDS: return {'ok':False,'error':'관리자만 결과를 처리할 수 있어요.'},403
+        settings=get_casino_settings(group_id,'horse')
+        horses=settings.get('horses',[{'id':1,'name':'번개','win_rate':30,'base_odds':2.5},{'id':2,'name':'폭풍','win_rate':20,'base_odds':3.5},{'id':3,'name':'황금','win_rate':15,'base_odds':5.0},{'id':4,'name':'다이아','win_rate':10,'base_odds':7.0},{'id':5,'name':'불꽃','win_rate':25,'base_odds':3.0}])
+        force=settings.get('force_result')
+        if force:
+            winner_h=next((h for h in horses if str(h['id'])==str(force) or h['name']==force),None)
+        else:
+            total_rate=sum(h.get('win_rate',20) for h in horses)
+            r=random.randint(1,total_rate); acc=0; winner_h=horses[-1]
+            for h in horses:
+                acc+=h.get('win_rate',20)
+                if r<=acc: winner_h=h; break
+        winner_id=str(winner_h['id']); odds=winner_h.get('base_odds',2.5)
+        c.execute("SELECT id,user_id,bet_on,amount FROM casino_bets WHERE round_id=%s",(round_id,))
+        bets=c.fetchall(); winners=[]
+        for bet in bets:
+            if str(bet[2])==winner_id:
+                payout=int(bet[3]*odds)
+                c.execute("UPDATE casino_bets SET won=TRUE,payout=%s WHERE id=%s",(payout,bet[0]))
+                c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s",(payout,bet[1],group_id))
+                winners.append(payout)
+            else: c.execute("UPDATE casino_bets SET won=FALSE,payout=0 WHERE id=%s",(bet[0],))
+        c.execute("UPDATE casino_games SET status='closed',result=%s,ended_at=NOW() WHERE id=%s",(winner_id,round_id))
+        db.commit()
+        total_pool=sum(b[3] for b in bets); total_payout=sum(winners)
+        bot.send_message(group_id,f"🐴 <b>경마 결과!</b>\n──────────────────\n🥇 <b>{winner_h.get('emoji','')} {winner_h['name']} 우승!</b>\n📊 배당: x{odds}\n💰 총 베팅: {total_pool:,}P\n🎁 총 지급: {total_payout:,}P",parse_mode='HTML')
+        return {'ok':True,'result':winner_id,'winner':winner_h},200
+    except Exception as e: return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
+# ─────────────────────────────────────────────────────────
+# 빅휠 (혼자 즉시 스핀)
+# ─────────────────────────────────────────────────────────
+@app.route('/casino/bigwheel')
+def serve_bigwheel(): return send_from_directory('.','bigwheel.html')
+
+@app.route('/casino/bigwheel/spin',methods=['POST'])
+def bigwheel_spin():
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json(); group_id=int(data.get('groupId',0)); user_id=int(data.get('userId',0))
+        bet_on=int(data.get('betOn',0)); amount=int(data.get('amount',0))
+        if is_casino_blacklisted(group_id,user_id): return {'ok':False,'error':'게임 이용이 제한된 계정이에요.'},403
+        settings=get_casino_settings(group_id,'bigwheel')
+        segs=settings.get('segments',[
+            {'label':'2배','multiplier':2,'color':'#1a3a6a','prob':30},
+            {'label':'3배','multiplier':3,'color':'#1a4a2a','prob':20},
+            {'label':'5배','multiplier':5,'color':'#4a3000','prob':15},
+            {'label':'10배','multiplier':10,'color':'#4a1010','prob':10},
+            {'label':'20배','multiplier':20,'color':'#3a1050','prob':5},
+            {'label':'꽝','multiplier':0,'color':'#1a1a2a','prob':20},
+        ])
+        if amount<settings.get('min_bet',10): return {'ok':False,'error':f"최소 {settings['min_bet']:,}P 이상"},400
+        if amount>settings.get('max_bet',10000): return {'ok':False,'error':f"최대 {settings['max_bet']:,}P까지"},400
+        c.execute("SELECT point FROM points WHERE user_id=%s AND group_id=%s",(user_id,group_id))
+        pt=c.fetchone()
+        if not pt or pt[0]<amount: return {'ok':False,'error':'포인트가 부족해요.'},400
+
+        # 결과 결정
+        total_prob=sum(s.get('prob',10) for s in segs)
+        r=random.randint(1,total_prob); acc=0; result_idx=len(segs)-1
+        for i,s in enumerate(segs):
+            acc+=s.get('prob',10)
+            if r<=acc: result_idx=i; break
+
+        result_seg=segs[result_idx]
+        payout=int(amount*result_seg['multiplier']) if result_seg['multiplier']>0 else 0
+        house_cut=int(amount*(settings.get('house_edge',5)/100))
+        net_payout=max(0,payout-house_cut) if payout>0 else 0
+
+        # 포인트 처리
+        c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s",(amount,user_id,group_id))
+        if net_payout>0:
+            c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s",(net_payout,user_id,group_id))
+
+        # 기록
+        c.execute("INSERT INTO casino_games (game_id,group_id,status,result,settings,ended_at) VALUES ('bigwheel',%s,'closed',%s,%s,NOW())",(group_id,result_seg['label'],json.dumps(settings)))
+        round_id=c.lastrowid if hasattr(c,'lastrowid') else None
+        db.commit()
+        return {'ok':True,'resultIdx':result_idx,'result':result_seg,'payout':net_payout},200
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
 
 # ─────────────────────────────────────────────────────────
 # Webhook
