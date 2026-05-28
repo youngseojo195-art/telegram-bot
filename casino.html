@@ -247,7 +247,7 @@ body::before{
 
   <!-- 바카라 -->
   <div class="game-card baccarat-card" onclick="goGame('baccarat')">
-    <div class="badge-soon">SOON</div>
+    <div class="badge-new">NEW</div>
     <div class="game-inner">
       <div class="game-emoji-wrap">🃏</div>
       <div class="game-info">
@@ -264,7 +264,7 @@ body::before{
 
   <!-- 경마 -->
   <div class="game-card horse-card" onclick="goGame('horse')">
-    <div class="badge-soon">SOON</div>
+    <div class="badge-new">NEW</div>
     <div class="game-inner">
       <div class="game-emoji-wrap">🐴</div>
       <div class="game-info">
@@ -281,7 +281,7 @@ body::before{
 
   <!-- 빅휠 -->
   <div class="game-card bigwheel-card" onclick="goGame('bigwheel')">
-    <div class="badge-soon">SOON</div>
+    <div class="badge-new">NEW</div>
     <div class="game-inner">
       <div class="game-emoji-wrap">🎡</div>
       <div class="game-info">
@@ -327,7 +327,7 @@ function showToast(msg, isError=false) {
 }
 
 function goGame(game) {
-  const ready = ['race'];
+  const ready = ['race','baccarat','horse','bigwheel'];
   if (!ready.includes(game)) {
     showToast('🚧 준비 중이에요! 곧 오픈해요.', true);
     return;
