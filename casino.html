@@ -296,6 +296,40 @@ body::before{
     </div>
   </div>
 
+  <!-- 슬롯머신 -->
+  <div class="game-card" onclick="goGame('slots')" style="border-color:#3a1a5a44">
+    <div class="badge-new">NEW</div>
+    <div class="game-inner">
+      <div class="game-emoji-wrap" style="background:linear-gradient(135deg,#150520,#1a0828)">🎰</div>
+      <div class="game-info">
+        <div class="game-name" style="color:#cc88ff">SLOT MACHINE</div>
+        <div class="game-desc">3릴 슬롯머신, 혼자 즉시 플레이<br>최대 50배 잭팟 도전</div>
+        <div class="game-tags">
+          <span class="game-tag" style="border-color:#441155;color:#cc88ff">즉시 플레이</span>
+          <span class="game-tag" style="border-color:#332244;color:#aa66ee">JACKPOT x50</span>
+        </div>
+      </div>
+      <div class="game-arrow" style="color:#aa55ee">›</div>
+    </div>
+  </div>
+
+  <!-- 룰렛 -->
+  <div class="game-card" onclick="goGame('roulette')" style="border-color:#4a1a1a44">
+    <div class="badge-new">NEW</div>
+    <div class="game-inner">
+      <div class="game-emoji-wrap" style="background:linear-gradient(135deg,#1a0505,#2a0808)">🎡</div>
+      <div class="game-info">
+        <div class="game-name" style="color:#ff8888">ROULETTE</div>
+        <div class="game-desc">유럽식 룰렛, 색상/숫자/홀짝 베팅<br>숫자 적중 시 35배 배당</div>
+        <div class="game-tags">
+          <span class="game-tag" style="border-color:#551122;color:#ff6666">즉시 플레이</span>
+          <span class="game-tag" style="border-color:#441111;color:#ee4444">숫자 x35</span>
+        </div>
+      </div>
+      <div class="game-arrow" style="color:#cc4444">›</div>
+    </div>
+  </div>
+
   <div class="divider"></div>
 
   <!-- 통계 -->
@@ -327,7 +361,7 @@ function showToast(msg, isError=false) {
 }
 
 function goGame(game) {
-  const ready = ['race','baccarat','horse','bigwheel'];
+  const ready = ['race','baccarat','horse','bigwheel','slots','roulette'];
   if (!ready.includes(game)) {
     showToast('🚧 준비 중이에요! 곧 오픈해요.', true);
     return;
