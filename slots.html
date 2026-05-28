@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>도파민 카지노 — 슬롯머신</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+KR:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --gold:#d4a843;--gold2:#f0c96a;--gold3:#8b6914;
+  --bg:#080810;--bg2:#0e0e1c;--bg3:#161628;--bg4:#1e1e35;
+  --border:#2a2a45;--text:#e8e0cc;--sub:#6a6a8a;
+}
+html,body{height:100%;width:100%;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;}
+
+.topbar{background:linear-gradient(180deg,#0e0e1e,#080810);border-bottom:1px solid var(--border);padding:12px 16px 10px;text-align:center;position:sticky;top:0;z-index:50;}
+.casino-label{font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:var(--gold3);margin-bottom:3px;}
+.top-title{font-family:'Cinzel',serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+
+.point-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;justify-content:space-between;}
+.point-val{font-size:16px;font-weight:700;color:var(--gold);}
+
+.main{flex:1;overflow-y:auto;padding:14px 14px 100px;display:flex;flex-direction:column;gap:14px;}
+
+/* 슬롯 머신 본체 */
+.machine-body{
+  background:linear-gradient(180deg,#1a0a2a,#0e051a);
+  border:2px solid #3a1a5a;border-radius:20px;
+  padding:20px 16px;
+  box-shadow:0 8px 32px rgba(120,50,200,0.2),inset 0 0 40px rgba(0,0,0,0.4);
+  position:relative;overflow:hidden;
+}
+.machine-body::before{
+  content:'';position:absolute;inset:0;border-radius:18px;
+  background:linear-gradient(135deg,rgba(255,255,255,0.03) 0%,transparent 50%);
+  pointer-events:none;
+}
+.machine-title{
+  font-family:'Cinzel',serif;font-size:11px;letter-spacing:4px;
+  color:#aa66ff;text-align:center;margin-bottom:14px;
+}
+
+/* 릴 창 */
+.reels-wrap{
+  background:#050510;border:2px solid #2a1a4a;border-radius:14px;
+  padding:10px;display:flex;gap:8px;
+  box-shadow:inset 0 4px 20px rgba(0,0,0,0.8);
+  position:relative;
+}
+/* 중앙 강조선 */
+.reels-wrap::before,.reels-wrap::after{
+  content:'';position:absolute;left:8px;right:8px;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(255,215,0,0.5),transparent);
+  z-index:5;pointer-events:none;
+}
+.reels-wrap::before{top:calc(50% - 40px);}
+.reels-wrap::after{top:calc(50% + 36px);}
+
+.reel{
+  flex:1;height:220px;overflow:hidden;border-radius:8px;
+  background:linear-gradient(180deg,#020208,#030312,#020208);
+  position:relative;
+}
+/* 위아래 페이드 */
+.reel::before,.reel::after{
+  content:'';position:absolute;left:0;right:0;height:60px;z-index:4;pointer-events:none;
+}
+.reel::before{top:0;background:linear-gradient(180deg,#050510,transparent);}
+.reel::after{bottom:0;background:linear-gradient(0deg,#050510,transparent);}
+
+.reel-inner{
+  display:flex;flex-direction:column;
+  transition:transform 0.05s linear;
+}
+.reel-cell{
+  height:74px;display:flex;align-items:center;justify-content:center;
+  font-size:40px;flex-shrink:0;
+  filter:drop-shadow(0 2px 8px rgba(0,0,0,0.6));
+}
+
+/* 잭팟 효과 */
+.jackpot-flash{animation:jackpotFlash 0.3s ease-in-out 6;}
+@keyframes jackpotFlash{0%,100%{box-shadow:inset 0 0 0 rgba(255,215,0,0)}50%{box-shadow:inset 0 0 30px rgba(255,215,0,0.4),0 0 40px rgba(255,215,0,0.3);}}
+
+/* 결과 표시 */
+.result-display{
+  margin-top:12px;text-align:center;min-height:32px;
+  font-family:'Cinzel',serif;font-size:14px;font-weight:700;
+  letter-spacing:1px;
+}
+
+/* 배당표 */
+.paytable{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+.paytable-title{font-family:'Cinzel',serif;font-size:10px;color:var(--gold3);letter-spacing:2px;margin-bottom:10px;}
+.pay-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);}
+.pay-row:last-child{border-bottom:none;}
+.pay-symbols{font-size:18px;letter-spacing:2px;}
+.pay-mult{font-size:13px;font-weight:700;color:var(--gold);}
+
+/* 베팅 */
+.bet-section{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;}
+.bet-title{font-family:'Cinzel',serif;font-size:11px;color:var(--gold);letter-spacing:1px;margin-bottom:12px;}
+.presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
+.preset{padding:9px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;text-align:center;}
+.preset:active{background:var(--bg4);}
+.amt-row{display:flex;gap:8px;align-items:center;}
+.amt-inp{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;padding:11px 14px;outline:none;}
+.amt-inp:focus{border-color:var(--gold3);}
+
+.spin-btn{
+  width:100%;padding:18px;border-radius:14px;border:none;
+  font-size:17px;font-weight:900;cursor:pointer;transition:all 0.2s;
+  background:linear-gradient(135deg,#882288,#551155,#882288);
+  background-size:200% 100%;
+  color:#fff;letter-spacing:2px;
+  box-shadow:0 6px 24px rgba(136,34,136,0.4);
+  margin-top:10px;
+}
+.spin-btn:not(.off):active{transform:scale(0.98);}
+.spin-btn.off{background:var(--border);color:#333;cursor:default;box-shadow:none;letter-spacing:0;}
+.spin-btn.spinning{animation:spinPulse 0.4s ease-in-out infinite;}
+@keyframes spinPulse{0%,100%{opacity:1}50%{opacity:0.7}}
+
+/* 최근 기록 */
+.history-row{display:flex;flex-wrap:wrap;gap:5px;}
+.hist-item{padding:4px 8px;border-radius:8px;font-size:11px;font-weight:700;}
+
+/* 오버레이 */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.96);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;}
+.overlay.show{display:flex;}
+.ov-symbols{font-size:48px;letter-spacing:8px;animation:pop 0.4s ease-out;}
+@keyframes pop{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+.ov-title{font-family:'Cinzel',serif;font-size:22px;font-weight:900;}
+.ov-payout{font-size:30px;font-weight:900;}
+.ov-close{padding:13px 30px;border-radius:12px;border:1px solid var(--gold3);background:transparent;color:var(--gold);font-size:14px;font-weight:600;cursor:pointer;}
+
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--gold);color:#0a0800;font-size:13px;font-weight:700;padding:10px 20px;border-radius:20px;z-index:500;opacity:0;transition:opacity 0.2s;white-space:nowrap;pointer-events:none;}
+.toast.show{opacity:1;}
+.toast.err{background:#cc3333;color:#fff;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="casino-label">DOPAMINE CASINO</div>
+  <div class="top-title">🎰 SLOT MACHINE</div>
+</div>
+<div class="point-bar">
+  <span style="font-size:11px;color:var(--sub)">💰 내 포인트</span>
+  <span class="point-val" id="my-point">— P</span>
+</div>
+
+<div class="main">
+  <!-- 슬롯 머신 -->
+  <div class="machine-body" id="machine-body">
+    <div class="machine-title">✦ LUCKY REELS ✦</div>
+    <div class="reels-wrap" id="reels-wrap">
+      <div class="reel" id="reel-0"><div class="reel-inner" id="inner-0"></div></div>
+      <div class="reel" id="reel-1"><div class="reel-inner" id="inner-1"></div></div>
+      <div class="reel" id="reel-2"><div class="reel-inner" id="inner-2"></div></div>
+    </div>
+    <div class="result-display" id="result-display">— BET & SPIN —</div>
+  </div>
+
+  <!-- 배당표 -->
+  <div class="paytable">
+    <div class="paytable-title">PAYTABLE</div>
+    <div class="pay-row"><span class="pay-symbols">💎💎💎</span><span class="pay-mult">x 50 JACKPOT!</span></div>
+    <div class="pay-row"><span class="pay-symbols">7️⃣7️⃣7️⃣</span><span class="pay-mult">x 10</span></div>
+    <div class="pay-row"><span class="pay-symbols">⭐⭐⭐</span><span class="pay-mult">x 7</span></div>
+    <div class="pay-row"><span class="pay-symbols">🍇🍇🍇</span><span class="pay-mult">x 5</span></div>
+    <div class="pay-row"><span class="pay-symbols">🍒🍒🍒</span><span class="pay-mult">x 4</span></div>
+    <div class="pay-row"><span class="pay-symbols">🍋🍋🍋</span><span class="pay-mult">x 3</span></div>
+    <div class="pay-row"><span class="pay-symbols">같은 심볼 2개</span><span class="pay-mult">x 1.5</span></div>
+  </div>
+
+  <!-- 베팅 -->
+  <div class="bet-section">
+    <div class="bet-title">— PLACE YOUR BET —</div>
+    <div class="presets">
+      <button class="preset" onclick="setAmt(100)">100</button>
+      <button class="preset" onclick="setAmt(500)">500</button>
+      <button class="preset" onclick="setAmt(1000)">1,000</button>
+      <button class="preset" onclick="setMax()">MAX</button>
+    </div>
+    <div class="amt-row">
+      <input class="amt-inp" type="number" id="amt" placeholder="베팅 금액" min="20" oninput="refreshBtn()"/>
+      <span style="font-size:13px;color:var(--sub)">P</span>
+    </div>
+    <button class="spin-btn off" id="spin-btn" onclick="doSpin()">최소 20P 이상 입력해주세요</button>
+  </div>
+
+  <!-- 기록 -->
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;">
+    <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold3);letter-spacing:2px;margin-bottom:10px;">RECENT SPINS</div>
+    <div class="history-row" id="history-row">
+      <div style="font-size:11px;color:var(--sub)">기록 없음</div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="ov-symbols" id="ov-symbols">🎰</div>
+  <div class="ov-title" id="ov-title" style="background:linear-gradient(135deg,#f0c96a,#d4a843);-webkit-background-clip:text;-webkit-text-fill-color:transparent;"></div>
+  <div style="font-size:13px;color:var(--sub)" id="ov-sub"></div>
+  <div class="ov-payout" id="ov-payout"></div>
+  <button class="ov-close" onclick="closeOverlay()">확인</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const p=new URLSearchParams(location.search);
+const userId=p.get('userId')||p.get('start')?.split('_')[0];
+const groupId=p.get('groupId')||p.get('start')?.split('_')[1];
+let myPt=0, spinning=false, history=[];
+
+const SYMBOLS=['🍋','🍒','🍇','⭐','7️⃣','💎'];
+const WEIGHTS=[30,25,20,15,7,3];
+const MULT_3={
+  '🍋':3,'🍒':4,'🍇':5,'⭐':7,'7️⃣':10,'💎':50
+};
+
+// ── 릴 초기화 ──
+function buildReel(idx){
+  const inner=document.getElementById('inner-'+idx);
+  // 여러 줄 반복 (무한 스크롤 효과용)
+  const cells=[];
+  for(let i=0;i<20;i++){
+    const s=weightedRand();
+    cells.push(`<div class="reel-cell">${s}</div>`);
+  }
+  inner.innerHTML=cells.join('');
+  // 중앙(3번째 셀)이 보이도록
+  inner.style.transform=`translateY(${-74*2}px)`;
+  return cells.map(c=>c.replace(/<[^>]+>/g,''));
+}
+
+function weightedRand(){
+  const total=WEIGHTS.reduce((a,b)=>a+b,0);
+  let r=Math.random()*total;
+  for(let i=0;i<SYMBOLS.length;i++){r-=WEIGHTS[i];if(r<=0)return SYMBOLS[i];}
+  return SYMBOLS[0];
+}
+
+// 릴 초기화
+let reelSymbols=[[],[],[]];
+for(let i=0;i<3;i++) reelSymbols[i]=buildReel(i);
+
+// ── 릴 스핀 애니메이션 ──
+function spinReel(idx, duration, targetSymbol){
+  return new Promise(resolve=>{
+    const inner=document.getElementById('inner-'+idx);
+    const cellH=74;
+    const totalCells=20;
+    // 마지막 목표 심볼 삽입
+    const newCells=[];
+    for(let i=0;i<18;i++) newCells.push(`<div class="reel-cell">${weightedRand()}</div>`);
+    newCells.push(`<div class="reel-cell">${targetSymbol}</div>`); // 중앙에 올 심볼
+    newCells.push(`<div class="reel-cell">${weightedRand()}</div>`);
+    inner.innerHTML=newCells.join('');
+
+    let pos=0; const speed=cellH*2;
+    const totalDist=cellH*(newCells.length-3); // 중앙에서 멈추기
+
+    const startTime=performance.now();
+    function tick(now){
+      const elapsed=now-startTime;
+      const progress=Math.min(elapsed/duration,1);
+      // easeOut
+      const eased=1-Math.pow(1-progress,3);
+      const y=-(eased*totalDist);
+      inner.style.transform=`translateY(${y}px)`;
+      if(progress<1) requestAnimationFrame(tick);
+      else {
+        inner.style.transform=`translateY(${-totalDist}px)`;
+        resolve();
+      }
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+// ── 배당 계산 ──
+function calcPayout(syms, bet){
+  const [s1,s2,s3]=syms;
+  if(s1===s2&&s2===s3){
+    const mult=MULT_3[s1]||3;
+    return {mult, payout:bet*mult, type:'triple', label:`${s1}${s2}${s3} — ${mult}배!`};
+  }
+  if(s1===s2||s2===s3||s1===s3){
+    return {mult:1.5, payout:Math.floor(bet*1.5), type:'double', label:`${s1}${s2}${s3} — 1.5배`};
+  }
+  return {mult:0, payout:0, type:'miss', label:`${s1}${s2}${s3} — 꽝`};
+}
+
+// ── 스핀 ──
+async function doSpin(){
+  if(spinning) return;
+  const amt=parseInt(document.getElementById('amt').value)||0;
+  if(amt<20){toast('최소 20P 이상 입력해주세요',true);return;}
+  if(amt>myPt){toast('포인트가 부족해요',true);return;}
+
+  spinning=true;
+  const btn=document.getElementById('spin-btn');
+  btn.className='spin-btn spinning'; btn.textContent='🎰 SPINNING...';
+  document.getElementById('result-display').textContent='';
+
+  // 결과 미리 결정
+  const result=[weightedRand(),weightedRand(),weightedRand()];
+  const pay=calcPayout(result,amt);
+
+  // 포인트 차감 (서버)
+  try{
+    const res=await fetch('/casino/slots/spin',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({groupId:parseInt(groupId),userId:parseInt(userId),amount:amt,result})
+    });
+    const data=await res.json();
+    if(!data.ok){toast(data.error||'오류',true);spinning=false;refreshBtn();return;}
+
+    myPt-=amt;
+    document.getElementById('my-point').textContent=fmt(myPt)+' P';
+
+    // 릴 애니메이션 순차 실행
+    await Promise.all([
+      spinReel(0, 1200, result[0]),
+      new Promise(r=>setTimeout(()=>spinReel(1,1600,result[1]).then(r),200)),
+      new Promise(r=>setTimeout(()=>spinReel(2,2000,result[2]).then(r),400)),
+    ]);
+
+    // 결과 표시
+    const resultText=pay.type==='triple'?`🎉 ${pay.label}`:pay.type==='double'?`✨ ${pay.label}`:`💸 ${pay.label}`;
+    document.getElementById('result-display').textContent=resultText;
+    document.getElementById('result-display').style.color=pay.payout>0?'#f0c96a':'#6a6a8a';
+
+    if(pay.type==='triple'&&result[0]==='💎'){
+      document.getElementById('machine-body').classList.add('jackpot-flash');
+      setTimeout(()=>document.getElementById('machine-body').classList.remove('jackpot-flash'),2000);
+    }
+
+    // 기록
+    history.unshift({syms:result.join(''),payout:pay.payout,type:pay.type});
+    if(history.length>12) history.pop();
+    renderHistory();
+
+    // 포인트 업데이트
+    const payout=data.payout||0;
+    if(payout>0){
+      myPt+=payout;
+      document.getElementById('my-point').textContent=fmt(myPt)+' P';
+    }
+
+    // 결과 오버레이
+    setTimeout(()=>{
+      document.getElementById('ov-symbols').textContent=result.join(' ');
+      document.getElementById('ov-title').textContent=pay.type==='triple'?(result[0]==='💎'?'💎 JACKPOT!':'🎉 THREE OF A KIND!'):pay.type==='double'?'✨ TWO MATCH!':'💸 NO MATCH';
+      document.getElementById('ov-sub').textContent=pay.label;
+      if(payout>0){
+        document.getElementById('ov-payout').textContent=`+${fmt(payout)} P 획득!`;
+        document.getElementById('ov-payout').style.color='#44ee88';
+      } else {
+        document.getElementById('ov-payout').textContent=`-${fmt(amt)} P`;
+        document.getElementById('ov-payout').style.color='#ee4444';
+      }
+      document.getElementById('overlay').classList.add('show');
+    }, 600);
+
+  } catch(e){toast('서버 오류',true);}
+  spinning=false; refreshBtn();
+}
+
+function renderHistory(){
+  const el=document.getElementById('history-row');
+  if(!history.length){el.innerHTML='<div style="font-size:11px;color:var(--sub)">기록 없음</div>';return;}
+  el.innerHTML=history.map(h=>{
+    const col=h.type==='triple'?'#f0c96a':h.type==='double'?'#44cc88':'#6a6a8a';
+    const bg=h.type==='triple'?'#1a1500':h.type==='double'?'#051a10':'#1a1a2a';
+    return `<div class="hist-item" style="background:${bg};border:1px solid ${col}44;color:${col}">${h.syms}</div>`;
+  }).join('');
+}
+
+function toast(msg,err=false){
+  const t=document.getElementById('toast');t.textContent=msg;
+  t.className='toast show'+(err?' err':'');setTimeout(()=>t.className='toast',2500);
+}
+function fmt(n){return Number(n||0).toLocaleString();}
+function setAmt(v){document.getElementById('amt').value=v;refreshBtn();}
+function setMax(){setAmt(Math.min(myPt,10000));}
+function refreshBtn(){
+  const btn=document.getElementById('spin-btn');
+  if(spinning){btn.className='spin-btn spinning';btn.textContent='🎰 SPINNING...';return;}
+  const amt=parseInt(document.getElementById('amt').value)||0;
+  if(amt<20){btn.className='spin-btn off';btn.textContent='최소 20P 이상 입력해주세요';return;}
+  if(amt>myPt){btn.className='spin-btn off';btn.textContent='포인트가 부족해요';return;}
+  btn.className='spin-btn';
+  btn.textContent=`🎰 SPIN! — ${fmt(amt)}P`;
+}
+function closeOverlay(){document.getElementById('overlay').classList.remove('show');}
+
+async function loadPt(){
+  try{
+    const res=await fetch(`/casino/users?groupId=${groupId}`);
+    const users=await res.json();
+    const me=users.find(u=>String(u.userId)===String(userId));
+    if(me){myPt=me.point;document.getElementById('my-point').textContent=fmt(myPt)+' P';}
+  }catch(e){}
+}
+loadPt();
+</script>
+</body>
+</html>
