@@ -24,6 +24,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .top-title{font-family:'Cinzel',serif;font-size:18px;font-weight:900;text-align:center;
   background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.admin-info{text-align:center;font-size:11px;color:var(--sub);margin-top:4px;padding-bottom:4px;}
+.admin-info span{color:var(--gold);}
 
 .tabs{display:flex;border-top:1px solid var(--border);margin-top:10px;overflow-x:auto;}
 .tab-btn{flex:0 0 auto;padding:10px 14px;background:transparent;border:none;
@@ -50,6 +52,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   background:linear-gradient(135deg,var(--gold),var(--gold3));
   color:#0a0800;font-size:14px;font-weight:700;cursor:pointer;}
 .gold-btn:active{opacity:0.85;}
+.gold-btn:disabled{opacity:0.4;cursor:not-allowed;}
 
 .outline-btn{padding:10px 16px;border-radius:10px;border:1px solid var(--border);
   background:transparent;color:var(--text);font-size:13px;cursor:pointer;}
@@ -112,6 +115,16 @@ input[type=range]{flex:1;accent-color:var(--gold);}
 .ctrl-start{background:linear-gradient(135deg,#cc8800,#885500);color:#fff;}
 .ctrl-result{background:linear-gradient(135deg,var(--gold),var(--gold3));color:#0a0800;}
 .ctrl-btn:active{opacity:0.85;}
+.ctrl-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* 인증 오류 화면 */
+.auth-error{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:60vh;gap:16px;padding:24px;text-align:center;}
+.auth-error-icon{font-size:48px;}
+.auth-error-title{font-size:18px;font-weight:700;color:var(--red);}
+.auth-error-msg{font-size:13px;color:var(--sub);line-height:1.6;}
+.debug-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  padding:12px;font-size:11px;color:var(--sub);word-break:break-all;text-align:left;width:100%;}
 
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
   background:var(--gold);color:#0a0800;font-size:13px;font-weight:700;
@@ -119,6 +132,11 @@ input[type=range]{flex:1;accent-color:var(--gold);}
   white-space:nowrap;pointer-events:none;}
 .toast.show{opacity:1;}
 .toast.error{background:#cc3333;color:#fff;}
+
+/* 로딩 */
+.loading-wrap{display:flex;align-items:center;justify-content:center;min-height:60vh;}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
@@ -126,7 +144,8 @@ input[type=range]{flex:1;accent-color:var(--gold);}
 <div class="topbar">
   <div class="casino-label">DOPAMINE CASINO</div>
   <div class="top-title">👑 ADMIN PANEL</div>
-  <div class="tabs">
+  <div class="admin-info" id="admin-info">인증 확인 중...</div>
+  <div class="tabs" id="main-tabs" style="display:none">
     <button class="tab-btn active" onclick="switchTab('race')"     id="tab-race">🐢 경주</button>
     <button class="tab-btn"        onclick="switchTab('baccarat')"  id="tab-baccarat">🃏 바카라</button>
     <button class="tab-btn"        onclick="switchTab('horse')"     id="tab-horse">🐴 경마</button>
@@ -138,18 +157,32 @@ input[type=range]{flex:1;accent-color:var(--gold);}
   </div>
 </div>
 
+<!-- 로딩 -->
+<div id="loading-screen" class="loading-wrap">
+  <div class="spinner"></div>
+</div>
+
+<!-- 인증 실패 화면 -->
+<div id="auth-error-screen" style="display:none">
+  <div class="auth-error">
+    <div class="auth-error-icon">🚫</div>
+    <div class="auth-error-title">관리자 권한 없음</div>
+    <div class="auth-error-msg">이 페이지는 등록된 관리자만 접근할 수 있어요.<br>텔레그램에서 /카지노관리 명령어로 접근해주세요.</div>
+    <div class="debug-box" id="debug-box"></div>
+  </div>
+</div>
+
 <!-- ══ 경주 관리 ══ -->
-<div class="screen show" id="screen-race">
+<div class="screen" id="screen-race">
   <div class="card">
     <div class="card-title">RACE CONTROL</div>
     <div style="font-size:12px;color:var(--sub);margin-bottom:12px">현재 상태: <span id="race-status-label" style="color:var(--gold);font-weight:700">불러오는 중...</span></div>
     <div class="race-ctrl">
       <button class="ctrl-btn ctrl-open"   onclick="raceOpen()">🏁 베팅 오픈 (새 경주 시작)</button>
-      <button class="ctrl-btn ctrl-start"  onclick="raceStart()">🚀 베팅 마감 & 경주 시작</button>
-      <button class="ctrl-btn ctrl-result" onclick="raceResult()">🏆 경주 결과 처리 & 정산</button>
+      <button class="ctrl-btn ctrl-start"  onclick="raceStart()">🚀 베팅 마감 &amp; 경주 시작</button>
+      <button class="ctrl-btn ctrl-result" onclick="raceResult()">🏆 경주 결과 처리 &amp; 정산</button>
     </div>
   </div>
-
   <div class="card">
     <div class="card-title">LIVE BETS</div>
     <div id="race-bets-info" style="font-size:13px;color:var(--sub)">베팅 정보 없음</div>
@@ -163,7 +196,7 @@ input[type=range]{flex:1;accent-color:var(--gold);}
     <div style="font-size:12px;color:var(--sub);margin-bottom:12px">현재 상태: <span id="baccarat-status-label" style="color:var(--gold);font-weight:700">불러오는 중...</span></div>
     <div class="race-ctrl">
       <button class="ctrl-btn ctrl-open"   onclick="baccaratOpen()">🃏 베팅 오픈 (새 게임 시작)</button>
-      <button class="ctrl-btn ctrl-result" onclick="baccaratResult()">🏆 결과 처리 & 정산</button>
+      <button class="ctrl-btn ctrl-result" onclick="baccaratResult()">🏆 결과 처리 &amp; 정산</button>
     </div>
   </div>
   <div class="card">
@@ -179,8 +212,8 @@ input[type=range]{flex:1;accent-color:var(--gold);}
     <div style="font-size:12px;color:var(--sub);margin-bottom:12px">현재 상태: <span id="horse-status-label" style="color:var(--gold);font-weight:700">불러오는 중...</span></div>
     <div class="race-ctrl">
       <button class="ctrl-btn ctrl-open"   onclick="horseOpen()">🐴 베팅 오픈 (새 경주 시작)</button>
-      <button class="ctrl-btn ctrl-start"  onclick="horseStart()">🚀 베팅 마감 & 경주 시작</button>
-      <button class="ctrl-btn ctrl-result" onclick="horseResult()">🏆 결과 처리 & 정산</button>
+      <button class="ctrl-btn ctrl-start"  onclick="horseStart()">🚀 베팅 마감 &amp; 경주 시작</button>
+      <button class="ctrl-btn ctrl-result" onclick="horseResult()">🏆 결과 처리 &amp; 정산</button>
     </div>
   </div>
   <div class="card">
@@ -191,11 +224,8 @@ input[type=range]{flex:1;accent-color:var(--gold);}
 
 <!-- ══ 게임 설정 ══ -->
 <div class="screen" id="screen-settings">
-
-  <!-- 경주 설정 -->
   <div class="card">
     <div class="card-title">🐢 경주 설정</div>
-
     <div class="setting-row">
       <span class="setting-label">🐇 토끼 승률</span>
       <input type="range" id="race-win-rate" min="1" max="99" value="60"
@@ -225,7 +255,6 @@ input[type=range]{flex:1;accent-color:var(--gold);}
         <span class="switch-slider"></span>
       </label>
     </div>
-
     <div style="margin-top:14px">
       <div style="font-size:12px;color:var(--sub);margin-bottom:8px">🎯 승부 조작 (강제 결과)</div>
       <div class="force-btns">
@@ -234,11 +263,9 @@ input[type=range]{flex:1;accent-color:var(--gold);}
         <button class="force-btn" id="force-turtle" onclick="setForce('turtle')">🐢 거북이 강제 승</button>
       </div>
     </div>
-
     <button class="gold-btn" style="margin-top:14px" onclick="saveRaceSettings()">💾 경주 설정 저장</button>
   </div>
 
-  <!-- 바카라 설정 -->
   <div class="card">
     <div class="card-title">🃏 바카라 설정</div>
     <div class="setting-row">
@@ -271,12 +298,9 @@ input[type=range]{flex:1;accent-color:var(--gold);}
     <button class="gold-btn" style="margin-top:14px" onclick="saveBaccaratSettings()">💾 바카라 설정 저장</button>
   </div>
 
-  <!-- 빅휠 설정 -->
   <div class="card">
     <div class="card-title">🎡 빅휠 설정</div>
-    <div id="bigwheel-segments">
-      <!-- JS로 렌더 -->
-    </div>
+    <div id="bigwheel-segments"></div>
     <button class="gold-btn" style="margin-top:14px" onclick="saveBigwheelSettings()">💾 빅휠 설정 저장</button>
   </div>
 </div>
@@ -352,7 +376,6 @@ input[type=range]{flex:1;accent-color:var(--gold);}
       <div style="text-align:center;color:var(--sub);padding:20px">불러오는 중...</div>
     </div>
   </div>
-
   <div class="card">
     <div class="card-title">🚫 블랙리스트</div>
     <div class="card-sub">게임 이용 제한 유저</div>
@@ -367,14 +390,13 @@ input[type=range]{flex:1;accent-color:var(--gold);}
   <div class="card">
     <div class="card-title">📊 전체 통계</div>
     <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <button class="outline-btn active" onclick="loadStats(7)" id="stat-7d">7일</button>
+      <button class="outline-btn active" onclick="loadStats(7)"  id="stat-7d">7일</button>
       <button class="outline-btn"        onclick="loadStats(30)" id="stat-30d">30일</button>
     </div>
     <div class="stat-grid" id="stat-grid">
       <div style="text-align:center;color:var(--sub);grid-column:1/-1;padding:20px">불러오는 중...</div>
     </div>
   </div>
-
   <div class="card" id="game-stat-cards">
     <div class="card-title">🎮 게임별 통계</div>
     <div id="game-stats-wrap" style="font-size:13px;color:var(--sub)">데이터 없음</div>
@@ -394,13 +416,53 @@ input[type=range]{flex:1;accent-color:var(--gold);}
 <div class="toast" id="toast"></div>
 
 <script>
-const params  = new URLSearchParams(location.search);
-const adminId = parseInt(params.get('adminId') || 0);
-const groupId = parseInt(params.get('groupId') || 0);
+// ════════════════════════════════════════
+// URL 파라미터 파싱 - 여러 방법 시도
+// ════════════════════════════════════════
+function parseParams() {
+  // 방법 1: URLSearchParams (일반적인 경우)
+  const params = new URLSearchParams(location.search);
+  let adminId = parseInt(params.get('adminId') || 0);
+  let groupId = parseInt(params.get('groupId') || 0);
 
-let raceState   = null;
-let usersCache  = [];
-let forceResult = 'none';
+  // 방법 2: hash 파라미터 (#?adminId=...)
+  if (!adminId && location.hash) {
+    const hashParams = new URLSearchParams(location.hash.replace('#', '').replace('?', ''));
+    adminId = parseInt(hashParams.get('adminId') || 0);
+    groupId = parseInt(hashParams.get('groupId') || 0);
+  }
+
+  // 방법 3: Telegram WebApp initData 파싱
+  if (!adminId && window.Telegram && window.Telegram.WebApp) {
+    try {
+      const tg = window.Telegram.WebApp;
+      const startParam = tg.initDataUnsafe?.start_param || '';
+      // start_param 형식: "adminId_groupId" 또는 URLencoded
+      if (startParam) {
+        const parts = startParam.split('_');
+        if (parts.length >= 2) {
+          adminId = parseInt(parts[0]);
+          groupId = parseInt(parts[1]);
+        }
+      }
+      // 또는 user 정보에서 adminId 추출
+      if (!adminId && tg.initDataUnsafe?.user?.id) {
+        adminId = tg.initDataUnsafe.user.id;
+      }
+    } catch(e) { console.warn('TG parse error:', e); }
+  }
+
+  return { adminId, groupId };
+}
+
+const { adminId, groupId } = parseParams();
+
+let raceState    = null;
+let baccaratState = null;
+let horseState   = null;
+let usersCache   = [];
+let forceResult  = 'none';
+let isAuthorized = false;
 
 // ════════════
 // 유틸
@@ -414,6 +476,7 @@ function showToast(msg, isError=false) {
 function fmt(n){return Number(n||0).toLocaleString();}
 
 function switchTab(tab) {
+  if (!isAuthorized) return;
   ['race','baccarat','horse','settings','points','users','stats','logs'].forEach(t => {
     document.getElementById('tab-'+t).className = 'tab-btn' + (t===tab?' active':'');
     document.getElementById('screen-'+t).classList.toggle('show', t===tab);
@@ -421,10 +484,10 @@ function switchTab(tab) {
   if (tab==='users')    { loadUsers(); loadBlacklist(); }
   if (tab==='baccarat') loadBaccaratState();
   if (tab==='horse')    loadHorseState();
-  if (tab==='stats')  loadStats(7);
-  if (tab==='logs')   loadLogs();
-  if (tab==='points') loadUsers();
-  if (tab==='race')   loadRaceState();
+  if (tab==='stats')    loadStats(7);
+  if (tab==='logs')     loadLogs();
+  if (tab==='points')   loadUsers();
+  if (tab==='race')     loadRaceState();
 }
 
 // ════════════
@@ -531,7 +594,7 @@ async function saveBaccaratSettings() {
 
 async function saveBigwheelSettings() {
   const segs = [];
-  document.querySelectorAll('.seg-prob').forEach((el, i) => {
+  document.querySelectorAll('.seg-prob').forEach((el) => {
     segs.push({
       label: el.dataset.label,
       multiplier: parseFloat(el.dataset.mult),
@@ -556,7 +619,8 @@ async function saveSettings(gameId, settings) {
 
 async function saveLimits() {
   const gameId = document.getElementById('limit-game').value;
-  const current = await (await fetch(`/casino/settings?groupId=${groupId}&gameId=${gameId}`)).json();
+  const res = await fetch(`/casino/settings?groupId=${groupId}&gameId=${gameId}`);
+  const current = await res.json();
   current.min_bet = parseInt(document.getElementById('limit-min').value);
   current.max_bet = parseInt(document.getElementById('limit-max').value);
   await saveSettings(gameId, current);
@@ -579,6 +643,7 @@ async function grantPoint() {
     const data = await res.json();
     if (data.ok) {
       showToast(`✅ ${data.userName}님 ${fmt(Math.abs(amount))}P ${amount>0?'지급':'차감'}`);
+      document.getElementById('pt-amount').value = '';
       loadUsers();
     } else showToast(data.error||'오류', true);
   } catch(e) { showToast('오류', true); }
@@ -608,24 +673,27 @@ async function loadUsers() {
     const res   = await fetch(`/casino/users?groupId=${groupId}`);
     usersCache  = await res.json();
 
-    // 유저 목록
     const list = document.getElementById('user-list');
-    list.innerHTML = usersCache.slice(0,30).map(u => `
-      <div class="user-item">
-        <div class="user-name">${u.name} ${u.blacklisted?'<span class="user-banned">제한됨</span>':''}</div>
-        <div class="user-point">${fmt(u.point)}P</div>
-        <button class="outline-btn ${u.blacklisted?'green':'red'}" style="padding:6px 10px;font-size:11px"
-          onclick="toggleBlacklist(${u.userId},'${u.name}',${u.blacklisted})">
-          ${u.blacklisted?'해제':'차단'}
-        </button>
-      </div>
-    `).join('') || '<div style="text-align:center;color:var(--sub);padding:20px">유저 없음</div>';
+    if (list) {
+      list.innerHTML = usersCache.slice(0,30).map(u => `
+        <div class="user-item">
+          <div class="user-name">${u.name} ${u.blacklisted?'<span class="user-banned">제한됨</span>':''}</div>
+          <div class="user-point">${fmt(u.point)}P</div>
+          <button class="outline-btn ${u.blacklisted?'green':'red'}" style="padding:6px 10px;font-size:11px"
+            onclick="toggleBlacklist(${u.userId},'${u.name.replace(/'/g,"\\'")}',${u.blacklisted})">
+            ${u.blacklisted?'해제':'차단'}
+          </button>
+        </div>
+      `).join('') || '<div style="text-align:center;color:var(--sub);padding:20px">유저 없음</div>';
+    }
 
     // 포인트 유저 선택
     const sel = document.getElementById('pt-user-select');
-    sel.innerHTML = '<option value="">유저 선택...</option>' +
-      usersCache.map(u => `<option value="${u.userId}">${u.name} (${fmt(u.point)}P)</option>`).join('');
-  } catch(e) {}
+    if (sel) {
+      sel.innerHTML = '<option value="">유저 선택...</option>' +
+        usersCache.map(u => `<option value="${u.userId}">${u.name} (${fmt(u.point)}P)</option>`).join('');
+    }
+  } catch(e) { console.error('loadUsers error:', e); }
 }
 
 async function toggleBlacklist(userId, name, isBlacklisted) {
@@ -648,6 +716,7 @@ async function loadBlacklist() {
     const res  = await fetch(`/casino/blacklist?groupId=${groupId}`);
     const data = await res.json();
     const wrap = document.getElementById('blacklist-wrap');
+    if (!wrap) return;
     if (data.length === 0) {
       wrap.innerHTML = '<div style="text-align:center;color:var(--sub);padding:20px">블랙리스트 없음</div>';
       return;
@@ -659,7 +728,7 @@ async function loadBlacklist() {
           <div style="font-size:11px;color:var(--sub)">${u.reason||'사유 없음'}</div>
         </div>
         <button class="outline-btn green" style="padding:6px 10px;font-size:11px"
-          onclick="toggleBlacklist(${u.userId},'${u.name}',true)">해제</button>
+          onclick="toggleBlacklist(${u.userId},'${u.name.replace(/'/g,"\\'")}',true)">해제</button>
       </div>
     `).join('');
   } catch(e) {}
@@ -675,7 +744,7 @@ async function loadStats(days) {
     const res  = await fetch(`/casino/stats?groupId=${groupId}&days=${days}`);
     const data = await res.json();
 
-    let totalBet=0, totalPayout=0, totalProfit=0, totalPlayers=new Set();
+    let totalBet=0, totalPayout=0, totalProfit=0;
     data.forEach(g => { totalBet+=g.totalBet; totalPayout+=g.totalPayout; totalProfit+=g.profit; });
 
     document.getElementById('stat-grid').innerHTML = `
@@ -726,7 +795,7 @@ async function loadLogs() {
 }
 
 // ════════════
-// 빅휠 세그먼트 렌더
+// 빅휠
 // ════════════
 function renderBigwheelSegments() {
   const segs = [
@@ -737,7 +806,7 @@ function renderBigwheelSegments() {
     {label:'20배',mult:20,color:'#882288',prob:5},
     {label:'꽝',mult:0,color:'#222233',prob:20},
   ];
-  document.getElementById('bigwheel-segments').innerHTML = segs.map((s,i) => `
+  document.getElementById('bigwheel-segments').innerHTML = segs.map((s) => `
     <div class="setting-row">
       <span class="setting-label" style="color:${s.color}">${s.label}</span>
       <input type="range" class="seg-prob" min="1" max="80" value="${s.prob}"
@@ -751,30 +820,37 @@ function renderBigwheelSegments() {
 // ════════════
 // 바카라
 // ════════════
-let baccaratState = null;
 async function loadBaccaratState() {
   try {
     const res = await fetch(`/casino/baccarat/state?groupId=${groupId}&userId=${adminId}`);
     baccaratState = await res.json();
     const labels = {idle:'⏳ 대기',betting:'🔴 베팅 중',running:'🎴 게임 중',closed:'🏁 종료'};
     document.getElementById('baccarat-status-label').textContent = labels[baccaratState.status]||'알 수 없음';
-    document.getElementById('baccarat-bets-info').textContent = '베팅 정보: roundId=' + (baccaratState.roundId||'없음');
+    document.getElementById('baccarat-bets-info').textContent = 'roundId=' + (baccaratState.roundId||'없음');
   } catch(e) {}
 }
+
 async function baccaratOpen() {
   if(!confirm('바카라 베팅을 오픈할까요?')) return;
   try {
-    const res = await fetch('/casino/baccarat/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId})});
+    const res = await fetch('/casino/baccarat/open',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({adminId,groupId})
+    });
     const data = await res.json();
     if(data.ok){showToast('✅ 바카라 베팅 오픈!');loadBaccaratState();}
     else showToast(data.error||'오류',true);
   } catch(e){showToast('오류',true);}
 }
+
 async function baccaratResult() {
   if(!baccaratState?.roundId){showToast('진행 중인 게임이 없어요',true);return;}
   if(!confirm('바카라 결과를 처리할까요?')) return;
   try {
-    const res = await fetch('/casino/baccarat/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId,roundId:baccaratState.roundId})});
+    const res = await fetch('/casino/baccarat/result',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({adminId,groupId,roundId:baccaratState.roundId})
+    });
     const data = await res.json();
     if(data.ok){showToast(`✅ ${data.result} 결과 처리 완료!`);loadBaccaratState();}
     else showToast(data.error||'오류',true);
@@ -784,7 +860,6 @@ async function baccaratResult() {
 // ════════════
 // 경마
 // ════════════
-let horseState = null;
 async function loadHorseState() {
   try {
     const res = await fetch(`/casino/horse/state?groupId=${groupId}&userId=${adminId}`);
@@ -794,48 +869,103 @@ async function loadHorseState() {
     document.getElementById('horse-bets-info').textContent = 'roundId=' + (horseState.roundId||'없음');
   } catch(e) {}
 }
+
 async function horseOpen() {
   if(!confirm('경마 베팅을 오픈할까요?')) return;
   try {
-    const res = await fetch('/casino/horse/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId})});
+    const res = await fetch('/casino/horse/open',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({adminId,groupId})
+    });
     const data = await res.json();
     if(data.ok){showToast('✅ 경마 베팅 오픈!');loadHorseState();}
     else showToast(data.error||'오류',true);
   } catch(e){showToast('오류',true);}
 }
+
 async function horseStart() {
   if(!horseState?.roundId){showToast('진행 중인 경마가 없어요',true);return;}
+  if(!confirm('경마 베팅을 마감할까요?')) return;
   try {
-    const res = await fetch('/casino/race/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId,roundId:horseState.roundId})});
+    const res = await fetch('/casino/race/start',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({adminId,groupId,roundId:horseState.roundId})
+    });
     const data = await res.json();
     if(data.ok){showToast('✅ 경마 시작!');loadHorseState();}
     else showToast(data.error||'오류',true);
   } catch(e){showToast('오류',true);}
 }
+
 async function horseResult() {
   if(!horseState?.roundId){showToast('진행 중인 경마가 없어요',true);return;}
   if(!confirm('경마 결과를 처리할까요?')) return;
   try {
-    const res = await fetch('/casino/horse/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId,roundId:horseState.roundId})});
+    const res = await fetch('/casino/horse/result',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({adminId,groupId,roundId:horseState.roundId})
+    });
     const data = await res.json();
     if(data.ok){showToast('✅ 경마 결과 처리 완료!');loadHorseState();}
     else showToast(data.error||'오류',true);
   } catch(e){showToast('오류',true);}
 }
 
-// switchTab 확장
-const _origSwitch = switchTab;
-
-// ════════════
-// 초기화
-// ════════════
+// ════════════════════════════════════════
+// 초기화 - 핵심 수정 부분
+// ════════════════════════════════════════
 async function init() {
-  if (!adminId) {
-    document.body.innerHTML = '<div style="text-align:center;padding:40px;color:#ee4444">관리자만 접근할 수 있어요.</div>';
+  const loadingEl     = document.getElementById('loading-screen');
+  const authErrorEl   = document.getElementById('auth-error-screen');
+  const mainTabsEl    = document.getElementById('main-tabs');
+  const adminInfoEl   = document.getElementById('admin-info');
+  const debugBoxEl    = document.getElementById('debug-box');
+
+  // 디버그: 파싱된 값 표시
+  console.log(`[AdminPanel] adminId=${adminId}, groupId=${groupId}, url=${location.href}`);
+
+  // adminId 없으면 접근 불가
+  if (!adminId || !groupId) {
+    loadingEl.style.display = 'none';
+    authErrorEl.style.display = 'block';
+    if (debugBoxEl) {
+      debugBoxEl.textContent = `디버그 정보:\nURL: ${location.href}\nadminId: ${adminId}\ngroupId: ${groupId}\n\n해결 방법: 텔레그램에서 /카지노관리 를 입력하세요.`;
+    }
     return;
   }
+
+  // 서버에 실제 관리자 여부 확인 (새 엔드포인트)
+  try {
+    const res = await fetch(`/casino/check_admin?adminId=${adminId}&groupId=${groupId}`);
+    const data = await res.json();
+
+    if (!data.isAdmin) {
+      loadingEl.style.display = 'none';
+      authErrorEl.style.display = 'block';
+      if (debugBoxEl) {
+        debugBoxEl.textContent = `adminId ${adminId} 는 등록된 관리자가 아니에요.\n텔레그램 봇 코드의 ADMIN_IDS 에 추가가 필요해요.`;
+      }
+      return;
+    }
+  } catch(e) {
+    // 엔드포인트 없으면 클라이언트 측에서만 체크 (기존 방식 유지)
+    console.warn('check_admin endpoint not found, skipping server auth check');
+  }
+
+  // 인증 성공
+  isAuthorized = true;
+  loadingEl.style.display = 'none';
+  authErrorEl.style.display = 'none';
+  mainTabsEl.style.display = 'flex';
+  adminInfoEl.innerHTML = `관리자 ID: <span>${adminId}</span> · 그룹: <span>${groupId}</span>`;
+
   renderBigwheelSegments();
+
+  // 첫 탭(경주) 표시
+  document.getElementById('screen-race').classList.add('show');
+
   await loadRaceState();
+
   // 경주 설정 로드
   try {
     const res  = await fetch(`/casino/settings?groupId=${groupId}&gameId=race`);
@@ -850,7 +980,11 @@ async function init() {
     setForce(s.force_result||'none');
   } catch(e) {}
 
-  setInterval(loadRaceState, 5000);
+  // 5초마다 경주 상태 갱신
+  setInterval(() => {
+    const raceScreen = document.getElementById('screen-race');
+    if (raceScreen.classList.contains('show')) loadRaceState();
+  }, 5000);
 }
 
 init();
