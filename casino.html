@@ -648,13 +648,13 @@ async function adminGrantPoints() {
   if (!amount || isNaN(amount)) { showToast('금액을 입력해주세요','error'); return; }
   if (!confirm(`${selectedAdmUserName}님에게 ${fmt(amount)}P를 ${amount>0?'지급':'차감'}할까요?`)) return;
   try {
-    const res = await fetch('/casino/admin/grant', {
+    const res = await fetch('/casino/point_grant', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         adminId: parseInt(userId),
         groupId: parseInt(groupId),
-        targetUserId: parseInt(selectedAdmUserId),
+        userId: parseInt(selectedAdmUserId),
         amount,
         reason
       })
