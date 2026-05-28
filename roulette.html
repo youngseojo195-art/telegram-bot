@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>도파민 카지노 — 룰렛</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+KR:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --gold:#d4a843;--gold2:#f0c96a;--gold3:#8b6914;
+  --bg:#080810;--bg2:#0e0e1c;--bg3:#161628;--bg4:#1e1e35;
+  --border:#2a2a45;--text:#e8e0cc;--sub:#6a6a8a;
+  --red:#cc2222;--black:#111122;--green:#116611;
+}
+html,body{height:100%;width:100%;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;}
+
+.topbar{background:linear-gradient(180deg,#0e0e1e,#080810);border-bottom:1px solid var(--border);padding:12px 16px 10px;text-align:center;position:sticky;top:0;z-index:50;}
+.casino-label{font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:var(--gold3);margin-bottom:3px;}
+.top-title{font-family:'Cinzel',serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.point-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;justify-content:space-between;}
+.point-val{font-size:16px;font-weight:700;color:var(--gold);}
+
+.main{flex:1;overflow-y:auto;padding:14px 14px 100px;display:flex;flex-direction:column;gap:14px;}
+
+/* 룰렛 휠 */
+.wheel-section{display:flex;flex-direction:column;align-items:center;gap:10px;}
+.wheel-outer{
+  position:relative;width:260px;height:260px;
+  filter:drop-shadow(0 8px 30px rgba(212,168,67,0.25));
+}
+.pointer-wrap{position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:10;}
+.pointer{width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:26px solid var(--gold2);filter:drop-shadow(0 0 6px rgba(212,168,67,0.8));}
+canvas#rwheel{width:260px;height:260px;border-radius:50%;}
+
+.ball-result{
+  font-family:'Cinzel',serif;font-size:20px;font-weight:900;
+  text-align:center;min-height:32px;
+}
+
+/* 베팅 탭 */
+.bet-tabs{display:flex;background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.bet-tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:700;cursor:pointer;color:var(--sub);transition:all 0.15s;}
+.bet-tab.active{background:var(--bg3);color:var(--gold);}
+
+/* 베팅 옵션들 */
+.bet-options-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;}
+.bet-opts-title{font-family:'Cinzel',serif;font-size:10px;color:var(--gold3);letter-spacing:2px;margin-bottom:10px;}
+
+/* 색상 베팅 */
+.color-opts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.color-opt{border-radius:12px;border:2px solid var(--border);padding:14px 8px;text-align:center;cursor:pointer;transition:all 0.18s;display:flex;flex-direction:column;align-items:center;gap:5px;}
+.color-opt:active{transform:scale(0.96);}
+.color-opt.sel-red  {border-color:#cc2222;background:#1a0505;}
+.color-opt.sel-black{border-color:#4444aa;background:#050510;}
+.color-opt.sel-green{border-color:#116611;background:#051005;}
+.color-dot{width:32px;height:32px;border-radius:50%;}
+.color-name{font-size:13px;font-weight:800;}
+.color-odds{font-size:11px;color:var(--gold);}
+
+/* 홀짝/높낮이 베팅 */
+.simple-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.simple-opt{border-radius:12px;border:2px solid var(--border);background:var(--bg3);padding:14px 8px;text-align:center;cursor:pointer;transition:all 0.18s;}
+.simple-opt:active{transform:scale(0.96);}
+.simple-opt.selected{border-color:var(--gold);background:#1a1500;}
+.simple-name{font-size:14px;font-weight:800;}
+.simple-range{font-size:11px;color:var(--sub);margin-top:2px;}
+.simple-odds{font-size:11px;color:var(--gold);margin-top:2px;}
+
+/* 숫자 베팅 그리드 */
+.num-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;}
+.num-cell{
+  aspect-ratio:1;border-radius:6px;border:1px solid rgba(255,255,255,0.1);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;
+}
+.num-cell:active{transform:scale(0.92);}
+.num-cell.n-red  {background:#2a0808;color:#ff6666;}
+.num-cell.n-black{background:#0a0a1a;color:#aaaaee;}
+.num-cell.n-green{background:#0a1a08;color:#66aa66;}
+.num-cell.num-sel{box-shadow:0 0 0 2px var(--gold)!important;background:#1a1500!important;color:var(--gold)!important;}
+
+/* 베팅 금액 & 스핀 */
+.bet-section{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;}
+.presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
+.preset{padding:9px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;text-align:center;}
+.preset:active{background:var(--bg4);}
+.amt-row{display:flex;gap:8px;align-items:center;}
+.amt-inp{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;padding:11px 14px;outline:none;}
+.amt-inp:focus{border-color:var(--gold3);}
+
+.spin-btn{width:100%;padding:18px;border-radius:14px;border:none;font-size:16px;font-weight:900;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,#8b1a1a,#cc2222,#8b1a1a);color:#fff;letter-spacing:1px;box-shadow:0 6px 24px rgba(200,50,50,0.3);margin-top:10px;}
+.spin-btn.off{background:var(--border);color:#333;cursor:default;box-shadow:none;letter-spacing:0;}
+.spin-btn:not(.off):active{transform:scale(0.98);}
+.spin-btn.spinning{animation:spinPulse 0.4s ease-in-out infinite;}
+@keyframes spinPulse{0%,100%{opacity:1}50%{opacity:0.7}}
+
+/* 기록 */
+.history-balls{display:flex;flex-wrap:wrap;gap:5px;}
+.hball{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;}
+
+/* 배당표 */
+.paytable-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.pay-item{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;}
+.pay-name{font-size:12px;}
+.pay-mult{font-size:13px;font-weight:700;color:var(--gold);}
+
+/* 오버레이 */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.96);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;}
+.overlay.show{display:flex;}
+.ov-ball{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:28px;font-weight:900;margin:0 auto;animation:pop 0.4s ease-out;box-shadow:0 0 30px rgba(255,255,255,0.2);}
+@keyframes pop{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+.ov-title{font-family:'Cinzel',serif;font-size:22px;font-weight:900;}
+.ov-sub{font-size:13px;color:var(--sub);line-height:1.7;}
+.ov-payout{font-size:30px;font-weight:900;}
+.ov-close{padding:13px 30px;border-radius:12px;border:1px solid var(--gold3);background:transparent;color:var(--gold);font-size:14px;font-weight:600;cursor:pointer;}
+
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--gold);color:#0a0800;font-size:13px;font-weight:700;padding:10px 20px;border-radius:20px;z-index:500;opacity:0;transition:opacity 0.2s;white-space:nowrap;pointer-events:none;}
+.toast.show{opacity:1;}
+.toast.err{background:#cc3333;color:#fff;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="casino-label">DOPAMINE CASINO</div>
+  <div class="top-title">🎡 ROULETTE</div>
+</div>
+<div class="point-bar">
+  <span style="font-size:11px;color:var(--sub)">💰 내 포인트</span>
+  <span class="point-val" id="my-point">— P</span>
+</div>
+
+<div class="main">
+  <!-- 룰렛 휠 -->
+  <div class="wheel-section">
+    <div class="wheel-outer">
+      <div class="pointer-wrap"><div class="pointer"></div></div>
+      <canvas id="rwheel" width="260" height="260"></canvas>
+    </div>
+    <div class="ball-result" id="ball-result" style="color:var(--sub)">— SPIN THE WHEEL —</div>
+  </div>
+
+  <!-- 베팅 탭 -->
+  <div class="bet-tabs">
+    <div class="bet-tab active" id="btab-color" onclick="switchBetTab('color')">🎨 색상</div>
+    <div class="bet-tab" id="btab-simple" onclick="switchBetTab('simple')">⚖️ 홀짝/범위</div>
+    <div class="bet-tab" id="btab-number" onclick="switchBetTab('number')">🔢 숫자</div>
+  </div>
+
+  <!-- 색상 베팅 -->
+  <div class="bet-options-wrap" id="panel-color">
+    <div class="bet-opts-title">COLOR BET</div>
+    <div class="color-opts">
+      <div class="color-opt" id="opt-red" onclick="pickColor('red')">
+        <div class="color-dot" style="background:#cc2222;box-shadow:0 0 8px rgba(204,34,34,0.5)"></div>
+        <div class="color-name" style="color:#ff6666">RED</div>
+        <div class="color-odds">x 2.0</div>
+      </div>
+      <div class="color-opt" id="opt-black" onclick="pickColor('black')">
+        <div class="color-dot" style="background:#2a2a6a;box-shadow:0 0 8px rgba(42,42,106,0.5)"></div>
+        <div class="color-name" style="color:#aaaaee">BLACK</div>
+        <div class="color-odds">x 2.0</div>
+      </div>
+      <div class="color-opt" id="opt-green" onclick="pickColor('green')">
+        <div class="color-dot" style="background:#116611;box-shadow:0 0 8px rgba(17,102,17,0.5)"></div>
+        <div class="color-name" style="color:#66cc66">GREEN</div>
+        <div class="color-odds">x 14</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 홀짝/범위 베팅 -->
+  <div class="bet-options-wrap" id="panel-simple" style="display:none">
+    <div class="bet-opts-title">ODD/EVEN · HIGH/LOW</div>
+    <div class="simple-opts">
+      <div class="simple-opt" id="sopt-odd"  onclick="pickSimple('odd')">
+        <div class="simple-name">홀수 ODD</div>
+        <div class="simple-range">1,3,5...35</div>
+        <div class="simple-odds">x 2.0</div>
+      </div>
+      <div class="simple-opt" id="sopt-even" onclick="pickSimple('even')">
+        <div class="simple-name">짝수 EVEN</div>
+        <div class="simple-range">2,4,6...36</div>
+        <div class="simple-odds">x 2.0</div>
+      </div>
+      <div class="simple-opt" id="sopt-low"  onclick="pickSimple('low')">
+        <div class="simple-name">LOW 1-18</div>
+        <div class="simple-range">1 ~ 18</div>
+        <div class="simple-odds">x 2.0</div>
+      </div>
+      <div class="simple-opt" id="sopt-high" onclick="pickSimple('high')">
+        <div class="simple-name">HIGH 19-36</div>
+        <div class="simple-range">19 ~ 36</div>
+        <div class="simple-odds">x 2.0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 숫자 베팅 -->
+  <div class="bet-options-wrap" id="panel-number" style="display:none">
+    <div class="bet-opts-title">NUMBER BET — 선택: <span id="num-sel-label" style="color:var(--gold)">없음</span></div>
+    <div class="num-grid" id="num-grid"></div>
+  </div>
+
+  <!-- 배당표 -->
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;">
+    <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold3);letter-spacing:2px;margin-bottom:10px;">PAYTABLE</div>
+    <div class="paytable-grid">
+      <div class="pay-item"><span class="pay-name">숫자 정확히</span><span class="pay-mult">x 35</span></div>
+      <div class="pay-item"><span class="pay-name">색상 (RED/BLACK)</span><span class="pay-mult">x 2</span></div>
+      <div class="pay-item"><span class="pay-name">GREEN (0)</span><span class="pay-mult">x 14</span></div>
+      <div class="pay-item"><span class="pay-name">홀수/짝수</span><span class="pay-mult">x 2</span></div>
+      <div class="pay-item"><span class="pay-name">1~18 / 19~36</span><span class="pay-mult">x 2</span></div>
+    </div>
+  </div>
+
+  <!-- 베팅 금액 & 스핀 -->
+  <div class="bet-section">
+    <div style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold);letter-spacing:1px;margin-bottom:12px;">— PLACE YOUR BET —</div>
+    <div class="presets">
+      <button class="preset" onclick="setAmt(100)">100</button>
+      <button class="preset" onclick="setAmt(500)">500</button>
+      <button class="preset" onclick="setAmt(1000)">1,000</button>
+      <button class="preset" onclick="setMax()">MAX</button>
+    </div>
+    <div class="amt-row">
+      <input class="amt-inp" type="number" id="amt" placeholder="베팅 금액" min="10" oninput="refreshBtn()"/>
+      <span style="font-size:13px;color:var(--sub)">P</span>
+    </div>
+    <button class="spin-btn off" id="spin-btn" onclick="doSpin()">베팅 항목을 선택해주세요</button>
+  </div>
+
+  <!-- 최근 기록 -->
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;">
+    <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold3);letter-spacing:2px;margin-bottom:10px;">RECENT NUMBERS</div>
+    <div class="history-balls" id="history-balls">
+      <div style="font-size:11px;color:var(--sub)">기록 없음</div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="ov-ball" id="ov-ball">0</div>
+  <div class="ov-title" id="ov-title" style="background:linear-gradient(135deg,#f0c96a,#d4a843);-webkit-background-clip:text;-webkit-text-fill-color:transparent;"></div>
+  <div class="ov-sub" id="ov-sub"></div>
+  <div class="ov-payout" id="ov-payout"></div>
+  <button class="ov-close" onclick="closeOverlay()">확인</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const p=new URLSearchParams(location.search);
+const userId=p.get('userId')||p.get('start')?.split('_')[0];
+const groupId=p.get('groupId')||p.get('start')?.split('_')[1];
+let myPt=0, spinning=false, betType=null, betValue=null, history=[];
+
+// 유럽식 룰렛 번호 배열 (0포함 37칸)
+const WHEEL_NUMS=[0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+const NUM_COLORS={
+  0:'green',
+  1:'red',2:'black',3:'red',4:'black',5:'red',6:'black',7:'red',8:'black',9:'red',10:'black',
+  11:'black',12:'red',13:'black',14:'red',15:'black',16:'red',17:'black',18:'red',19:'red',20:'black',
+  21:'red',22:'black',23:'red',24:'black',25:'red',26:'black',27:'red',28:'black',29:'black',30:'red',
+  31:'black',32:'red',33:'black',34:'red',35:'black',36:'red'
+};
+
+// ── 캔버스 휠 그리기 ──
+const canvas=document.getElementById('rwheel');
+const ctx=canvas.getContext('2d');
+const W=260,CX=130,CY=130,R=124;
+let wheelAngle=0;
+
+function getWheelColor(num){
+  const c=NUM_COLORS[num];
+  if(c==='green') return '#0d5c0d';
+  if(c==='red')   return '#8b0000';
+  return '#0a0a2a';
+}
+
+function drawRoulette(angle){
+  ctx.clearRect(0,0,W,W);
+  const n=WHEEL_NUMS.length;
+  const arc=Math.PI*2/n;
+
+  // 외곽 링
+  ctx.beginPath();ctx.arc(CX,CY,R+4,0,Math.PI*2);
+  ctx.fillStyle='#1a1000';ctx.fill();
+  ctx.strokeStyle='rgba(212,168,67,0.5)';ctx.lineWidth=3;ctx.stroke();
+
+  WHEEL_NUMS.forEach((num,i)=>{
+    const s=angle+arc*i, e=s+arc;
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.arc(CX,CY,R,s,e);ctx.closePath();
+    ctx.fillStyle=getWheelColor(num);ctx.fill();
+    ctx.strokeStyle='rgba(212,168,67,0.2)';ctx.lineWidth=0.8;ctx.stroke();
+    // 숫자
+    ctx.save();ctx.translate(CX,CY);ctx.rotate(s+arc/2);
+    ctx.textAlign='right';ctx.fillStyle='#ddd';
+    ctx.font='bold 9px sans-serif';
+    ctx.shadowColor='rgba(0,0,0,0.8)';ctx.shadowBlur=3;
+    ctx.fillText(String(num),R-4,3);
+    ctx.restore();
+  });
+
+  // 중앙
+  ctx.beginPath();ctx.arc(CX,CY,18,0,Math.PI*2);
+  ctx.fillStyle='#080808';ctx.fill();
+  ctx.strokeStyle='#d4a843';ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='#d4a843';ctx.font='bold 11px sans-serif';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('★',CX,CY);
+  ctx.textBaseline='alphabetic';
+}
+drawRoulette(0);
+
+// ── 숫자 그리드 ──
+function buildNumGrid(){
+  const el=document.getElementById('num-grid');
+  const nums=[0,...Array.from({length:36},(_,i)=>i+1)];
+  el.innerHTML=nums.map(n=>{
+    const c=NUM_COLORS[n];
+    return `<div class="num-cell n-${c}" id="nc-${n}" onclick="pickNum(${n})">${n}</div>`;
+  }).join('');
+}
+buildNumGrid();
+
+// ── 탭 전환 ──
+function switchBetTab(tab){
+  ['color','simple','number'].forEach(t=>{
+    document.getElementById('btab-'+t).className='bet-tab'+(t===tab?' active':'');
+    document.getElementById('panel-'+t).style.display=t===tab?'block':'none';
+  });
+  betType=null;betValue=null;
+  document.querySelectorAll('.color-opt').forEach(el=>el.className='color-opt');
+  document.querySelectorAll('.simple-opt').forEach(el=>el.classList.remove('selected'));
+  document.querySelectorAll('.num-cell').forEach(el=>el.classList.remove('num-sel'));
+  document.getElementById('num-sel-label').textContent='없음';
+  refreshBtn();
+}
+
+// ── 베팅 선택 ──
+function pickColor(c){
+  betType='color';betValue=c;
+  document.getElementById('opt-red').className='color-opt'+(c==='red'?' sel-red':'');
+  document.getElementById('opt-black').className='color-opt'+(c==='black'?' sel-black':'');
+  document.getElementById('opt-green').className='color-opt'+(c==='green'?' sel-green':'');
+  refreshBtn();
+}
+function pickSimple(t){
+  betType='simple';betValue=t;
+  ['odd','even','low','high'].forEach(v=>document.getElementById('sopt-'+v).classList.toggle('selected',v===t));
+  refreshBtn();
+}
+function pickNum(n){
+  betType='number';betValue=n;
+  document.querySelectorAll('.num-cell').forEach(el=>el.classList.remove('num-sel'));
+  document.getElementById('nc-'+n).classList.add('num-sel');
+  document.getElementById('num-sel-label').textContent=n+' ('+NUM_COLORS[n].toUpperCase()+')';
+  refreshBtn();
+}
+
+function getOdds(){
+  if(betType==='number') return 35;
+  if(betType==='color'&&betValue==='green') return 14;
+  return 2;
+}
+
+function toast(msg,err=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(err?' err':'');setTimeout(()=>t.className='toast',2500);}
+function fmt(n){return Number(n||0).toLocaleString();}
+function setAmt(v){document.getElementById('amt').value=v;refreshBtn();}
+function setMax(){setAmt(Math.min(myPt,10000));}
+function refreshBtn(){
+  const btn=document.getElementById('spin-btn');
+  if(spinning){btn.className='spin-btn spinning';btn.textContent='🎡 SPINNING...';return;}
+  const amt=parseInt(document.getElementById('amt').value)||0;
+  if(!betType){btn.className='spin-btn off';btn.textContent='베팅 항목을 선택해주세요';return;}
+  if(amt<10){btn.className='spin-btn off';btn.textContent='최소 10P 이상 입력해주세요';return;}
+  if(amt>myPt){btn.className='spin-btn off';btn.textContent='포인트가 부족해요';return;}
+  const odds=getOdds();
+  const labels={color:{red:'🔴 RED',black:'⚫ BLACK',green:'🟢 GREEN'},simple:{odd:'홀수',even:'짝수',low:'LOW 1~18',high:'HIGH 19~36'}};
+  const label=betType==='number'?`숫자 ${betValue}`:betType==='color'?labels.color[betValue]:labels.simple[betValue];
+  btn.className='spin-btn';
+  btn.textContent=`🎡 ${label} · ${fmt(amt)}P → 예상 +${fmt(amt*odds)}P`;
+}
+
+// ── 스핀 애니메이션 ──
+function animWheel(targetNum, duration){
+  return new Promise(resolve=>{
+    const idx=WHEEL_NUMS.indexOf(targetNum);
+    if(idx<0){resolve();return;}
+    const n=WHEEL_NUMS.length;
+    const arc=Math.PI*2/n;
+    const targetAngle=-Math.PI/2 - arc*idx - arc/2;
+    const spins=5+Math.random()*3;
+    const endAngle=targetAngle+spins*Math.PI*2;
+    let startTime=null;
+    function tick(ts){
+      if(!startTime)startTime=ts;
+      const elapsed=ts-startTime;
+      const progress=Math.min(elapsed/duration,1);
+      const eased=1-Math.pow(1-progress,3);
+      wheelAngle=eased*endAngle;
+      drawRoulette(wheelAngle);
+      if(progress<1)requestAnimationFrame(tick);
+      else{wheelAngle=endAngle%(Math.PI*2);drawRoulette(wheelAngle);resolve();}
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+// ── 당첨 판정 ──
+function checkWin(num){
+  const color=NUM_COLORS[num];
+  if(betType==='color') return betValue===color;
+  if(betType==='simple'){
+    if(betValue==='odd')  return num>0&&num%2===1;
+    if(betValue==='even') return num>0&&num%2===0;
+    if(betValue==='low')  return num>=1&&num<=18;
+    if(betValue==='high') return num>=19&&num<=36;
+  }
+  if(betType==='number') return betValue===num;
+  return false;
+}
+
+async function doSpin(){
+  if(spinning||!betType) return;
+  const amt=parseInt(document.getElementById('amt').value)||0;
+  if(amt<10||amt>myPt) return;
+  spinning=true; refreshBtn();
+  document.getElementById('ball-result').textContent='';
+
+  // 결과
+  const resultNum=Math.floor(Math.random()*37);
+  const won=checkWin(resultNum);
+  const odds=getOdds();
+  const payout=won?amt*odds:0;
+
+  try{
+    const res=await fetch('/casino/roulette/spin',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({groupId:parseInt(groupId),userId:parseInt(userId),amount:amt,betType,betValue,result:resultNum,won,payout})
+    });
+    const data=await res.json();
+    if(!data.ok){toast(data.error||'오류',true);spinning=false;refreshBtn();return;}
+
+    myPt-=amt;
+    document.getElementById('my-point').textContent=fmt(myPt)+' P';
+
+    await animWheel(resultNum,4000);
+
+    const color=NUM_COLORS[resultNum];
+    const colBg={red:'#8b0000',black:'#0a0a2a',green:'#0d5c0d'}[color]||'#1a1a2a';
+    const colText={red:'#ff6666',black:'#aaaaee',green:'#66cc66'}[color]||'#fff';
+    document.getElementById('ball-result').innerHTML=`<span style="background:${colBg};color:${colText};padding:4px 14px;border-radius:20px;border:1px solid ${colText}44">${resultNum} ${color.toUpperCase()}</span>`;
+
+    // 기록
+    history.unshift({num:resultNum,color,won});
+    if(history.length>15)history.pop();
+    const hw=document.getElementById('history-balls');
+    hw.innerHTML=history.map(h=>{
+      const bg={red:'#2a0808',black:'#0a0a1a',green:'#0a1a0a'}[h.color]||'#1a1a2a';
+      const tc={red:'#ff6666',black:'#aaaaee',green:'#66cc66'}[h.color]||'#fff';
+      return `<div class="hball" style="background:${bg};border:1px solid ${tc}44;color:${tc}">${h.num}</div>`;
+    }).join('');
+
+    if(payout>0){ myPt+=payout; document.getElementById('my-point').textContent=fmt(myPt)+' P'; }
+
+    // 오버레이
+    setTimeout(()=>{
+      const ovBall=document.getElementById('ov-ball');
+      const colBg2={red:'#8b0000',black:'#0a0a2a',green:'#0d5c0d'}[color];
+      const colTc2={red:'#ff6666',black:'#aaaaee',green:'#66cc66'}[color];
+      ovBall.style.background=colBg2; ovBall.style.color=colTc2;
+      ovBall.style.border=`2px solid ${colTc2}`;
+      ovBall.textContent=resultNum;
+      document.getElementById('ov-title').textContent=won?'🎉 WIN!':'💸 MISS';
+      document.getElementById('ov-sub').textContent=`${resultNum} ${color.toUpperCase()}${won?' — 베팅 성공!':' — 아쉬워요'}`;
+      if(payout>0){
+        document.getElementById('ov-payout').textContent=`+${fmt(payout)} P 획득!`;
+        document.getElementById('ov-payout').style.color='#44ee88';
+      } else {
+        document.getElementById('ov-payout').textContent=`-${fmt(amt)} P`;
+        document.getElementById('ov-payout').style.color='#ee4444';
+      }
+      document.getElementById('overlay').classList.add('show');
+    },500);
+  }catch(e){toast('서버 오류',true);}
+  spinning=false; refreshBtn();
+}
+
+function closeOverlay(){document.getElementById('overlay').classList.remove('show');}
+
+async function loadPt(){
+  try{
+    const res=await fetch(`/casino/users?groupId=${groupId}`);
+    const users=await res.json();
+    const me=users.find(u=>String(u.userId)===String(userId));
+    if(me){myPt=me.point;document.getElementById('my-point').textContent=fmt(myPt)+' P';}
+  }catch(e){}
+}
+loadPt();
+</script>
+</body>
+</html>
