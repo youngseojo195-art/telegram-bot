@@ -127,8 +127,10 @@ input[type=range]{flex:1;accent-color:var(--gold);}
   <div class="casino-label">DOPAMINE CASINO</div>
   <div class="top-title">👑 ADMIN PANEL</div>
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('race')"    id="tab-race">🐢 경주</button>
-    <button class="tab-btn"        onclick="switchTab('settings')" id="tab-settings">⚙️ 게임설정</button>
+    <button class="tab-btn active" onclick="switchTab('race')"     id="tab-race">🐢 경주</button>
+    <button class="tab-btn"        onclick="switchTab('baccarat')"  id="tab-baccarat">🃏 바카라</button>
+    <button class="tab-btn"        onclick="switchTab('horse')"     id="tab-horse">🐴 경마</button>
+    <button class="tab-btn"        onclick="switchTab('settings')"  id="tab-settings">⚙️ 설정</button>
     <button class="tab-btn"        onclick="switchTab('points')"   id="tab-points">💰 포인트</button>
     <button class="tab-btn"        onclick="switchTab('users')"    id="tab-users">👥 유저</button>
     <button class="tab-btn"        onclick="switchTab('stats')"    id="tab-stats">📊 통계</button>
@@ -151,6 +153,39 @@ input[type=range]{flex:1;accent-color:var(--gold);}
   <div class="card">
     <div class="card-title">LIVE BETS</div>
     <div id="race-bets-info" style="font-size:13px;color:var(--sub)">베팅 정보 없음</div>
+  </div>
+</div>
+
+<!-- ══ 바카라 관리 ══ -->
+<div class="screen" id="screen-baccarat">
+  <div class="card">
+    <div class="card-title">BACCARAT CONTROL</div>
+    <div style="font-size:12px;color:var(--sub);margin-bottom:12px">현재 상태: <span id="baccarat-status-label" style="color:var(--gold);font-weight:700">불러오는 중...</span></div>
+    <div class="race-ctrl">
+      <button class="ctrl-btn ctrl-open"   onclick="baccaratOpen()">🃏 베팅 오픈 (새 게임 시작)</button>
+      <button class="ctrl-btn ctrl-result" onclick="baccaratResult()">🏆 결과 처리 & 정산</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">LIVE BETS</div>
+    <div id="baccarat-bets-info" style="font-size:13px;color:var(--sub)">베팅 정보 없음</div>
+  </div>
+</div>
+
+<!-- ══ 경마 관리 ══ -->
+<div class="screen" id="screen-horse">
+  <div class="card">
+    <div class="card-title">HORSE RACE CONTROL</div>
+    <div style="font-size:12px;color:var(--sub);margin-bottom:12px">현재 상태: <span id="horse-status-label" style="color:var(--gold);font-weight:700">불러오는 중...</span></div>
+    <div class="race-ctrl">
+      <button class="ctrl-btn ctrl-open"   onclick="horseOpen()">🐴 베팅 오픈 (새 경주 시작)</button>
+      <button class="ctrl-btn ctrl-start"  onclick="horseStart()">🚀 베팅 마감 & 경주 시작</button>
+      <button class="ctrl-btn ctrl-result" onclick="horseResult()">🏆 결과 처리 & 정산</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">LIVE BETS</div>
+    <div id="horse-bets-info" style="font-size:13px;color:var(--sub)">베팅 정보 없음</div>
   </div>
 </div>
 
@@ -379,11 +414,13 @@ function showToast(msg, isError=false) {
 function fmt(n){return Number(n||0).toLocaleString();}
 
 function switchTab(tab) {
-  ['race','settings','points','users','stats','logs'].forEach(t => {
+  ['race','baccarat','horse','settings','points','users','stats','logs'].forEach(t => {
     document.getElementById('tab-'+t).className = 'tab-btn' + (t===tab?' active':'');
     document.getElementById('screen-'+t).classList.toggle('show', t===tab);
   });
-  if (tab==='users')  { loadUsers(); loadBlacklist(); }
+  if (tab==='users')    { loadUsers(); loadBlacklist(); }
+  if (tab==='baccarat') loadBaccaratState();
+  if (tab==='horse')    loadHorseState();
   if (tab==='stats')  loadStats(7);
   if (tab==='logs')   loadLogs();
   if (tab==='points') loadUsers();
@@ -710,6 +747,84 @@ function renderBigwheelSegments() {
     </div>
   `).join('');
 }
+
+// ════════════
+// 바카라
+// ════════════
+let baccaratState = null;
+async function loadBaccaratState() {
+  try {
+    const res = await fetch(`/casino/baccarat/state?groupId=${groupId}&userId=${adminId}`);
+    baccaratState = await res.json();
+    const labels = {idle:'⏳ 대기',betting:'🔴 베팅 중',running:'🎴 게임 중',closed:'🏁 종료'};
+    document.getElementById('baccarat-status-label').textContent = labels[baccaratState.status]||'알 수 없음';
+    document.getElementById('baccarat-bets-info').textContent = '베팅 정보: roundId=' + (baccaratState.roundId||'없음');
+  } catch(e) {}
+}
+async function baccaratOpen() {
+  if(!confirm('바카라 베팅을 오픈할까요?')) return;
+  try {
+    const res = await fetch('/casino/baccarat/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId})});
+    const data = await res.json();
+    if(data.ok){showToast('✅ 바카라 베팅 오픈!');loadBaccaratState();}
+    else showToast(data.error||'오류',true);
+  } catch(e){showToast('오류',true);}
+}
+async function baccaratResult() {
+  if(!baccaratState?.roundId){showToast('진행 중인 게임이 없어요',true);return;}
+  if(!confirm('바카라 결과를 처리할까요?')) return;
+  try {
+    const res = await fetch('/casino/baccarat/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId,roundId:baccaratState.roundId})});
+    const data = await res.json();
+    if(data.ok){showToast(`✅ ${data.result} 결과 처리 완료!`);loadBaccaratState();}
+    else showToast(data.error||'오류',true);
+  } catch(e){showToast('오류',true);}
+}
+
+// ════════════
+// 경마
+// ════════════
+let horseState = null;
+async function loadHorseState() {
+  try {
+    const res = await fetch(`/casino/horse/state?groupId=${groupId}&userId=${adminId}`);
+    horseState = await res.json();
+    const labels = {idle:'⏳ 대기',betting:'🔴 베팅 중',running:'🏇 경주 중',closed:'🏁 종료'};
+    document.getElementById('horse-status-label').textContent = labels[horseState.status]||'알 수 없음';
+    document.getElementById('horse-bets-info').textContent = 'roundId=' + (horseState.roundId||'없음');
+  } catch(e) {}
+}
+async function horseOpen() {
+  if(!confirm('경마 베팅을 오픈할까요?')) return;
+  try {
+    const res = await fetch('/casino/horse/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId})});
+    const data = await res.json();
+    if(data.ok){showToast('✅ 경마 베팅 오픈!');loadHorseState();}
+    else showToast(data.error||'오류',true);
+  } catch(e){showToast('오류',true);}
+}
+async function horseStart() {
+  if(!horseState?.roundId){showToast('진행 중인 경마가 없어요',true);return;}
+  try {
+    const res = await fetch('/casino/race/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId,roundId:horseState.roundId})});
+    const data = await res.json();
+    if(data.ok){showToast('✅ 경마 시작!');loadHorseState();}
+    else showToast(data.error||'오류',true);
+  } catch(e){showToast('오류',true);}
+}
+async function horseResult() {
+  if(!horseState?.roundId){showToast('진행 중인 경마가 없어요',true);return;}
+  if(!confirm('경마 결과를 처리할까요?')) return;
+  try {
+    const res = await fetch('/casino/horse/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId,roundId:horseState.roundId})});
+    const data = await res.json();
+    if(data.ok){showToast('✅ 경마 결과 처리 완료!');loadHorseState();}
+    else showToast(data.error||'오류',true);
+  } catch(e){showToast('오류',true);}
+}
+
+// switchTab 확장
+const _origSwitch = switchTab;
 
 // ════════════
 // 초기화
