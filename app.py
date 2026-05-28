@@ -783,6 +783,14 @@ def handle_all(message):
 # ─────────────────────────────────────────────────────────
 # Flask 라우트
 # ─────────────────────────────────────────────────────────
+@app.route('/casino/check_admin')
+def casino_check_admin():
+    try:
+        admin_id = int(request.args.get('adminId', 0))
+        return {'isAdmin': admin_id in ADMIN_IDS}, 200
+    except:
+        return {'isAdmin': False}, 200
+
 @app.route('/kbo')
 def serve_kbo(): return send_from_directory('.', 'kbo.html')
 
