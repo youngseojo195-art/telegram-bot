@@ -11,193 +11,141 @@
   --gold:#d4a843;--gold2:#f0c96a;--gold3:#8b6914;
   --bg:#080810;--bg2:#0e0e1c;--bg3:#161628;--bg4:#1e1e35;
   --border:#2a2a45;--text:#e8e0cc;--sub:#6a6a8a;
+  --red:#ee4444;--green:#44cc88;--blue:#4a9eff;
 }
-body{
-  font-family:'Noto Sans KR',sans-serif;
-  background:var(--bg);color:var(--text);
-  min-height:100vh;display:flex;flex-direction:column;
-  overflow-x:hidden;
-}
-body::before{
-  content:'';position:fixed;inset:0;
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212,168,67,0.12) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 40% at 20% 80%, rgba(74,158,255,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse 40% 40% at 80% 80%, rgba(136,34,136,0.04) 0%, transparent 50%);
-  pointer-events:none;z-index:0;
-}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(212,168,67,0.12) 0%,transparent 60%),radial-gradient(ellipse 40% 40% at 20% 80%,rgba(74,158,255,0.04) 0%,transparent 50%);pointer-events:none;z-index:0;}
 
 /* 헤더 */
-.hero{
-  position:relative;z-index:1;
-  padding:40px 20px 30px;text-align:center;
-  border-bottom:1px solid var(--border);
-  background:linear-gradient(180deg,#0e0e20,#080810);
-}
-.hero-label{
-  font-family:'Cinzel',serif;font-size:10px;
-  letter-spacing:6px;color:var(--gold3);margin-bottom:8px;
-}
-.hero-title{
-  font-family:'Cinzel',serif;font-size:32px;font-weight:900;
-  background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  line-height:1.2;margin-bottom:6px;
-}
+.hero{position:relative;z-index:1;padding:32px 20px 24px;text-align:center;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#0e0e20,#080810);}
+.hero-label{font-family:'Cinzel',serif;font-size:10px;letter-spacing:6px;color:var(--gold3);margin-bottom:8px;}
+.hero-title{font-family:'Cinzel',serif;font-size:32px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.2;margin-bottom:6px;}
 .hero-sub{font-size:12px;color:var(--sub);letter-spacing:1px;}
 
+/* 관리자 바 */
+.admin-bar{position:relative;z-index:1;background:linear-gradient(135deg,#1a0e00,#0e0a00);border-bottom:1px solid #3a2800;padding:10px 16px;display:none;}
+.admin-bar.show{display:block;}
+.admin-bar-title{font-size:10px;color:var(--gold3);letter-spacing:2px;font-family:'Cinzel',serif;margin-bottom:8px;}
+.admin-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+.admin-game-btn{border-radius:10px;border:1px solid #3a2800;background:#150c00;padding:8px 4px;text-align:center;cursor:pointer;}
+.admin-game-btn:active{opacity:0.8;}
+.admin-game-label{font-size:10px;color:var(--gold3);margin-bottom:4px;}
+.admin-open{display:block;font-size:11px;font-weight:700;color:var(--green);background:#051a10;border:1px solid #22aa55;border-radius:6px;padding:4px 0;cursor:pointer;width:100%;margin-bottom:3px;}
+.admin-open:active{opacity:0.8;}
+.admin-close{display:block;font-size:11px;font-weight:700;color:var(--red);background:#1a0505;border:1px solid #aa2222;border-radius:6px;padding:4px 0;cursor:pointer;width:100%;margin-bottom:3px;}
+.admin-close:active{opacity:0.8;}
+.admin-result{display:block;font-size:11px;font-weight:700;color:var(--gold);background:#1a1500;border:1px solid var(--gold3);border-radius:6px;padding:4px 0;cursor:pointer;width:100%;}
+.admin-result:active{opacity:0.8;}
+.game-status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:middle;}
+.dot-idle{background:var(--sub);}
+.dot-betting{background:var(--red);animation:blink 1s infinite;}
+.dot-running{background:var(--gold);animation:blink 0.5s infinite;}
+.dot-closed{background:var(--green);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+
 /* 포인트 바 */
-.point-bar{
-  position:relative;z-index:1;
-  background:var(--bg2);border-bottom:1px solid var(--border);
-  padding:10px 20px;
-  display:flex;align-items:center;justify-content:space-between;
-}
+.point-bar{position:relative;z-index:1;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;}
 .point-wrap{display:flex;align-items:center;gap:8px;}
 .point-icon{font-size:18px;}
 .point-info{display:flex;flex-direction:column;}
 .point-label{font-size:10px;color:var(--sub);letter-spacing:0.05em;}
 .point-val{font-size:18px;font-weight:900;color:var(--gold);}
 .point-unit{font-size:11px;color:var(--gold3);}
+.admin-badge{font-size:10px;font-weight:700;color:#0a0800;background:linear-gradient(135deg,var(--gold),var(--gold3));padding:3px 8px;border-radius:8px;}
+
+/* 탭 네비 */
+.tab-nav{position:relative;z-index:1;display:flex;background:var(--bg2);border-bottom:1px solid var(--border);overflow-x:auto;}
+.tab-nav::-webkit-scrollbar{display:none;}
+.tab-item{flex:0 0 auto;padding:10px 16px;font-size:12px;font-weight:600;color:var(--sub);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
+.tab-item.active{color:var(--gold);border-bottom-color:var(--gold);}
+
+/* 탭 콘텐츠 */
+.tab-content{display:none;position:relative;z-index:1;}
+.tab-content.show{display:block;}
 
 /* 게임 그리드 */
-.games-wrap{
-  position:relative;z-index:1;
-  padding:20px 14px 100px;
-  display:flex;flex-direction:column;gap:12px;
-}
-.section-title{
-  font-family:'Cinzel',serif;font-size:11px;
-  color:var(--gold3);letter-spacing:3px;
-  padding:0 4px;margin-bottom:4px;
-}
+.games-wrap{padding:16px 14px 20px;display:flex;flex-direction:column;gap:12px;}
+.section-title{font-family:'Cinzel',serif;font-size:11px;color:var(--gold3);letter-spacing:3px;padding:0 4px;margin-bottom:4px;}
 
-.game-card{
-  background:var(--bg2);
-  border:1px solid var(--border);
-  border-radius:18px;overflow:hidden;
-  cursor:pointer;transition:all 0.2s;
-  position:relative;
-  box-shadow:0 4px 20px rgba(0,0,0,0.3);
-}
+.game-card{background:var(--bg2);border:1px solid var(--border);border-radius:18px;overflow:hidden;cursor:pointer;transition:all 0.2s;position:relative;box-shadow:0 4px 20px rgba(0,0,0,0.3);}
 .game-card:active{transform:scale(0.98);}
-.game-card::before{
-  content:'';position:absolute;inset:0;
-  opacity:0;transition:opacity 0.2s;
-  background:linear-gradient(135deg,rgba(212,168,67,0.05),transparent);
-}
-.game-card:active::before{opacity:1;}
-
-.game-inner{
-  display:flex;align-items:center;gap:16px;
-  padding:18px 16px;
-}
-.game-emoji-wrap{
-  width:64px;height:64px;border-radius:16px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:32px;flex-shrink:0;
-  position:relative;overflow:hidden;
-}
+.game-inner{display:flex;align-items:center;gap:16px;padding:18px 16px;}
+.game-emoji-wrap{width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;}
 .game-info{flex:1;}
-.game-name{
-  font-family:'Cinzel',serif;
-  font-size:16px;font-weight:700;
-  color:var(--text);margin-bottom:4px;
-}
+.game-name{font-family:'Cinzel',serif;font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px;}
 .game-desc{font-size:12px;color:var(--sub);line-height:1.5;margin-bottom:8px;}
 .game-tags{display:flex;gap:6px;flex-wrap:wrap;}
-.game-tag{
-  font-size:10px;padding:3px 8px;border-radius:10px;
-  border:1px solid;font-weight:600;letter-spacing:0.03em;
-}
-.game-arrow{
-  font-size:20px;color:var(--gold3);flex-shrink:0;
-  transition:transform 0.2s;
-}
-.game-card:active .game-arrow{transform:translateX(4px);}
+.game-tag{font-size:10px;padding:3px 8px;border-radius:10px;border:1px solid;font-weight:600;}
+.game-arrow{font-size:20px;color:var(--gold3);flex-shrink:0;}
+.game-status-bar{padding:6px 16px 10px;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub);border-top:1px solid var(--border);}
 
-/* 게임별 색상 */
 .race-card .game-emoji-wrap{background:linear-gradient(135deg,#051525,#0a1530);}
 .race-card .game-name{color:#7ab8ff;}
-.race-card .game-arrow{color:#4a9eff;}
-
 .baccarat-card .game-emoji-wrap{background:linear-gradient(135deg,#1a0a05,#2a1008);}
 .baccarat-card .game-name{color:#ffaa66;}
-.baccarat-card .game-arrow{color:#ff8844;}
-
 .horse-card .game-emoji-wrap{background:linear-gradient(135deg,#0a1505,#101a08);}
 .horse-card .game-name{color:#88cc55;}
-.horse-card .game-arrow{color:#66aa33;}
-
 .bigwheel-card .game-emoji-wrap{background:linear-gradient(135deg,#15051a,#200a28);}
 .bigwheel-card .game-name{color:#cc88ff;}
-.bigwheel-card .game-arrow{color:#aa55ee;}
 
-/* 구분선 */
-.divider{
-  height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);
-  margin:4px 0;
-}
+.badge-new{position:absolute;top:12px;right:12px;font-size:9px;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:8px;background:linear-gradient(135deg,var(--gold),var(--gold3));color:#0a0800;}
 
-/* 잠김 배지 */
-.badge-new{
-  position:absolute;top:12px;right:12px;
-  font-size:9px;font-weight:700;letter-spacing:1px;
-  padding:3px 8px;border-radius:8px;
-  background:linear-gradient(135deg,var(--gold),var(--gold3));
-  color:#0a0800;
-}
-.badge-soon{
-  position:absolute;top:12px;right:12px;
-  font-size:9px;font-weight:700;letter-spacing:1px;
-  padding:3px 8px;border-radius:8px;
-  background:var(--bg3);color:var(--sub);
-  border:1px solid var(--border);
-}
+/* 랭킹 탭 */
+.rank-wrap{padding:16px 14px;}
+.rank-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.rank-me{background:var(--bg3);border:1px solid var(--gold3);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.rank-me-label{font-size:10px;color:var(--gold3);letter-spacing:1px;margin-bottom:2px;}
+.rank-me-val{font-size:16px;font-weight:700;color:var(--gold);}
+.rank-list{display:flex;flex-direction:column;gap:6px;}
+.rank-item{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;}
+.rank-item.me{border-color:var(--gold3);background:var(--bg3);}
+.rank-num{font-size:16px;font-weight:900;color:var(--sub);min-width:28px;}
+.rank-num.gold{color:#ffd700;}
+.rank-num.silver{color:#c0c0c0;}
+.rank-num.bronze{color:#cd7f32;}
+.rank-name{flex:1;font-size:14px;font-weight:600;}
+.rank-point{font-size:14px;font-weight:700;color:var(--gold);}
+.rank-bar-wrap{margin-top:4px;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden;}
+.rank-bar{height:100%;background:linear-gradient(90deg,var(--gold3),var(--gold2));border-radius:2px;transition:width 0.6s ease;}
 
-/* 하단 정보 */
-.footer-info{
-  position:relative;z-index:1;
-  padding:0 14px 20px;
-  display:grid;grid-template-columns:1fr 1fr;gap:10px;
-}
-.info-card{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:12px;padding:12px 14px;text-align:center;
-}
-.info-val{font-size:20px;font-weight:900;color:var(--gold);}
-.info-label{font-size:10px;color:var(--sub);margin-top:2px;letter-spacing:0.05em;}
+/* 피드 탭 */
+.feed-wrap{padding:16px 14px;}
+.feed-list{display:flex;flex-direction:column;gap:8px;}
+.feed-item{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;animation:feedIn 0.3s ease;}
+@keyframes feedIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.feed-icon{font-size:20px;flex-shrink:0;}
+.feed-body{flex:1;}
+.feed-name{font-size:13px;font-weight:600;}
+.feed-desc{font-size:11px;color:var(--sub);margin-top:1px;}
+.feed-amount{font-size:14px;font-weight:700;flex-shrink:0;}
+.feed-amount.win{color:var(--green);}
+.feed-amount.lose{color:var(--red);}
+.feed-time{font-size:10px;color:var(--sub);margin-top:2px;}
+.feed-empty{text-align:center;color:var(--sub);padding:40px 20px;font-size:13px;}
+
+/* 하단 통계 */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px 20px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;text-align:center;}
+.stat-val{font-size:20px;font-weight:900;color:var(--gold);}
+.stat-label{font-size:10px;color:var(--sub);margin-top:3px;}
 
 /* 토스트 */
-.toast{
-  position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
-  background:var(--gold);color:#0a0800;
-  font-size:13px;font-weight:700;padding:10px 20px;border-radius:20px;
-  z-index:2000;opacity:0;transition:opacity 0.2s;white-space:nowrap;pointer-events:none;
-}
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--gold);color:#0a0800;font-size:13px;font-weight:700;padding:10px 20px;border-radius:20px;z-index:2000;opacity:0;transition:opacity 0.2s;white-space:nowrap;pointer-events:none;}
 .toast.show{opacity:1;}
 .toast.error{background:#cc3333;color:#fff;}
 
 /* 로딩 */
-.loading{
-  position:fixed;inset:0;background:var(--bg);
-  z-index:100;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:16px;
-}
-.loading-title{
-  font-family:'Cinzel',serif;font-size:24px;font-weight:900;
-  background:linear-gradient(135deg,var(--gold2),var(--gold));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-}
+.loading{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.loading-title{font-family:'Cinzel',serif;font-size:24px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
 .loading-bar-wrap{width:200px;height:3px;background:var(--bg3);border-radius:3px;overflow:hidden;}
-.loading-bar{height:100%;background:linear-gradient(90deg,var(--gold3),var(--gold2));
-  border-radius:3px;animation:loadAnim 1.5s ease-in-out infinite;}
+.loading-bar{height:100%;background:linear-gradient(90deg,var(--gold3),var(--gold2));border-radius:3px;animation:loadAnim 1.5s ease-in-out infinite;}
 @keyframes loadAnim{0%{width:0;margin-left:0}50%{width:100%;margin-left:0}100%{width:0;margin-left:100%}}
+
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:4px 0;}
 </style>
 </head>
 <body>
 
-<!-- 로딩 -->
 <div class="loading" id="loading">
   <div style="font-size:48px">🎰</div>
   <div class="loading-title">DOPAMINE CASINO</div>
@@ -211,6 +159,34 @@ body::before{
   <div class="hero-sub">✦ PLAY SMART · WIN BIG ✦</div>
 </div>
 
+<!-- 관리자 게임 컨트롤 (관리자만 표시) -->
+<div class="admin-bar" id="admin-bar">
+  <div class="admin-bar-title">👑 GAME CONTROL</div>
+  <div class="admin-btns">
+    <!-- 경주 -->
+    <div class="admin-game-btn">
+      <div class="admin-game-label"><span class="game-status-dot dot-idle" id="adm-race-dot"></span>경주</div>
+      <button class="admin-open" onclick="adminOpen('race')">▶ 베팅 오픈</button>
+      <button class="admin-close" onclick="adminStart('race')">⏸ 베팅 마감</button>
+      <button class="admin-result" onclick="adminResult('race')">🏆 결과 처리</button>
+    </div>
+    <!-- 바카라 -->
+    <div class="admin-game-btn">
+      <div class="admin-game-label"><span class="game-status-dot dot-idle" id="adm-baccarat-dot"></span>바카라</div>
+      <button class="admin-open" onclick="adminOpen('baccarat')">▶ 베팅 오픈</button>
+      <button class="admin-close" style="visibility:hidden">-</button>
+      <button class="admin-result" onclick="adminResult('baccarat')">🏆 결과 처리</button>
+    </div>
+    <!-- 경마 -->
+    <div class="admin-game-btn">
+      <div class="admin-game-label"><span class="game-status-dot dot-idle" id="adm-horse-dot"></span>경마</div>
+      <button class="admin-open" onclick="adminOpen('horse')">▶ 베팅 오픈</button>
+      <button class="admin-close" onclick="adminStart('horse')">⏸ 베팅 마감</button>
+      <button class="admin-result" onclick="adminResult('horse')">🏆 결과 처리</button>
+    </div>
+  </div>
+</div>
+
 <!-- 포인트 바 -->
 <div class="point-bar">
   <div class="point-wrap">
@@ -221,129 +197,186 @@ body::before{
     </div>
     <span class="point-unit">P</span>
   </div>
-  <div style="font-size:11px;color:var(--sub)" id="user-name-label"></div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span style="font-size:11px;color:var(--sub)" id="user-name-label"></span>
+    <span class="admin-badge" id="admin-badge" style="display:none">👑 관리자</span>
+  </div>
 </div>
 
-<!-- 게임 목록 -->
-<div class="games-wrap">
-  <div class="section-title">GAMES</div>
+<!-- 탭 네비 -->
+<div class="tab-nav">
+  <div class="tab-item active" onclick="switchTab('games')">🎮 게임</div>
+  <div class="tab-item" onclick="switchTab('ranking')">🏆 랭킹</div>
+  <div class="tab-item" onclick="switchTab('feed')">📡 실시간</div>
+</div>
 
-  <!-- 토끼 vs 거북이 -->
-  <div class="game-card race-card" onclick="goGame('race')">
-    <div class="badge-new">NEW</div>
-    <div class="game-inner">
-      <div class="game-emoji-wrap">🐇</div>
-      <div class="game-info">
-        <div class="game-name">GRAND RACE</div>
-        <div class="game-desc">토끼 vs 거북이 실시간 경주<br>베팅 풀 기반 동적 배당률</div>
-        <div class="game-tags">
-          <span class="game-tag" style="border-color:#2255aa;color:#4a9eff">동적 배당</span>
-          <span class="game-tag" style="border-color:#224422;color:#44cc88">실시간</span>
+<!-- ══ 게임 탭 ══ -->
+<div class="tab-content show" id="tab-games">
+  <div class="games-wrap">
+    <div class="section-title">GAMES</div>
+
+    <div class="game-card race-card" onclick="goGame('race')">
+      <div class="badge-new">NEW</div>
+      <div class="game-inner">
+        <div class="game-emoji-wrap">🐇</div>
+        <div class="game-info">
+          <div class="game-name">GRAND RACE</div>
+          <div class="game-desc">토끼 vs 거북이 실시간 경주<br>베팅 풀 기반 동적 배당률</div>
+          <div class="game-tags">
+            <span class="game-tag" style="border-color:#2255aa;color:#4a9eff">동적 배당</span>
+            <span class="game-tag" style="border-color:#224422;color:#44cc88">실시간</span>
+          </div>
         </div>
+        <div class="game-arrow">›</div>
       </div>
-      <div class="game-arrow">›</div>
+      <div class="game-status-bar">
+        <span class="game-status-dot dot-idle" id="race-dot"></span>
+        <span id="race-status-text" style="color:var(--sub)">대기 중</span>
+        <span style="margin-left:auto;color:var(--gold);font-weight:700" id="race-pool">—</span>
+      </div>
     </div>
-  </div>
 
-  <!-- 바카라 -->
-  <div class="game-card baccarat-card" onclick="goGame('baccarat')">
-    <div class="badge-new">NEW</div>
-    <div class="game-inner">
-      <div class="game-emoji-wrap">🃏</div>
-      <div class="game-info">
-        <div class="game-name">BACCARAT</div>
-        <div class="game-desc">플레이어 vs 뱅커<br>클래식 카지노 카드 게임</div>
-        <div class="game-tags">
-          <span class="game-tag" style="border-color:#553322;color:#ff8844">카드게임</span>
-          <span class="game-tag" style="border-color:#443322;color:#cc8833">고정 배당</span>
+    <div class="game-card baccarat-card" onclick="goGame('baccarat')">
+      <div class="badge-new">NEW</div>
+      <div class="game-inner">
+        <div class="game-emoji-wrap">🃏</div>
+        <div class="game-info">
+          <div class="game-name">BACCARAT</div>
+          <div class="game-desc">플레이어 vs 뱅커<br>클래식 카지노 카드 게임</div>
+          <div class="game-tags">
+            <span class="game-tag" style="border-color:#553322;color:#ff8844">카드게임</span>
+            <span class="game-tag" style="border-color:#443322;color:#cc8833">고정 배당</span>
+          </div>
         </div>
+        <div class="game-arrow">›</div>
       </div>
-      <div class="game-arrow">›</div>
+      <div class="game-status-bar">
+        <span class="game-status-dot dot-idle" id="baccarat-dot"></span>
+        <span id="baccarat-status-text" style="color:var(--sub)">대기 중</span>
+      </div>
     </div>
-  </div>
 
-  <!-- 경마 -->
-  <div class="game-card horse-card" onclick="goGame('horse')">
-    <div class="badge-new">NEW</div>
-    <div class="game-inner">
-      <div class="game-emoji-wrap">🐴</div>
-      <div class="game-info">
-        <div class="game-name">HORSE RACING</div>
-        <div class="game-desc">5마리 말 중 우승마 예측<br>배당률에 따른 고수익 가능</div>
-        <div class="game-tags">
-          <span class="game-tag" style="border-color:#223322;color:#66aa33">고배당</span>
-          <span class="game-tag" style="border-color:#224422;color:#44cc88">5마리</span>
+    <div class="game-card horse-card" onclick="goGame('horse')">
+      <div class="badge-new">NEW</div>
+      <div class="game-inner">
+        <div class="game-emoji-wrap">🐴</div>
+        <div class="game-info">
+          <div class="game-name">HORSE RACING</div>
+          <div class="game-desc">5마리 말 중 우승마 예측<br>배당률에 따른 고수익 가능</div>
+          <div class="game-tags">
+            <span class="game-tag" style="border-color:#223322;color:#66aa33">고배당</span>
+            <span class="game-tag" style="border-color:#224422;color:#44cc88">5마리</span>
+          </div>
         </div>
+        <div class="game-arrow">›</div>
       </div>
-      <div class="game-arrow">›</div>
+      <div class="game-status-bar">
+        <span class="game-status-dot dot-idle" id="horse-dot"></span>
+        <span id="horse-status-text" style="color:var(--sub)">대기 중</span>
+      </div>
     </div>
-  </div>
 
-  <!-- 빅휠 -->
-  <div class="game-card bigwheel-card" onclick="goGame('bigwheel')">
-    <div class="badge-new">NEW</div>
-    <div class="game-inner">
-      <div class="game-emoji-wrap">🎡</div>
-      <div class="game-info">
-        <div class="game-name">BIG WHEEL</div>
-        <div class="game-desc">행운의 룰렛 휠을 돌려라<br>최대 20배 배당</div>
-        <div class="game-tags">
-          <span class="game-tag" style="border-color:#441155;color:#cc88ff">최대 20배</span>
-          <span class="game-tag" style="border-color:#332244;color:#aa66ee">혼자 플레이</span>
+    <div class="game-card bigwheel-card" onclick="goGame('bigwheel')">
+      <div class="badge-new">NEW</div>
+      <div class="game-inner">
+        <div class="game-emoji-wrap">🎡</div>
+        <div class="game-info">
+          <div class="game-name">BIG WHEEL</div>
+          <div class="game-desc">행운의 룰렛 휠을 돌려라<br>최대 20배 배당</div>
+          <div class="game-tags">
+            <span class="game-tag" style="border-color:#441155;color:#cc88ff">최대 20배</span>
+            <span class="game-tag" style="border-color:#332244;color:#aa66ee">혼자 플레이</span>
+          </div>
         </div>
+        <div class="game-arrow">›</div>
       </div>
-      <div class="game-arrow">›</div>
     </div>
-  </div>
 
-  <!-- 슬롯머신 -->
-  <div class="game-card" onclick="goGame('slots')" style="border-color:#3a1a5a44">
-    <div class="badge-new">NEW</div>
-    <div class="game-inner">
-      <div class="game-emoji-wrap" style="background:linear-gradient(135deg,#150520,#1a0828)">🎰</div>
-      <div class="game-info">
-        <div class="game-name" style="color:#cc88ff">SLOT MACHINE</div>
-        <div class="game-desc">3릴 슬롯머신, 혼자 즉시 플레이<br>최대 50배 잭팟 도전</div>
-        <div class="game-tags">
-          <span class="game-tag" style="border-color:#441155;color:#cc88ff">즉시 플레이</span>
-          <span class="game-tag" style="border-color:#332244;color:#aa66ee">JACKPOT x50</span>
+    <div class="game-card" onclick="goGame('slots')" style="border-color:#3a1a5a44">
+      <div class="badge-new">NEW</div>
+      <div class="game-inner">
+        <div class="game-emoji-wrap" style="background:linear-gradient(135deg,#150520,#1a0828)">🎰</div>
+        <div class="game-info">
+          <div class="game-name" style="color:#cc88ff">SLOT MACHINE</div>
+          <div class="game-desc">3릴 슬롯머신, 혼자 즉시 플레이<br>최대 50배 잭팟 도전</div>
+          <div class="game-tags">
+            <span class="game-tag" style="border-color:#441155;color:#cc88ff">즉시 플레이</span>
+            <span class="game-tag" style="border-color:#332244;color:#aa66ee">JACKPOT x50</span>
+          </div>
         </div>
+        <div class="game-arrow" style="color:#aa55ee">›</div>
       </div>
-      <div class="game-arrow" style="color:#aa55ee">›</div>
     </div>
-  </div>
 
-  <!-- 룰렛 -->
-  <div class="game-card" onclick="goGame('roulette')" style="border-color:#4a1a1a44">
-    <div class="badge-new">NEW</div>
-    <div class="game-inner">
-      <div class="game-emoji-wrap" style="background:linear-gradient(135deg,#1a0505,#2a0808)">🎡</div>
-      <div class="game-info">
-        <div class="game-name" style="color:#ff8888">ROULETTE</div>
-        <div class="game-desc">유럽식 룰렛, 색상/숫자/홀짝 베팅<br>숫자 적중 시 35배 배당</div>
-        <div class="game-tags">
-          <span class="game-tag" style="border-color:#551122;color:#ff6666">즉시 플레이</span>
-          <span class="game-tag" style="border-color:#441111;color:#ee4444">숫자 x35</span>
+    <div class="game-card" onclick="goGame('roulette')" style="border-color:#4a1a1a44">
+      <div class="badge-new">NEW</div>
+      <div class="game-inner">
+        <div class="game-emoji-wrap" style="background:linear-gradient(135deg,#1a0505,#2a0808)">🎡</div>
+        <div class="game-info">
+          <div class="game-name" style="color:#ff8888">ROULETTE</div>
+          <div class="game-desc">유럽식 룰렛, 색상/숫자/홀짝 베팅<br>숫자 적중 시 35배 배당</div>
+          <div class="game-tags">
+            <span class="game-tag" style="border-color:#551122;color:#ff6666">즉시 플레이</span>
+            <span class="game-tag" style="border-color:#441111;color:#ee4444">숫자 x35</span>
+          </div>
         </div>
+        <div class="game-arrow" style="color:#cc4444">›</div>
       </div>
-      <div class="game-arrow" style="color:#cc4444">›</div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="stats-grid" style="padding:0;margin-top:4px;">
+      <div class="stat-card">
+        <div class="stat-val" id="my-rank">—</div>
+        <div class="stat-label">MY RANK</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="total-players">—</div>
+        <div class="stat-label">PLAYERS</div>
+      </div>
     </div>
   </div>
+</div>
 
-  <div class="divider"></div>
-
-  <!-- 통계 -->
-  <div class="footer-info" style="padding:0;margin-top:4px;">
-    <div class="info-card">
-      <div class="info-val" id="my-rank">—</div>
-      <div class="info-label">MY RANK</div>
+<!-- ══ 랭킹 탭 ══ -->
+<div class="tab-content" id="tab-ranking">
+  <div class="rank-wrap">
+    <div class="rank-header">
+      <div style="font-family:'Cinzel',serif;font-size:12px;color:var(--gold3);letter-spacing:2px">LEADERBOARD</div>
+      <div style="font-size:11px;color:var(--sub)" id="rank-updated">—</div>
     </div>
-    <div class="info-card">
-      <div class="info-val" id="total-players">—</div>
-      <div class="info-label">PLAYERS</div>
+    <!-- 내 순위 요약 -->
+    <div class="rank-me" id="my-rank-card" style="display:none">
+      <div style="font-size:24px">👤</div>
+      <div style="flex:1">
+        <div class="rank-me-label">MY RANKING</div>
+        <div class="rank-me-val" id="my-rank-detail">—</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:10px;color:var(--sub)">보유 포인트</div>
+        <div style="font-size:16px;font-weight:700;color:var(--gold)" id="my-rank-point">—</div>
+      </div>
+    </div>
+    <div class="rank-list" id="rank-list">
+      <div style="text-align:center;color:var(--sub);padding:40px">불러오는 중...</div>
     </div>
   </div>
+</div>
 
+<!-- ══ 실시간 피드 탭 ══ -->
+<div class="tab-content" id="tab-feed">
+  <div class="feed-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="font-family:'Cinzel',serif;font-size:12px;color:var(--gold3);letter-spacing:2px">LIVE FEED</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--green)">
+        <span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;animation:blink 1s infinite"></span>
+        실시간
+      </div>
+    </div>
+    <div class="feed-list" id="feed-list">
+      <div class="feed-empty">아직 기록이 없어요<br>게임을 시작해보세요!</div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -353,44 +386,229 @@ const params  = new URLSearchParams(location.search);
 const userId  = params.get('userId')  || params.get('start')?.split('_')[0];
 const groupId = params.get('groupId') || params.get('start')?.split('_')[1];
 
+// 관리자 ID 목록 (서버와 동기화 필요)
+const ADMIN_IDS = [8698678650, 8236798970, 8621088096, 7319936275];
+const isAdmin = ADMIN_IDS.includes(parseInt(userId));
+
+let usersCache = [];
+let gameStates = {race:null, baccarat:null, horse:null};
+
 function showToast(msg, isError=false) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = 'toast show' + (isError?' error':'');
   setTimeout(()=>t.className='toast', 2500);
 }
+function fmt(n){return Number(n||0).toLocaleString();}
+
+function switchTab(tab) {
+  ['games','ranking','feed'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('show', t===tab);
+  });
+  document.querySelectorAll('.tab-item').forEach((el,i) => {
+    el.classList.toggle('active', ['games','ranking','feed'][i]===tab);
+  });
+  if (tab==='ranking') loadRanking();
+  if (tab==='feed')    loadFeed();
+}
 
 function goGame(game) {
-  const ready = ['race','baccarat','horse','bigwheel','slots','roulette'];
-  if (!ready.includes(game)) {
-    showToast('🚧 준비 중이에요! 곧 오픈해요.', true);
-    return;
-  }
   location.href = `/casino/${game}?userId=${userId}&groupId=${groupId}`;
 }
 
+// ════════════
+// 게임 상태
+// ════════════
+const STATUS_MAP = {
+  idle:    {text:'대기 중',    dotClass:'dot-idle',    color:'var(--sub)'},
+  betting: {text:'🔴 베팅 중', dotClass:'dot-betting', color:'#ee4444'},
+  running: {text:'🏃 진행 중', dotClass:'dot-running', color:'var(--gold)'},
+  closed:  {text:'🏁 종료',    dotClass:'dot-closed',  color:'var(--green)'},
+};
+
+function updateGameStatus(game, status, pool) {
+  const s = STATUS_MAP[status] || STATUS_MAP.idle;
+  const dot  = document.getElementById(game+'-dot');
+  const text = document.getElementById(game+'-status-text');
+  const admDot = document.getElementById('adm-'+game+'-dot');
+  if (dot)  { dot.className = 'game-status-dot '+s.dotClass; }
+  if (text) { text.textContent = s.text; text.style.color = s.color; }
+  if (admDot) { admDot.className = 'game-status-dot '+s.dotClass; }
+  if (game==='race') {
+    const poolEl = document.getElementById('race-pool');
+    if (poolEl) poolEl.textContent = pool > 0 ? fmt(pool)+'P 베팅 중' : '';
+  }
+}
+
+async function loadGameStates() {
+  try {
+    const [raceRes, baccRes, horseRes] = await Promise.all([
+      fetch(`/casino/race/state?groupId=${groupId}&userId=${userId}`),
+      fetch(`/casino/baccarat/state?groupId=${groupId}&userId=${userId}`),
+      fetch(`/casino/horse/state?groupId=${groupId}&userId=${userId}`)
+    ]);
+    const [race, bacc, horse] = await Promise.all([raceRes.json(), baccRes.json(), horseRes.json()]);
+    gameStates.race     = race;
+    gameStates.baccarat = bacc;
+    gameStates.horse    = horse;
+
+    const racePool = race.bets ? Object.values(race.bets).reduce((a,b)=>a+(b.total||0), 0) : 0;
+    updateGameStatus('race',     race.status  || 'idle', racePool);
+    updateGameStatus('baccarat', bacc.status  || 'idle', 0);
+    updateGameStatus('horse',    horse.status || 'idle', 0);
+  } catch(e) {}
+}
+
+// ════════════
+// 관리자 액션
+// ════════════
+async function adminOpen(game) {
+  if (!confirm(`${game} 베팅을 오픈할까요?`)) return;
+  const urls = {race:'/casino/race/open', baccarat:'/casino/baccarat/open', horse:'/casino/horse/open'};
+  try {
+    const res  = await fetch(urls[game], {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId:parseInt(userId),groupId:parseInt(groupId)})});
+    const data = await res.json();
+    if (data.ok) { showToast('✅ 베팅 오픈!'); loadGameStates(); }
+    else showToast(data.error||'오류', true);
+  } catch(e) { showToast('오류',true); }
+}
+
+async function adminStart(game) {
+  const state = gameStates[game];
+  if (!state?.roundId) { showToast('진행 중인 게임이 없어요', true); return; }
+  if (!confirm('베팅을 마감할까요?')) return;
+  try {
+    const res  = await fetch('/casino/race/start', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId:parseInt(userId),groupId:parseInt(groupId),roundId:state.roundId})});
+    const data = await res.json();
+    if (data.ok) { showToast('✅ 베팅 마감!'); loadGameStates(); }
+    else showToast(data.error||'오류', true);
+  } catch(e) { showToast('오류',true); }
+}
+
+async function adminResult(game) {
+  const state = gameStates[game];
+  if (!state?.roundId) { showToast('진행 중인 게임이 없어요', true); return; }
+  if (!confirm('결과를 처리하고 정산할까요?')) return;
+  const urls = {race:'/casino/race/result', baccarat:'/casino/baccarat/result', horse:'/casino/horse/result'};
+  try {
+    const res  = await fetch(urls[game], {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId:parseInt(userId),groupId:parseInt(groupId),roundId:state.roundId})});
+    const data = await res.json();
+    if (data.ok) { showToast('✅ 정산 완료!'); loadGameStates(); loadFeed(); }
+    else showToast(data.error||'오류', true);
+  } catch(e) { showToast('오류',true); }
+}
+
+// ════════════
+// 랭킹
+// ════════════
+async function loadRanking() {
+  try {
+    const res   = await fetch(`/casino/users?groupId=${groupId}`);
+    usersCache  = await res.json();
+    const sorted = [...usersCache].sort((a,b)=>b.point-a.point);
+    const myIdx  = sorted.findIndex(u=>String(u.userId)===String(userId));
+    const me     = sorted[myIdx];
+
+    // 내 카드
+    if (me) {
+      document.getElementById('my-rank-card').style.display = 'flex';
+      document.getElementById('my-rank-detail').textContent = `#${myIdx+1} · ${me.name}`;
+      document.getElementById('my-rank-point').textContent  = fmt(me.point)+'P';
+    }
+
+    // 업데이트 시간
+    document.getElementById('rank-updated').textContent = '방금 업데이트';
+
+    const maxPt = sorted[0]?.point || 1;
+    const medals = ['🥇','🥈','🥉'];
+    const numClasses = ['gold','silver','bronze'];
+
+    document.getElementById('rank-list').innerHTML = sorted.slice(0,20).map((u,i) => `
+      <div class="rank-item ${String(u.userId)===String(userId)?'me':''}">
+        <div class="rank-num ${numClasses[i]||''}">${medals[i]||('#'+(i+1))}</div>
+        <div style="flex:1">
+          <div class="rank-name">${u.name} ${String(u.userId)===String(userId)?'<span style="font-size:10px;color:var(--gold3)">(나)</span>':''}</div>
+          <div class="rank-bar-wrap"><div class="rank-bar" style="width:${Math.round(u.point/maxPt*100)}%"></div></div>
+        </div>
+        <div class="rank-point">${fmt(u.point)}P</div>
+      </div>
+    `).join('') || '<div style="text-align:center;color:var(--sub);padding:40px">유저 없음</div>';
+  } catch(e) {}
+}
+
+// ════════════
+// 실시간 피드
+// ════════════
+async function loadFeed() {
+  try {
+    const res  = await fetch(`/casino/point_logs?groupId=${groupId}&limit=30`);
+    const logs = await res.json();
+
+    if (!logs.length) {
+      document.getElementById('feed-list').innerHTML = '<div class="feed-empty">아직 기록이 없어요<br>게임을 시작해보세요!</div>';
+      return;
+    }
+
+    const gameIcons = {race:'🏁',baccarat:'🃏',horse:'🐴',bigwheel:'🎡',slots:'🎰',roulette:'🎡',관리자:'👑',이벤트:'🎁'};
+
+    document.getElementById('feed-list').innerHTML = logs.map(l => {
+      const isWin  = l.amount > 0;
+      const icon   = Object.entries(gameIcons).find(([k])=>l.reason?.includes(k))?.[1] || (isWin?'💰':'💸');
+      const timeStr = l.createdAt ? new Date(l.createdAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : '';
+      return `
+        <div class="feed-item">
+          <div class="feed-icon">${icon}</div>
+          <div class="feed-body">
+            <div class="feed-name">${l.userName||'?'}</div>
+            <div class="feed-desc">${l.reason||''}</div>
+            <div class="feed-time">${timeStr}</div>
+          </div>
+          <div class="feed-amount ${isWin?'win':'lose'}">${isWin?'+':''}${fmt(l.amount)}P</div>
+        </div>
+      `;
+    }).join('');
+  } catch(e) {}
+}
+
+// ════════════
+// 초기화
+// ════════════
 async function loadInfo() {
   try {
     const res   = await fetch(`/casino/users?groupId=${groupId}`);
-    const users = await res.json();
-    const me    = users.find(u => String(u.userId) === String(userId));
+    usersCache  = await res.json();
+    const me    = usersCache.find(u=>String(u.userId)===String(userId));
     if (me) {
-      document.getElementById('my-point').textContent = Number(me.point).toLocaleString();
-      document.getElementById('user-name-label').textContent = me.name + '님';
-      const rank = users.filter(u=>u.point > me.point).length + 1;
-      document.getElementById('my-rank').textContent = '#' + rank;
+      document.getElementById('my-point').textContent = fmt(me.point);
+      document.getElementById('user-name-label').textContent = me.name+'님';
+      const rank = usersCache.filter(u=>u.point>me.point).length+1;
+      document.getElementById('my-rank').textContent = '#'+rank;
     }
-    document.getElementById('total-players').textContent = users.length;
+    document.getElementById('total-players').textContent = usersCache.length;
   } catch(e) {}
 }
 
 async function init() {
-  await loadInfo();
+  // 관리자 UI
+  if (isAdmin) {
+    document.getElementById('admin-bar').classList.add('show');
+    document.getElementById('admin-badge').style.display = 'inline-block';
+  }
+
+  await Promise.all([loadInfo(), loadGameStates()]);
+
   setTimeout(()=>{
-    document.getElementById('loading').style.opacity = '0';
-    document.getElementById('loading').style.transition = 'opacity 0.4s';
-    setTimeout(()=>document.getElementById('loading').style.display='none', 400);
+    const l = document.getElementById('loading');
+    l.style.opacity='0'; l.style.transition='opacity 0.4s';
+    setTimeout(()=>l.style.display='none', 400);
   }, 800);
+
+  // 주기적 갱신
+  setInterval(loadGameStates, 5000);
+  setInterval(()=>{
+    const feedTab = document.getElementById('tab-feed');
+    if (feedTab.classList.contains('show')) loadFeed();
+  }, 10000);
 }
 
 init();
