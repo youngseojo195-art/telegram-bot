@@ -34,7 +34,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 
 .main{flex:1;overflow-y:auto;padding:0 14px 120px;display:flex;flex-direction:column;gap:12px;}
 
-/* 카드 테이블 */
 .table-wrap{
   background:radial-gradient(ellipse at center, #0a2a14 0%, #061508 100%);
   border:2px solid #1a4a28;border-radius:16px;padding:16px;
@@ -81,7 +80,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .vs-center{display:flex;flex-direction:column;align-items:center;gap:6px;}
 .vs-text{font-family:'Cinzel',serif;font-size:14px;color:var(--gold3);}
 
-/* 결과 */
 .result-banner{
   text-align:center;padding:10px;border-radius:10px;
   font-family:'Cinzel',serif;font-size:16px;font-weight:900;
@@ -92,7 +90,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .result-banner.banker{background:rgba(255,77,109,0.15);border:1px solid var(--banker);color:var(--banker);}
 .result-banner.tie   {background:rgba(68,204,136,0.15);border:1px solid var(--tie);color:var(--tie);}
 
-/* 베팅 옵션 */
 .bet-opts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
 .bopt{
   border-radius:14px;border:2px solid var(--border);
@@ -111,7 +108,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .bopt-name.t{color:var(--tie);}
 .bopt-odds{font-size:11px;color:var(--gold);}
 
-/* 공통 */
 .card-inner{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;}
 .card-title{font-family:'Cinzel',serif;font-size:11px;color:var(--gold);letter-spacing:1px;margin-bottom:12px;}
 .presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
@@ -131,14 +127,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .idle-title{font-family:'Cinzel',serif;font-size:16px;color:var(--gold);margin-bottom:6px;}
 .idle-sub{font-size:12px;color:var(--sub);line-height:1.7;}
 
-/* 기록 */
 .history-dots{display:flex;flex-wrap:wrap;gap:5px;}
 .hdot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;}
 .hdot.p{background:rgba(74,158,255,0.2);border:1px solid var(--player);color:var(--player);}
 .hdot.b{background:rgba(255,77,109,0.2);border:1px solid var(--banker);color:var(--banker);}
 .hdot.t{background:rgba(68,204,136,0.2);border:1px solid var(--tie);color:var(--tie);}
 
-/* 오버레이 */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;}
 .overlay.show{display:flex;}
 .ov-emoji{font-size:64px;animation:pop 0.4s ease-out;}
@@ -147,7 +141,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .ov-sub{font-size:13px;color:var(--sub);line-height:1.7;}
 .ov-payout{font-size:28px;font-weight:900;}
 .ov-close{padding:13px 30px;border-radius:12px;border:1px solid var(--gold3);background:transparent;color:var(--gold);font-size:14px;font-weight:600;cursor:pointer;}
-
 
 .bet-actions{display:flex;gap:8px;margin-top:8px;}
 .cancel-btn{flex:1;padding:11px;border-radius:12px;border:1px solid #aa222244;background:transparent;color:#ee4444;font-size:13px;font-weight:700;cursor:pointer;}
@@ -174,8 +167,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 </div>
 
 <div class="main">
-
-  <!-- 카드 테이블 -->
   <div class="table-wrap">
     <div class="table-sides">
       <div>
@@ -201,7 +192,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <div class="result-banner" id="result-banner"></div>
   </div>
 
-  <!-- 베팅 기록 -->
   <div class="card-inner">
     <div class="card-title">HISTORY</div>
     <div class="history-dots" id="history-dots">
@@ -209,7 +199,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     </div>
   </div>
 
-  <!-- 내 베팅 -->
   <div id="my-bet-section" style="display:none">
     <div class="my-bet-card" id="my-bet-card">
       <div>
@@ -226,7 +215,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     </div>
   </div>
 
-  <!-- 베팅 섹션 -->
   <div id="bet-section" style="display:none">
     <div class="card-inner">
       <div class="card-title">— PLACE YOUR BET —</div>
@@ -267,7 +255,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <div class="idle-title" id="idle-title">바카라 대기 중</div>
     <div class="idle-sub" id="idle-sub">관리자가 게임을 시작하면<br>베팅할 수 있어요</div>
   </div>
-
 </div>
 
 <div class="overlay" id="overlay">
@@ -281,7 +268,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 <button class="home-btn" onclick="goHome()">🏠 홈</button>
 
 <script>
-// ─── URL 파라미터 파싱 (텔레그램 WebApp 호환) ───
 function getUrlParam(key) {
   const sp = new URLSearchParams(location.search);
   if (sp.get(key)) return sp.get(key);
@@ -301,19 +287,18 @@ let state=null, picked=null, myPt=0, prevSt=null;
 let history=[];
 
 const SUITS = ['♠','♥','♦','♣'];
-const VALS  = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-function randCard() {
+function randCard(targetScore) {
   const s = SUITS[Math.floor(Math.random()*4)];
-  const v = VALS[Math.floor(Math.random()*13)];
-  const red = s==='♥'||s==='♦';
-  return {s,v,red};
+  let v = 'A';
+  if(targetScore === 0) {
+    v = ['10','J','Q','K'][Math.floor(Math.random()*4)];
+  } else if(targetScore === 1) {
+    v = 'A';
+  } else {
+    v = String(targetScore);
+  }
+  return {s, v, red: s==='♥'||s==='♦'};
 }
-function cardScore(v) {
-  if(['10','J','Q','K'].includes(v)) return 0;
-  if(v==='A') return 1;
-  return parseInt(v);
-}
-function handScore(cards) { return cards.reduce((a,c)=>a+cardScore(c.v),0)%10; }
 
 function renderCards(side, cards) {
   const el = document.getElementById('cards-'+side);
@@ -367,11 +352,6 @@ function render(s){
   const badge=document.getElementById('status-badge');
   badge.className='status-badge '+cls; badge.textContent=lbl;
 
-  // 배당 표시
-  document.getElementById('odds-p').textContent='x 1.95';
-  document.getElementById('odds-b').textContent='x 1.95';
-  document.getElementById('odds-t').textContent='x 8.00';
-
   const betSec=document.getElementById('bet-section');
   const myBetCard=document.getElementById('my-bet-card');
   const idleMsg=document.getElementById('idle-msg');
@@ -393,12 +373,14 @@ function render(s){
   refreshBtn();
 }
 
-// 바카라 자체 게임 로직 (서버에서 결과 받아서 애니메이션)
-function playRound(result, myBet){
-  const pCards=[randCard(),randCard()];
-  const bCards=[randCard(),randCard()];
-  // 점수 맞추기
-  const pScore=handScore(pCards); const bScore=handScore(bCards);
+function playRound(result){
+  let pScore = 0, bScore = 0;
+  if(result==='player') { pScore=7; bScore=5; }
+  else if(result==='banker') { pScore=4; bScore=8; }
+  else { pScore=6; bScore=6; }
+
+  const pCards=[randCard(4), randCard(pScore-4)];
+  const bCards=[randCard(5), randCard(bScore-5)];
 
   renderCards('player', pCards);
   renderCards('banker', bCards);
@@ -410,13 +392,9 @@ function playRound(result, myBet){
   banner.textContent=resultLabels[result]||result;
   banner.className='result-banner show '+result;
 
-  // 히스토리 추가
   history.push(result); if(history.length>30) history.shift();
   renderHistory();
 }
-
-
-function fmt(n){return Number(n||0).toLocaleString();}
 
 async function cancelBet() {
   if(!state?.myBet) return;
@@ -448,7 +426,7 @@ async function doBet(){
     });
     const data=await res.json();
     if(data.ok){
-      toast(`✅ ${picked==='player'?'PLAYER':picked==='banker'?'BANKER':'TIE'} ${fmt(amt)}P 베팅!`);
+      toast(`✅ ${picked.toUpperCase()} ${fmt(amt)}P 베팅!`);
       myPt-=amt; document.getElementById('my-point').textContent=fmt(myPt)+' P';
       await load();
     } else { toast(data.error||'오류',true); refreshBtn(); }
@@ -462,7 +440,7 @@ function showResult(s){
   const payout=won?Math.floor((s.myBet?.amount||0)*(oddsMap[r]||2)):0;
   const labels={player:'🔵 PLAYER WIN!',banker:'🔴 BANKER WIN!',tie:'🟢 TIE!'};
 
-  playRound(r, s.myBet);
+  playRound(r);
   setTimeout(()=>{
     document.getElementById('ov-emoji').textContent=won?'🏆':'💸';
     document.getElementById('ov-title').textContent=labels[r]||r;
@@ -504,7 +482,6 @@ async function loadPt(){
     if(me){ myPt=me.point; document.getElementById('my-point').textContent=fmt(myPt)+' P'; }
   } catch(e){}
 }
-
 
 function goHome(){
   const p=new URLSearchParams(location.search);
