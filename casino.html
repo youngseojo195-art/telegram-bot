@@ -237,7 +237,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="daily-btn-icon">💧</div>
     <div class="daily-btn-info">
       <div class="daily-btn-title">포인트 리필</div>
-      <div class="daily-btn-sub" id="refill-sub">일 5회 가능</div>
+      <div class="daily-btn-sub">일 5회 가능</div>
     </div>
     <div class="daily-btn-badge" id="refill-badge">+100P</div>
   </div>
@@ -518,23 +518,35 @@ function closeModalBtn() {
   currentGame = null;
 }
 
-// ──★ 수정한 게임 입장 핵심 함수 ──
+// ──★ 수정한 게임 입장 핵심 함수 (2중 안전 방어 로직) ──
 function enterGame() {
-  if (!currentGame) return;
-  closeModalBtn();
-
   const p = new URLSearchParams(location.search);
   const uid = p.get('userId') || p.get('start')?.split('_')[0] || userId;
   const gid = p.get('groupId') || p.get('start')?.split('_')[1] || groupId;
 
+  // 1차적으로 현재 타겟팅된 변수 확인 후, 유실되었다면 모달창 제목에서 기습 판별
+  let gameKey = currentGame;
+  if (!gameKey) {
+    const modalNameText = document.getElementById('modal-name')?.textContent || '';
+    if (modalNameText.includes('RACE')) gameKey = 'race';
+    else if (modalNameText.includes('HORSE')) gameKey = 'horse';
+    else if (modalNameText.includes('BACCARAT')) gameKey = 'baccarat';
+    else if (modalNameText.includes('WHEEL')) gameKey = 'bigwheel';
+    else if (modalNameText.includes('SLOT')) gameKey = 'slots';
+    else if (modalNameText.includes('ROULETTE')) gameKey = 'roulette';
+  }
+
   let targetUrl = '';
-  if (currentGame === 'race') targetUrl = '/casino/race';
-  else if (currentGame === 'horse') targetUrl = '/casino/horse';
-  else if (currentGame === 'baccarat') targetUrl = '/casino/baccarat';
-  else if (currentGame === 'bigwheel') targetUrl = '/casino/bigwheel';
-  else if (currentGame === 'slots') targetUrl = '/casino/slots';
-  else if (currentGame === 'roulette') targetUrl = '/casino/roulette';
-  else targetUrl = `/casino/${currentGame}`;
+  if (gameKey === 'race') targetUrl = '/casino/race';
+  else if (gameKey === 'horse') targetUrl = '/casino/horse';
+  else if (gameKey === 'baccarat') targetUrl = '/casino/baccarat';
+  else if (gameKey === 'bigwheel') targetUrl = '/casino/bigwheel';
+  else if (gameKey === 'slots') targetUrl = '/casino/slots';
+  else if (gameKey === 'roulette') targetUrl = '/casino/roulette';
+  else {
+    toast('⚠️ 게임 식별 실패. 다시 시도해주세요.', true);
+    return;
+  }
 
   location.href = `${targetUrl}?userId=${uid}&groupId=${gid}`;
 }
@@ -587,7 +599,7 @@ async function doRefill() {
       document.getElementById('refill-popup').classList.add('show');
       myPt=data.newPoint||myPt+data.reward;
       document.getElementById('my-point').textContent=fmt(myPt);
-      document.getElementById('refill-sub').textContent=`일 5회 가능 (${data.remaining}회 남음)`;
+      document.getElementById('refill-sub').textContent=요일 5회 가능 (${data.remaining}회 남음)`;
       if(data.remaining<=0){btn.classList.add('done');document.getElementById('refill-badge').textContent='완료';}
     } else {
       document.getElementById('refill-emoji').textContent='💧';
