@@ -10,7 +10,9 @@ import pytz
 import uuid
 from telebot import types
 from datetime import datetime, timedelta
-from flask import Flask, request, send_from_directory
+from flask import Flask, request, send_from_directory, send_file
+import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 BOT_TOKEN = '8046489365:AAHAFBz4Ca07KcjqI0EJl76aIAu-rlVHw-4'
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -19,7 +21,7 @@ app = Flask(__name__)
 KST = pytz.timezone('Asia/Seoul')
 UTC = pytz.utc
 
-ADMIN_IDS = [8698678650, 8621088096, 7319936275]
+ADMIN_IDS = [8698678650, 8236798970, 8621088096, 7319936275]
 
 BASEBALL_GIF_FILE_ID = "CgACAgUAAxkBAAMzagl3svn3G8Jr7JDeNhdXbodfQnIAAi8dAAJux0hUOyDPUXIJtRs7BA"
 NAEJEON_GIF_FILE_ID  = "CgACAgUAAxkBAAOGag0cXgdCIn_PggmqSmC0GM0GnC4AAkofAAKWbGhUMjetimSM_S47BA"
@@ -48,6 +50,7 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 <b>[평생]</b> · <a href="https://t.me/gamte59/94">띵벳</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/44">지엑스뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/46">케이비씨겜</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/49">블록체인바카라</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/60">우루스뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/62">마닐라</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/70">미우카지노</a>
@@ -253,6 +256,85 @@ def init_db():
             c.execute("ALTER TABLE points ALTER COLUMN last_attendance TYPE DATE USING last_attendance::DATE")
             db.commit()
         except: db.rollback()
+
+        # ── 누락 컬럼 일괄 추가 ──
+        missing_cols = [
+            ("points",       "total_bet",    "BIGINT DEFAULT 0"),
+            ("points",       "last_attendance", "DATE"),
+            ("casino_games", "started_at",   "TIMESTAMP DEFAULT NOW()"),
+            ("casino_games", "settings",     "JSONB DEFAULT '{}'"),
+        ]
+        for tbl, col, typ in missing_cols:
+            try:
+                c.execute(f"ALTER TABLE {tbl} ADD COLUMN IF NOT EXISTS {col} {typ}")
+                db.commit()
+            except: db.rollback()
+
+        # ── 누락 테이블 보완 생성 ──
+        extra_tables = [
+            """CREATE TABLE IF NOT EXISTS daily_missions (
+                id SERIAL PRIMARY KEY, user_id BIGINT NOT NULL,
+                group_id BIGINT NOT NULL, mission_id VARCHAR(30) NOT NULL,
+                mission_date DATE NOT NULL, progress INTEGER DEFAULT 0,
+                completed BOOLEAN DEFAULT FALSE,
+                UNIQUE(user_id, group_id, mission_id, mission_date))""",
+            """CREATE TABLE IF NOT EXISTS chat_milestone_logs (
+                id SERIAL PRIMARY KEY, user_id BIGINT NOT NULL,
+                group_id BIGINT NOT NULL, milestone INTEGER NOT NULL,
+                rewarded_date DATE NOT NULL,
+                UNIQUE(user_id, group_id, milestone, rewarded_date))""",
+            """CREATE TABLE IF NOT EXISTS bet_cooldowns (
+                user_id BIGINT NOT NULL, group_id BIGINT NOT NULL,
+                game_id VARCHAR(30) NOT NULL, last_bet TIMESTAMP,
+                PRIMARY KEY(user_id, group_id, game_id))""",
+            """CREATE TABLE IF NOT EXISTS daily_bet_totals (
+                user_id BIGINT NOT NULL, group_id BIGINT NOT NULL,
+                bet_date DATE NOT NULL, total INTEGER DEFAULT 0,
+                PRIMARY KEY(user_id, group_id, bet_date))""",
+            """CREATE TABLE IF NOT EXISTS auto_round_config (
+                group_id BIGINT PRIMARY KEY,
+                race_auto BOOLEAN DEFAULT TRUE,
+                horse_auto BOOLEAN DEFAULT TRUE,
+                round_minutes INTEGER DEFAULT 3,
+                updated_at TIMESTAMP DEFAULT NOW())""",
+            """CREATE TABLE IF NOT EXISTS withdrawal_requests (
+                id SERIAL PRIMARY KEY, group_id BIGINT NOT NULL,
+                user_id BIGINT NOT NULL, user_name VARCHAR(255),
+                amount INTEGER NOT NULL, status VARCHAR(20) DEFAULT 'pending',
+                note TEXT, created_at TIMESTAMP DEFAULT NOW(),
+                processed_at TIMESTAMP)""",
+            """CREATE TABLE IF NOT EXISTS chat_milestone_settings (
+                group_id BIGINT PRIMARY KEY,
+                milestones JSONB DEFAULT '{}',
+                enabled BOOLEAN DEFAULT TRUE,
+                updated_at TIMESTAMP DEFAULT NOW())""",
+            """CREATE TABLE IF NOT EXISTS point_logs (
+                id SERIAL PRIMARY KEY, group_id BIGINT NOT NULL,
+                user_id BIGINT NOT NULL, user_name VARCHAR(255),
+                amount INTEGER NOT NULL, reason TEXT,
+                admin_id BIGINT, created_at TIMESTAMP DEFAULT NOW())""",
+            """CREATE TABLE IF NOT EXISTS keyword_events (
+                id SERIAL PRIMARY KEY, group_id BIGINT NOT NULL,
+                admin_id BIGINT NOT NULL, title TEXT NOT NULL,
+                keyword VARCHAR(100) NOT NULL, description TEXT DEFAULT '',
+                max_participants INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW(), ended_at TIMESTAMP)""",
+            """CREATE TABLE IF NOT EXISTS keyword_event_participants (
+                id SERIAL PRIMARY KEY,
+                event_id INTEGER REFERENCES keyword_events(id),
+                group_id BIGINT NOT NULL, user_id BIGINT NOT NULL,
+                user_name VARCHAR(255),
+                joined_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(event_id, user_id))""",
+            """CREATE TABLE IF NOT EXISTS refill_logs (
+                id SERIAL PRIMARY KEY, user_id BIGINT NOT NULL,
+                group_id BIGINT NOT NULL, first_name VARCHAR(255),
+                username VARCHAR(255), refill_date DATE NOT NULL)""",
+        ]
+        for ddl in extra_tables:
+            try: c.execute(ddl); db.commit()
+            except: db.rollback()
 
         # ── 카지노 테이블 ──
         casino_ddl = [
@@ -1239,7 +1321,7 @@ def handle_all(message):
 # Flask 라우트
 # ─────────────────────────────────────────────────────────
 @app.route('/kbo')
-def serve_kbo(): return send_from_directory('.', 'kbo.html')
+def serve_kbo(): return send_from_directory(BASE_DIR, 'kbo.html')
 
 @app.route('/kbo/submit', methods=['POST'])
 def kbo_submit():
@@ -1358,7 +1440,7 @@ def kbo_my():
         c.close(); db.close()
 
 @app.route('/naejeon')
-def serve_naejeon(): return send_from_directory('.', 'naejeon.html')
+def serve_naejeon(): return send_from_directory(BASE_DIR, 'naejeon.html')
 
 @app.route('/naejeon/check_admin')
 def naejeon_check_admin():
@@ -1613,7 +1695,7 @@ def finish_event():
 # 투표 이벤트 라우트
 # ─────────────────────────────────────────────────────────
 @app.route('/vote')
-def serve_vote(): return send_from_directory('.', 'vote.html')
+def serve_vote(): return send_from_directory(BASE_DIR, 'vote.html')
 
 @app.route('/vote/room')
 def vote_room():
@@ -1835,10 +1917,10 @@ def is_casino_blacklisted(group_id, user_id):
 # 카지노 메인 & 공통
 # ─────────────────────────────────────────────────────────
 @app.route('/casino')
-def serve_casino(): return send_from_directory('.', 'casino.html')
+def serve_casino(): return send_from_directory(BASE_DIR, 'casino.html')
 
 @app.route('/casino/admin')
-def serve_casino_admin(): return send_from_directory('.', 'casino_admin.html')
+def serve_casino_admin(): return send_from_directory(BASE_DIR, 'casino_admin.html')
 
 @app.route('/casino/settings', methods=['GET'])
 def casino_get_settings():
@@ -2097,7 +2179,7 @@ def casino_users():
 # 경주 (토끼 vs 거북이)
 # ─────────────────────────────────────────────────────────
 @app.route('/casino/race')
-def serve_race(): return send_from_directory('.', 'race.html')
+def serve_race(): return send_from_directory(BASE_DIR, 'race.html')
 
 @app.route('/casino/race/state')
 def race_state():
@@ -2332,7 +2414,7 @@ def race_result():
 # 슬롯머신 & 룰렛 (즉시 플레이)
 # ─────────────────────────────────────────────────────────
 @app.route('/casino/slots')
-def serve_slots(): return send_from_directory('.','slots.html')
+def serve_slots(): return send_from_directory(BASE_DIR,'slots.html')
 
 @app.route('/casino/slots/spin', methods=['POST'])
 def slots_spin():
@@ -2400,7 +2482,7 @@ def slots_spin():
     finally: c.close(); db.close()
 
 @app.route('/casino/roulette')
-def serve_roulette(): return send_from_directory('.','roulette.html')
+def serve_roulette(): return send_from_directory(BASE_DIR,'roulette.html')
 
 @app.route('/casino/roulette/spin', methods=['POST'])
 def roulette_spin():
@@ -2466,7 +2548,7 @@ def roulette_spin():
 # 바카라
 # ─────────────────────────────────────────────────────────
 @app.route('/casino/baccarat')
-def serve_baccarat(): return send_from_directory('.','baccarat.html')
+def serve_baccarat(): return send_from_directory(BASE_DIR,'baccarat.html')
 
 @app.route('/casino/baccarat/state')
 def baccarat_state():
@@ -2571,7 +2653,7 @@ def baccarat_result():
 # 경마
 # ─────────────────────────────────────────────────────────
 @app.route('/casino/horse')
-def serve_horse(): return send_from_directory('.','horse.html')
+def serve_horse(): return send_from_directory(BASE_DIR,'horse.html')
 
 @app.route('/casino/horse/state')
 def horse_state():
@@ -2679,7 +2761,7 @@ def horse_result():
 # 빅휠 (혼자 즉시 스핀)
 # ─────────────────────────────────────────────────────────
 @app.route('/casino/bigwheel')
-def serve_bigwheel(): return send_from_directory('.','bigwheel.html')
+def serve_bigwheel(): return send_from_directory(BASE_DIR,'bigwheel.html')
 
 @app.route('/casino/bigwheel/spin',methods=['POST'])
 def bigwheel_spin():
