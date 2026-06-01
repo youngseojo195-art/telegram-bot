@@ -26,6 +26,7 @@ ADMIN_IDS = [8698678650, 8236798970, 8621088096, 7319936275]
 
 BASEBALL_GIF_FILE_ID = "CgACAgUAAxkBAAMzagl3svn3G8Jr7JDeNhdXbodfQnIAAi8dAAJux0hUOyDPUXIJtRs7BA"
 NAEJEON_GIF_FILE_ID  = "CgACAgUAAxkBAAOGag0cXgdCIn_PggmqSmC0GM0GnC4AAkofAAKWbGhUMjetimSM_S47BA"
+AFFILIATE_GIF_URL    = "CgACAgUAAxkBAAM4agmS7OD4fz1bxh5zNQPn8VNCpysAAmYdAAJux0hUYXAsQb02yzs7BA"
 
 def send_baseball_gif(chat_id):
     if not BASEBALL_GIF_FILE_ID: return
@@ -1063,7 +1064,7 @@ def handle_all(message):
 
         elif '/슬롯' in text:
             if message.chat.type == 'private': return
-            slots_url = f"{WEBAPP_BASE_URL}/casino/slots?userId={user_id}&groupId={group_id}"
+            slots_url = f"{WEBAPP_BASE_URL}/casino/slots?userId={user_id}&groupId={group_id}&start={user_id}_{group_id}"
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("🎰 슬롯머신 플레이", url=slots_url))
             bot.reply_to(message, "🎰", reply_markup=markup)
@@ -1071,7 +1072,7 @@ def handle_all(message):
 
         elif '/룰렛' in text:
             if message.chat.type == 'private': return
-            roulette_url = f"{WEBAPP_BASE_URL}/casino/roulette?userId={user_id}&groupId={group_id}"
+            roulette_url = f"{WEBAPP_BASE_URL}/casino/roulette?userId={user_id}&groupId={group_id}&start={user_id}_{group_id}"
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("🎡 룰렛 플레이", url=roulette_url))
             bot.reply_to(message, "🎡", reply_markup=markup)
@@ -1164,7 +1165,7 @@ def handle_all(message):
 
         elif text.strip().startswith('/카지노'):
             if message.chat.type == 'private': return
-            casino_url = f"{WEBAPP_BASE_URL}/casino?userId={user_id}&groupId={group_id}"
+            casino_url = f"{WEBAPP_BASE_URL}/casino?userId={user_id}&groupId={group_id}&start={user_id}_{group_id}"
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("🎰 카지노 입장", url=casino_url))
             bot.reply_to(message, "🎰", reply_markup=markup)
