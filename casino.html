@@ -50,7 +50,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 .section-label{font-family:'Cinzel',serif;font-size:10px;color:var(--gold3);letter-spacing:3px;margin-bottom:10px;padding:0 2px;}
 
-/* ★ 게임 그리드 2x3 */
+/* 게임 그리드 2x3 */
 .game-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
 
 .game-card{
@@ -104,7 +104,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .stat-val{font-size:20px;font-weight:900;color:var(--gold);}
 .stat-label{font-size:10px;color:var(--sub);margin-top:2px;}
 
-/* ★ 게임 상세 모달 */
+/* 게임 상세 모달 */
 .game-modal{position:fixed;inset:0;background:rgba(0,0,0,0.94);z-index:200;display:none;align-items:flex-end;justify-content:center;}
 .game-modal.show{display:flex;animation:slideUp 0.25s ease-out;}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
@@ -124,7 +124,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .modal-game-name{font-family:'Cinzel',serif;font-size:22px;font-weight:900;margin-bottom:6px;}
 .modal-desc{font-size:13px;color:var(--sub);line-height:1.7;padding:0 10px;}
 .modal-divider{height:1px;background:var(--border);margin:16px 20px;}
-.modal-info{padding:0 20px;display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.modal-info(padding:0 20px;display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
 .modal-info-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);border-radius:10px;}
 .modal-info-label{font-size:12px;color:var(--sub);}
 .modal-info-val{font-size:13px;font-weight:700;color:var(--text);}
@@ -245,13 +245,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 <div class="main">
 
-  <!-- 데일리 미션 -->
   <div class="missions-wrap" id="missions-wrap" style="display:none">
     <div class="missions-title">✦ DAILY MISSIONS</div>
     <div id="mission-list"></div>
   </div>
 
-  <!-- 게임 그리드 -->
   <div class="section-label">GAMES</div>
   <div class="game-grid">
 
@@ -297,7 +295,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
   </div>
 
-  <!-- 통계 -->
   <div class="stats-row">
     <div class="stat-card">
       <div class="stat-val" id="my-rank">—</div>
@@ -309,12 +306,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     </div>
   </div>
 
-  <!-- 베팅 내역 -->
   <button onclick="openHistory()" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--sub);font-size:13px;cursor:pointer;margin-bottom:14px">
     📋 내 베팅 내역 보기
   </button>
 
-  <!-- 출금 신청 -->
   <div class="withdraw-section">
     <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold3);letter-spacing:2px;margin-bottom:10px">💸 WITHDRAW</div>
     <input class="wd-inp" type="number" id="wd-amount" placeholder="출금 신청 포인트 (최소 1,000P)">
@@ -325,7 +320,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 </div>
 
-<!-- ★ 게임 상세 모달 -->
 <div class="game-modal" id="game-modal" onclick="closeModal(event)">
   <div class="game-modal-box" id="modal-box">
     <div class="modal-handle"></div>
@@ -344,7 +338,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 </div>
 
-<!-- 출석 팝업 -->
 <div class="popup-overlay" id="attend-popup">
   <div class="popup-box">
     <div class="popup-emoji" id="attend-emoji">📅</div>
@@ -355,7 +348,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 </div>
 
-<!-- 리필 팝업 -->
 <div class="popup-overlay" id="refill-popup">
   <div class="popup-box">
     <div class="popup-emoji" id="refill-emoji">💧</div>
@@ -366,7 +358,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 </div>
 
-<!-- 베팅 내역 모달 -->
 <div class="history-modal" id="history-modal">
   <div class="history-header">
     <div class="history-title">📋 내 베팅 내역</div>
@@ -381,13 +372,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <script>
 // URL 파라미터 파싱 (search, hash, startapp 전부 지원)
 function getUrlParam(key) {
-  // 1. ?key=val
   const sp = new URLSearchParams(location.search);
   if (sp.get(key)) return sp.get(key);
-  // 2. #key=val 또는 #tgWebAppData=...
   const hp = new URLSearchParams(location.hash.replace(/^#/, ''));
   if (hp.get(key)) return hp.get(key);
-  // 3. tgWebAppStartParam (start=userId_groupId)
   const startParam = sp.get('tgWebAppStartParam') || hp.get('tgWebAppStartParam') || sp.get('start') || hp.get('start') || '';
   if (startParam) {
     const parts = startParam.split('_');
@@ -507,14 +495,12 @@ function openModal(gameId) {
   document.getElementById('modal-name').style.color  = g.color;
   document.getElementById('modal-desc').textContent  = g.desc;
 
-  // 정보 행
   document.getElementById('modal-info').innerHTML = g.info.map(row=>`
     <div class="modal-info-row">
       <span class="modal-info-label">${row.label}</span>
       <span class="modal-info-val ${row.cls}">${row.val}</span>
     </div>`).join('');
 
-  // 태그
   document.getElementById('modal-tags').innerHTML = g.tags.map(t=>`
     <span class="modal-tag" style="border-color:${t.c}44;color:${t.c}">${t.t}</span>`).join('');
 
@@ -531,10 +517,26 @@ function closeModalBtn() {
   document.getElementById('game-modal').classList.remove('show');
   currentGame = null;
 }
+
+// ──★ 수정한 게임 입장 핵심 함수 ──
 function enterGame() {
   if (!currentGame) return;
   closeModalBtn();
-  location.href = `/casino/${currentGame}?userId=${userId}&groupId=${groupId}`;
+
+  const p = new URLSearchParams(location.search);
+  const uid = p.get('userId') || p.get('start')?.split('_')[0] || userId;
+  const gid = p.get('groupId') || p.get('start')?.split('_')[1] || groupId;
+
+  let targetUrl = '';
+  if (currentGame === 'race') targetUrl = '/casino/race';
+  else if (currentGame === 'horse') targetUrl = '/casino/horse';
+  else if (currentGame === 'baccarat') targetUrl = '/casino/baccarat';
+  else if (currentGame === 'bigwheel') targetUrl = '/casino/bigwheel';
+  else if (currentGame === 'slots') targetUrl = '/casino/slots';
+  else if (currentGame === 'roulette') targetUrl = '/casino/roulette';
+  else targetUrl = `/casino/${currentGame}`;
+
+  location.href = `${targetUrl}?userId=${uid}&groupId=${gid}`;
 }
 
 // ── 출석 ──
@@ -698,7 +700,6 @@ async function init() {
   initTheme();
   console.log('[casino init] userId='+userId+' groupId='+groupId);
   if (!userId || !groupId || userId === 'undefined' || groupId === 'undefined') {
-    // 파라미터 없음 - 로딩 숨기고 오류 표시
     setTimeout(()=>{
       const el=document.getElementById('loading');
       if(el){ el.style.opacity='0'; el.style.transition='opacity 0.4s'; setTimeout(()=>el.style.display='none',400); }
