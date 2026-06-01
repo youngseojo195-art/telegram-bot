@@ -1012,11 +1012,13 @@ def handle_all(message):
             bot.reply_to(message, "🎮 게임 목록\n\n🎰 /슬롯 - 슬롯머신\n🎡 /룰렛 - 룰렛\n⚠️ 최소 배팅: 20포인트")
 
         # ── 웹앱 연동부 WebAppInfo 공식 규격으로 교체 ──
+        # ── 수정할 명령어 연동부 ──
         elif '/슬롯' in text:
             if message.chat.type == 'private': return
             slots_url = f"{WEBAPP_BASE_URL}/casino/slots?userId={user_id}&groupId={group_id}"
             markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("🎰 슬롯머신 플레이", web_app=types.WebAppInfo(url=slots_url)))
+            # web_app= 대신 url= 구조로 롤백하되 파라미터는 명확히 전달
+            markup.add(types.InlineKeyboardButton("🎰 슬롯머신 플레이", url=slots_url))
             bot.reply_to(message, "🎰", reply_markup=markup)
             send_dm_link(user_id, "🎰 <b>슬롯머신</b>", "최대 50배 잭팟 도전!", markup)
 
@@ -1024,9 +1026,19 @@ def handle_all(message):
             if message.chat.type == 'private': return
             roulette_url = f"{WEBAPP_BASE_URL}/casino/roulette?userId={user_id}&groupId={group_id}"
             markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("🎡 룰렛 플레이", web_app=types.WebAppInfo(url=roulette_url)))
+            # web_app= 대신 url= 구조로 롤백
+            markup.add(types.InlineKeyboardButton("🎡 룰렛 플레이", url=roulette_url))
             bot.reply_to(message, "🎡", reply_markup=markup)
             send_dm_link(user_id, "🎡 <b>룰렛</b>", "숫자 정확히 맞추면 35배!", markup)
+
+        elif text.strip().startswith('/카지노'):
+            if message.chat.type == 'private': return
+            casino_url = f"{WEBAPP_BASE_URL}/casino?userId={user_id}&groupId={group_id}"
+            markup = types.InlineKeyboardMarkup()
+            # web_app= 대신 url= 구조로 롤백
+            markup.add(types.InlineKeyboardButton("🎰 카지노 입장", url=casino_url))
+            bot.reply_to(message, "🎰", reply_markup=markup)
+            send_dm_link(user_id, "🎰 <b>도파민 카지노</b>", "🐢 경주 · 🃏 바카라 · 🐴 경마\n🎡 빅휠 · 🎰 슬롯 · 🎡 룰렛", markup)
 
         elif '/채팅랭킹' in text:
             if message.chat.type == 'private': return
