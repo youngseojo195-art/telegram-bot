@@ -313,18 +313,18 @@ async function doSpin(){
   btn.className='spin-btn spinning'; btn.textContent='🎰 SPINNING...';
   document.getElementById('result-display').textContent='';
 
-  // 결과 미리 결정
-  const result=[weightedRand(),weightedRand(),weightedRand()];
-  const pay=calcPayout(result,amt);
-
-  // 포인트 차감 (서버)
   try{
+    // ★ 서버에서 결과 결정 요청
     const res=await fetch('/casino/slots/spin',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({groupId:parseInt(groupId),userId:parseInt(userId),amount:amt,result})
+      body:JSON.stringify({groupId:parseInt(groupId),userId:parseInt(userId),amount:amt})
     });
     const data=await res.json();
     if(!data.ok){toast(data.error||'오류',true);spinning=false;refreshBtn();return;}
+
+    // ★ 서버 결과 사용
+    const result = data.result;
+    const pay    = calcPayout(result, amt);
 
     myPt-=amt;
     document.getElementById('my-point').textContent=fmt(myPt)+' P';
@@ -364,7 +364,7 @@ async function doSpin(){
       document.getElementById('ov-title').textContent=pay.type==='triple'?(result[0]==='💎'?'💎 JACKPOT!':'🎉 THREE OF A KIND!'):pay.type==='double'?'✨ TWO MATCH!':'💸 NO MATCH';
       document.getElementById('ov-sub').textContent=pay.label;
       if(payout>0){
-        document.getElementById('ov-payout').textContent=`+${fmt(payout)} P 획득!`;
+        document.getElementById('ov-payout').textContent=`+${fmt(serverPayout)} P 획득!`;
       if(pay.type==='triple'&&result[0]==='💎'){vibrate([100,50,100,50,300,50,300]);playSound('jackpot');}else{vibrate([100,50,100]);playSound('win');}
         document.getElementById('ov-payout').style.color='#44ee88';
       } else {
