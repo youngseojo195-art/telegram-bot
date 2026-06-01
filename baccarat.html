@@ -281,9 +281,22 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 <button class="home-btn" onclick="goHome()">🏠 홈</button>
 
 <script>
-const p = new URLSearchParams(location.search);
-const userId  = p.get('userId')  || p.get('start')?.split('_')[0];
-const groupId = p.get('groupId') || p.get('start')?.split('_')[1];
+// ─── URL 파라미터 파싱 (텔레그램 WebApp 호환) ───
+function getUrlParam(key) {
+  const sp = new URLSearchParams(location.search);
+  if (sp.get(key)) return sp.get(key);
+  const hp = new URLSearchParams(location.hash.replace(/^#/,''));
+  if (hp.get(key)) return hp.get(key);
+  const start = sp.get('tgWebAppStartParam') || hp.get('tgWebAppStartParam') || sp.get('start') || hp.get('start') || '';
+  if (start) {
+    const parts = start.split('_');
+    if (key==='userId'  && parts[0]) return parts[0];
+    if (key==='groupId' && parts[1]) return parts[1];
+  }
+  return null;
+}
+const userId  = getUrlParam('userId');
+const groupId = getUrlParam('groupId');
 let state=null, picked=null, myPt=0, prevSt=null;
 let history=[];
 
