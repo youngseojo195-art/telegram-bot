@@ -48,7 +48,6 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 <b>[평생]</b> · <a href="https://t.me/gamte59/94">띵벳</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/44">지엑스뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/46">케이비씨겜</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/49">블록체인바카라</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/60">우루스뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/62">마닐라</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/70">미우카지노</a>
@@ -1606,6 +1605,71 @@ def casino_save_settings():
         return {'ok': True}, 200
     except Exception as e: return {'ok': False, 'error': str(e)}, 500
 
+# ─────────────────────────────────────────────────────────
+# 출석 / 리필 (웹앱 팝업 방식)
+# ─────────────────────────────────────────────────────────
+@app.route('/casino/attend', methods=['POST'])
+def casino_attend():
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json()
+        user_id=int(data.get('userId',0)); group_id=int(data.get('groupId',0))
+        today=datetime.now(KST).date()
+        c.execute("SELECT last_attendance,first_name,username,point FROM points WHERE user_id=%s AND group_id=%s",(user_id,group_id))
+        row=c.fetchone()
+        if row and row[0]==today:
+            return {'ok':False,'error':'오늘 이미 출석했어요! 내일 다시 도전하세요 😊'},200
+        reward=100
+        name=row[1] or row[2] or f"id:{user_id}" if row else f"id:{user_id}"
+        current_point=row[3] if row else 0
+        if row:
+            c.execute("UPDATE points SET point=point+%s,last_attendance=%s WHERE user_id=%s AND group_id=%s",
+                      (reward,today,user_id,group_id))
+        else:
+            c.execute("INSERT INTO points(user_id,group_id,first_name,username,point,last_attendance) VALUES(%s,%s,%s,%s,%s,%s)",
+                      (user_id,group_id,'','',reward,today))
+        c.execute("INSERT INTO point_logs(group_id,user_id,user_name,amount,reason) VALUES(%s,%s,%s,%s,%s)",
+                  (group_id,user_id,name,reward,'출석 보상'))
+        db.commit()
+        update_mission(user_id,group_id,'play3')
+        return {'ok':True,'reward':reward,'newPoint':current_point+reward},200
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
+@app.route('/casino/refill', methods=['POST'])
+def casino_refill():
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json()
+        user_id=int(data.get('userId',0)); group_id=int(data.get('groupId',0))
+        today=datetime.now(KST).date()
+        c.execute("SELECT COUNT(*) FROM refill_logs WHERE user_id=%s AND group_id=%s AND refill_date=%s",
+                  (user_id,group_id,today))
+        count=c.fetchone()[0]
+        if count>=5:
+            return {'ok':False,'error':'오늘 리필을 5번 모두 사용했어요! 내일 다시 도전하세요 😊'},200
+        reward=100
+        c.execute("INSERT INTO refill_logs(user_id,group_id,first_name,username,refill_date) VALUES(%s,%s,%s,%s,%s)",
+                  (user_id,group_id,'','',today))
+        c.execute("""INSERT INTO points(user_id,group_id,first_name,username,point)
+            VALUES(%s,%s,%s,%s,%s) ON CONFLICT(user_id,group_id)
+            DO UPDATE SET point=points.point+%s""",
+            (user_id,group_id,'','',reward,reward))
+        c.execute("SELECT first_name,username,point FROM points WHERE user_id=%s AND group_id=%s",(user_id,group_id))
+        pr=c.fetchone()
+        name=pr[0] or pr[1] or f"id:{user_id}" if pr else f"id:{user_id}"
+        new_point=pr[2] if pr else reward
+        c.execute("INSERT INTO point_logs(group_id,user_id,user_name,amount,reason) VALUES(%s,%s,%s,%s,%s)",
+                  (group_id,user_id,name,reward,'리필'))
+        db.commit()
+        return {'ok':True,'reward':reward,'remaining':5-count-1,'newPoint':new_point},200
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
 @app.route('/casino/point_grant', methods=['POST'])
 def casino_point_grant():
     """관리자 포인트 지급/차감"""
@@ -2021,7 +2085,7 @@ def slots_spin():
         group_id = int(data.get('groupId', 0))
         user_id  = int(data.get('userId', 0))
         amount   = int(data.get('amount', 0))
-        result   = data.get('result', [])
+        # ★ 클라이언트가 보낸 result 무시 - 서버에서 독립 결정
 
         if is_casino_blacklisted(group_id, user_id):
             return {'ok': False, 'error': '게임 이용이 제한된 계정이에요.'}, 403
@@ -2033,21 +2097,34 @@ def slots_spin():
         if not pt or pt[0] < amount:
             return {'ok': False, 'error': '포인트가 부족해요.'}, 400
 
+        # ★ 서버에서 결과 결정
+        SYMBOLS = ['🍋','🍒','🍇','⭐','7️⃣','💎']
+        WEIGHTS = [30, 25, 20, 15, 7, 3]
+        def weighted_rand():
+            total = sum(WEIGHTS)
+            r = random.randint(1, total); acc = 0
+            for s, w in zip(SYMBOLS, WEIGHTS):
+                acc += w
+                if r <= acc: return s
+            return SYMBOLS[0]
+
+        s1, s2, s3 = weighted_rand(), weighted_rand(), weighted_rand()
+        result = [s1, s2, s3]
+
         # 배당 계산
         MULT_3 = {'🍋':3,'🍒':4,'🍇':5,'⭐':7,'7️⃣':10,'💎':50}
-        s1, s2, s3 = result[0], result[1], result[2]
         if s1 == s2 == s3:
-            mult = MULT_3.get(s1, 3)
-            payout = amount * mult
+            payout = amount * MULT_3.get(s1, 3)
         elif s1==s2 or s2==s3 or s1==s3:
             payout = int(amount * 1.5)
         else:
             payout = 0
 
         # 포인트 처리
-        house_cut = int(payout * 0.05) if payout > 0 else 0
+        house_cut  = int(payout * 0.05) if payout > 0 else 0
         net_payout = max(0, payout - house_cut)
-        c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s", (amount, user_id, group_id))
+        c.execute("UPDATE points SET point=point-%s,total_bet=COALESCE(total_bet,0)+%s WHERE user_id=%s AND group_id=%s",
+                  (amount, amount, user_id, group_id))
         if net_payout > 0:
             c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s", (net_payout, user_id, group_id))
 
@@ -2055,7 +2132,11 @@ def slots_spin():
         c.execute("INSERT INTO casino_games (game_id,group_id,status,result,settings,ended_at) VALUES ('slots',%s,'closed',%s,%s,NOW())",
                   (group_id, ''.join(result), json.dumps({'amount':amount,'payout':net_payout})))
         db.commit()
-        return {'ok': True, 'payout': net_payout}, 200
+        add_daily_bet(user_id, group_id, amount)
+        update_mission(user_id, group_id, 'play3')
+        if net_payout > 0: update_mission(user_id, group_id, 'win1')
+        # ★ 서버 결과 반환
+        return {'ok': True, 'payout': net_payout, 'result': result}, 200
     except Exception as e:
         import traceback; print(traceback.format_exc())
         return {'ok': False, 'error': str(e)}, 500
