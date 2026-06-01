@@ -46,14 +46,10 @@ def send_affiliate_gif(chat_id):
 AFFILIATE_TEXT = """🎰 <b>카지노</b>
 ──────────────────
 <b>[평생]</b> · <a href="https://t.me/gamte59/31">렛츠뱃</a>
-<b>[평생]</b> · <a href="https://t.me/gamte59/28">예스뱃</a>
-<b>[평생]</b> · <a href="https://t.me/gamte59/96">스피드벳</a>
 <b>[평생]</b> · <a href="https://t.me/gamte59/94">띵벳</a>
+<b>[평생]</b> · <a href="https://t.me/gamte59/96">스피드벳</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/44">지엑스뱃</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/46">케이비씨겜</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/49">블록체인바카라</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/60">우루스뱃</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/62">마닐라</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/70">미우카지노</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/72">그랜드파리</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/74">룰라뱃</a>
@@ -61,10 +57,10 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/84">123GAME카지노</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/100">벨라벳</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/100">부자벳</a>
-
+<b>[도파민]</b> · <a href="https://t.me/gamte59/111">로얄클럽</a>
 💸 <b>급전</b>
 ──────────────────
-<b>[도파민]</b> · <a href="https://t.me/gamte59/16">OR급전</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/109">꾸러기급전</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/77">빅딜OTC</a>
 
 🏠 <b>장집</b>
@@ -84,7 +80,10 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 
 💼 <b>이체 알바</b>
 ──────────────────
-<b>[도파민]</b> · <a href="https://t.me/gamte59/87">창비팀 대면이체알바</a>"""
+<b>[도파민]</b> · <a href="https://t.me/gamte59/87">창비팀 대면이체알바</a>
+
+✨ <b>유심</b>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/104">친구유심</a>"""
 
 KBO_TEAMS = ['KT', '삼성', 'LG', 'SSG', 'KIA', '한화', '두산', 'NC', '롯데', '키움']
 KBO_TEAMS_DISPLAY = {
