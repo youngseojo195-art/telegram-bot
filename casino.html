@@ -379,9 +379,26 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div class="toast" id="toast"></div>
 
 <script>
-const p       = new URLSearchParams(location.search);
-const userId  = p.get('userId')  || p.get('start')?.split('_')[0];
-const groupId = p.get('groupId') || p.get('start')?.split('_')[1];
+// URL 파라미터 파싱 (search, hash, startapp 전부 지원)
+function getUrlParam(key) {
+  // 1. ?key=val
+  const sp = new URLSearchParams(location.search);
+  if (sp.get(key)) return sp.get(key);
+  // 2. #key=val 또는 #tgWebAppData=...
+  const hp = new URLSearchParams(location.hash.replace(/^#/, ''));
+  if (hp.get(key)) return hp.get(key);
+  // 3. tgWebAppStartParam (start=userId_groupId)
+  const startParam = sp.get('tgWebAppStartParam') || hp.get('tgWebAppStartParam') || sp.get('start') || hp.get('start') || '';
+  if (startParam) {
+    const parts = startParam.split('_');
+    if (key === 'userId'  && parts[0]) return parts[0];
+    if (key === 'groupId' && parts[1]) return parts[1];
+  }
+  return null;
+}
+const userId  = getUrlParam('userId');
+const groupId = getUrlParam('groupId');
+console.log('[casino] userId='+userId+' groupId='+groupId);
 let myPt = 0, currentGame = null;
 
 function toast(msg, err=false) {
@@ -652,6 +669,11 @@ async function loadMissions() {
 
 // ── 유저 정보 ──
 async function loadInfo() {
+  if (!userId || !groupId || userId === 'undefined' || groupId === 'undefined') {
+    document.getElementById('user-name-label').textContent = '파라미터 오류';
+    document.getElementById('my-point').textContent = '—';
+    return;
+  }
   try {
     const res=await fetch(`/casino/users?groupId=${groupId}`);
     const users=await res.json();
@@ -664,16 +686,28 @@ async function loadInfo() {
       document.getElementById('my-rank').textContent='#'+rank;
     }
     document.getElementById('total-players').textContent=users.length;
-  } catch(e){}
+  } catch(e){ console.error('loadInfo users error', e); }
   try {
     const res=await fetch(`/casino/user_level?groupId=${groupId}&userId=${userId}`);
     const data=await res.json();
     if(data.level) document.getElementById('user-level-label').textContent=`${data.level.emoji} ${data.level.name} · 누적 ${fmt(data.totalBet)}P`;
-  } catch(e){}
+  } catch(e){ console.error('loadInfo level error', e); }
 }
 
 async function init() {
   initTheme();
+  console.log('[casino init] userId='+userId+' groupId='+groupId);
+  if (!userId || !groupId || userId === 'undefined' || groupId === 'undefined') {
+    // 파라미터 없음 - 로딩 숨기고 오류 표시
+    setTimeout(()=>{
+      const el=document.getElementById('loading');
+      if(el){ el.style.opacity='0'; el.style.transition='opacity 0.4s'; setTimeout(()=>el.style.display='none',400); }
+    },300);
+    document.getElementById('user-name-label').textContent='로딩 오류';
+    document.getElementById('my-point').textContent='0';
+    toast('⚠️ 텔레그램 봇에서 /카지노 를 다시 입력해주세요', true);
+    return;
+  }
   await loadInfo();
   await loadMissions();
   setTimeout(()=>{
