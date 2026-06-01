@@ -14,7 +14,6 @@
 }
 html,body{height:100%;width:100%;}
 body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;}
-
 .topbar{background:linear-gradient(180deg,#0e0e1e,#080810);border-bottom:1px solid var(--border);padding:12px 16px 10px;text-align:center;position:sticky;top:0;z-index:50;}
 .casino-label{font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:var(--gold3);margin-bottom:3px;}
 .top-title{font-family:'Cinzel',serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
@@ -27,53 +26,21 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .s-running{background:#0a1a10;color:#44ee88;border:1px solid #22aa55;animation:blink 1s infinite;}
 .s-closed{background:#1a0a0a;color:#ee4444;border:1px solid #aa2222;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0.6}}
-
 .main{flex:1;overflow-y:auto;padding:0 14px 120px;display:flex;flex-direction:column;gap:12px;}
-
-/* 경마 트랙 */
 .horse-track{background:linear-gradient(180deg,#060e04,#081006);border:1px solid #1a3a12;border-radius:14px;padding:12px;overflow:hidden;}
 .track-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
 .track-title{font-family:'Cinzel',serif;font-size:11px;color:var(--gold);letter-spacing:1px;}
-
-.horse-lane{
-  position:relative;height:48px;border-radius:8px;
-  background:linear-gradient(90deg,#060e04,#081206);
-  border:1px solid rgba(255,255,255,0.05);
-  margin-bottom:6px;overflow:hidden;
-}
+.horse-lane{position:relative;height:48px;border-radius:8px;background:linear-gradient(90deg,#060e04,#081206);border:1px solid rgba(255,255,255,0.05);margin-bottom:6px;overflow:hidden;}
 .horse-lane:last-child{margin-bottom:0;}
-.horse-lane::before{
-  content:'';position:absolute;inset:0;
-  background:repeating-linear-gradient(90deg,transparent,transparent 30px,rgba(255,255,255,0.015) 30px,rgba(255,255,255,0.015) 31px);
-}
-.lane-num{
-  position:absolute;left:6px;top:50%;transform:translateY(-50%);
-  width:20px;height:20px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:10px;font-weight:900;z-index:2;
-}
+.horse-lane::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 30px,rgba(255,255,255,0.015) 30px,rgba(255,255,255,0.015) 31px);}
+.lane-num{position:absolute;left:6px;top:50%;transform:translateY(-50%);width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;z-index:2;}
 .finish-line{position:absolute;right:0;top:0;bottom:0;width:12px;background:repeating-linear-gradient(180deg,#fff 0px,#fff 6px,#000 6px,#000 12px);opacity:0.4;}
-.horse-racer{
-  position:absolute;top:50%;transform:translateY(-50%);
-  left:24px;font-size:20px;z-index:3;
-  transition:left 0.08s linear;
-  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));
-}
+.horse-racer{position:absolute;top:50%;transform:translateY(-50%);left:24px;font-size:20px;z-index:3;transition:left 0.08s linear;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));}
 .horse-racer.winner-pulse{animation:wp 0.4s ease-in-out infinite;}
 @keyframes wp{0%,100%{transform:translateY(-50%) scale(1)}50%{transform:translateY(-50%) scale(1.15)}}
-.horse-name-tag{
-  position:absolute;right:18px;top:50%;transform:translateY(-50%);
-  font-size:10px;font-weight:700;opacity:0.6;z-index:2;
-}
-
-/* 말 선택 */
+.horse-name-tag{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;opacity:0.6;z-index:2;}
 .horse-grid{display:flex;flex-direction:column;gap:8px;}
-.horse-opt{
-  border-radius:12px;border:1.5px solid var(--border);
-  background:var(--bg2);padding:12px 14px;
-  cursor:pointer;transition:all 0.18s;
-  display:flex;align-items:center;gap:12px;
-}
+.horse-opt{border-radius:12px;border:1.5px solid var(--border);background:var(--bg2);padding:12px 14px;cursor:pointer;transition:all 0.18s;display:flex;align-items:center;gap:12px;}
 .horse-opt:active{transform:scale(0.98);}
 .horse-opt.selected{border-width:2px;}
 .horse-emoji{font-size:28px;width:40px;text-align:center;}
@@ -83,7 +50,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .horse-pool{font-size:10px;color:var(--sub);margin-top:2px;}
 .horse-bar-bg{flex-shrink:0;width:60px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;}
 .horse-bar-fill{height:100%;border-radius:3px;transition:width 0.4s;}
-
 .card-inner{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;}
 .card-title{font-family:'Cinzel',serif;font-size:11px;color:var(--gold);letter-spacing:1px;margin-bottom:12px;}
 .presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
@@ -105,13 +71,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .ov-sub{font-size:13px;color:var(--sub);line-height:1.7;}
 .ov-payout{font-size:28px;font-weight:900;}
 .ov-close{padding:13px 30px;border-radius:12px;border:1px solid var(--gold3);background:transparent;color:var(--gold);font-size:14px;font-weight:600;cursor:pointer;}
-
-/* 타이머 */
-.timer-wrap{
-  background:linear-gradient(135deg,#1a1000,#0e0a00);
-  border:1px solid var(--gold3);border-radius:14px;padding:14px 16px;
-  display:none;flex-direction:column;gap:6px;
-}
+.timer-wrap{background:linear-gradient(135deg,#1a1000,#0e0a00);border:1px solid var(--gold3);border-radius:14px;padding:14px 16px;display:none;flex-direction:column;gap:6px;}
 .timer-label{font-size:11px;color:var(--gold3);letter-spacing:1px;}
 .timer-display{font-family:'Cinzel',serif;font-size:28px;font-weight:900;color:var(--gold2);letter-spacing:2px;}
 .timer-display.urgent{color:#ff4444;animation:timerUrgent 0.5s ease-in-out infinite;}
@@ -119,8 +79,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .timer-bar-wrap{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;}
 .timer-bar{height:100%;border-radius:2px;transition:width 1s linear;background:linear-gradient(90deg,var(--gold2),var(--gold));}
 .timer-bar.urgent{background:linear-gradient(90deg,#ff4444,#cc0000);}
-
-
 .bet-actions{display:flex;gap:8px;margin-top:8px;}
 .cancel-btn{flex:1;padding:11px;border-radius:12px;border:1px solid #aa222244;background:transparent;color:#ee4444;font-size:13px;font-weight:700;cursor:pointer;}
 .cancel-btn:active{background:#1a0505;}
@@ -131,7 +89,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .auto-start-btn{width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#2255aa,#113388);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
 .auto-start-btn.running{background:linear-gradient(135deg,#aa2222,#881111);}
 .auto-status{font-size:11px;color:var(--sub);text-align:center;margin-top:6px;}
-
 .home-btn{position:fixed;bottom:20px;left:16px;z-index:100;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--sub);font-size:12px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--gold);color:#0a0800;font-size:13px;font-weight:700;padding:10px 20px;border-radius:20px;z-index:500;opacity:0;transition:opacity 0.2s;white-space:nowrap;pointer-events:none;}
 .toast.show{opacity:1;}
@@ -151,8 +108,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   <div class="status-badge s-idle" id="status-badge">⏳ 대기 중</div>
 </div>
 
-
-<!-- 타이머 -->
 <div class="timer-wrap" id="timer-wrap">
   <div style="display:flex;align-items:center;justify-content:space-between">
     <div>
@@ -169,7 +124,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 </div>
 
 <div class="main">
-  <!-- 경마 트랙 -->
   <div class="horse-track">
     <div class="track-title-row">
       <span class="track-title">RACE TRACK</span>
@@ -178,7 +132,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <div id="horse-lanes"></div>
   </div>
 
-  <!-- 내 베팅 -->
   <div id="my-bet-section" style="display:none">
     <div class="my-bet-card" id="my-bet-card">
       <div>
@@ -196,7 +149,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     </div>
   </div>
 
-  <!-- 베팅 -->
   <div id="bet-section" style="display:none">
     <div class="card-inner">
       <div class="card-title">— 출전마 선택 —</div>
@@ -216,13 +168,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     </div>
   </div>
 
-  <!-- 자동 베팅 -->
   <div class="auto-bet-wrap" id="auto-bet-wrap" style="display:none">
     <div class="auto-title">🤖 자동 베팅</div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
       <span style="font-size:12px;color:var(--sub);width:80px">반복 횟수</span>
-      <input type="number" id="auto-count" value="3" min="1" max="20"
-        style="width:70px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:8px 10px;outline:none">
+      <input type="number" id="auto-count" value="3" min="1" max="20" style="width:70px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:8px 10px;outline:none">
       <span style="font-size:12px;color:var(--sub)">회</span>
     </div>
     <button class="auto-start-btn" id="auto-btn" onclick="toggleAutoBet()">▶ 자동 베팅 시작</button>
@@ -247,7 +197,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 <button class="home-btn" onclick="goHome()">🏠 홈</button>
 
 <script>
-// ─── URL 파라미터 파싱 (텔레그램 WebApp 호환) ───
 function getUrlParam(key) {
   const sp = new URLSearchParams(location.search);
   if (sp.get(key)) return sp.get(key);
@@ -277,8 +226,6 @@ const DEFAULT_HORSES=[
   {id:5,name:'불꽃',emoji:'🔥',win_rate:25,base_odds:3.0},
 ];
 
-
-// ── 타이머 ──
 let timerInterval = null;
 function startTimer(timerInfo) {
   const wrap = document.getElementById('timer-wrap');
@@ -291,7 +238,7 @@ function startTimer(timerInfo) {
   const startedAt = new Date(timerInfo.startedAt);
   function tick() {
     const elapsed = (new Date() - startedAt) / 1000;
-    const remain  = Math.max(0, totalSecs - elapsed);
+    const remain   = Math.max(0, totalSecs - elapsed);
     const mins    = Math.floor(remain / 60);
     const secs    = Math.floor(remain % 60);
     disp.textContent = `${mins}:${String(secs).padStart(2,'0')}`;
@@ -349,14 +296,14 @@ function resetHorses(horses){
 function animHorse(winner,horses,onDone){
   racing=true;
   let step=0,total=120;
-  const winnerH=horses.find(h=>h.id===winner||h.name===winner);
+  const winnerH=horses.find(h=>String(h.id)===String(winner)||h.name===winner);
   if(!winnerH){if(onDone)onDone();return;}
 
   function tick(){
     if(step>=total){
       racing=false;
       horses.forEach(h=>{
-        const isWin=(h.id===winnerH.id);
+        const isWin=(String(h.id)===String(winnerH.id));
         setHorsePos(h.id,isWin?96:60+Math.random()*20);
         if(isWin){
           const el=document.getElementById('racer-'+h.id);
@@ -369,7 +316,7 @@ function animHorse(winner,horses,onDone){
     const prog=step/total;
     const ease=1-Math.pow(1-prog,2);
     horses.forEach(h=>{
-      const isWin=(h.id===winnerH.id);
+      const isWin=(String(h.id)===String(winnerH.id));
       const j=(Math.random()-0.5)*3;
       const target=isWin?ease*93:ease*(55+Math.random()*15);
       horsePos[h.id]=Math.max(0,Math.min(93,horsePos[h.id]+(target-horsePos[h.id])*0.08+j));
@@ -450,7 +397,7 @@ function render(s){
 
   if(s.status==='betting'){
     if(s.myBet){
-      const h=horses.find(hh=>hh.id===s.myBet.betOn||String(hh.id)===String(s.myBet.betOn));
+      const h=horses.find(hh=>String(hh.id)===String(s.myBet.betOn));
       const odds=h?.base_odds||2.5;
       document.getElementById('my-bet-detail').textContent=`${h?.emoji||'🐎'} ${h?.name||s.myBet.betOn} · ${fmt(s.myBet.amount)} P`;
       document.getElementById('my-bet-exp').textContent=`+${fmt(Math.floor(s.myBet.amount*odds))} P`;
@@ -462,11 +409,8 @@ function render(s){
     }
   } else if(s.status==='idle'||s.status==='closed'){
     idleMsg.style.display='block';
-    document.getElementById('idle-title').textContent=s.status==='closed'?'경주 종료':'경마 대기 중';
-    document.getElementById('idle-sub').textContent=s.status==='closed'?'다음 경주를 기다려주세요':'관리자가 경주를 시작하면\n베팅할 수 있어요';
     resetHorses(horses);
   }
-  // 타이머
   if (s.status === 'betting' && s.timerInfo) startTimer(s.timerInfo);
   else stopTimer();
 
@@ -496,11 +440,11 @@ async function doBet(){
 function showResult(s){
   const winner=s.result;
   const horses=s.settings?.horses||DEFAULT_HORSES;
-  const winH=horses.find(h=>h.id===winner||String(h.id)===String(winner));
+  const winH=horses.find(h=>String(h.id)===String(winner));
   const myBetOn=s.myBet?.betOn;
   const won=myBetOn&&String(myBetOn)===String(winner);
   const odds=winH?.base_odds||2.5;
-  const payout=won?Math.floor((s.myBet?.amount||0)*odds):0;
+  const globalPayout=won?Math.floor((s.myBet?.amount||0)*odds):0; // 무한 락 방지 스코프 개정
 
   animHorse(winner,horses,()=>{
     document.getElementById('ov-emoji').textContent=won?'🏆':'💸';
@@ -510,10 +454,10 @@ function showResult(s){
       document.getElementById('ov-payout').textContent='';
     } else if(won){
       document.getElementById('ov-sub').textContent='🎉 베팅 성공!';
-      document.getElementById('ov-payout').textContent=`+${fmt(payout)} P 획득!`;
+      document.getElementById('ov-payout').textContent=`+${fmt(globalPayout)} P 획득!`;
       vibrate([100,50,100,50,200]); playSound('win');
       document.getElementById('ov-payout').style.color='#44ee88';
-      myPt+=payout; document.getElementById('my-point').textContent=fmt(myPt)+' P';
+      myPt+=globalPayout; document.getElementById('my-point').textContent=fmt(myPt)+' P';
     } else {
       document.getElementById('ov-sub').textContent='아쉬워요. 다음 기회에!';
       document.getElementById('ov-payout').textContent=`-${fmt(s.myBet?.amount||0)} P`;
@@ -525,9 +469,6 @@ function showResult(s){
 }
 
 function closeOverlay(){ document.getElementById('overlay').classList.remove('show'); load(); }
-
-
-function fmt(n){return Number(n||0).toLocaleString();}
 
 async function cancelBet() {
   if(!state?.myBet) return;
@@ -605,7 +546,7 @@ async function waitAutoResult(){
   await load();
   if(state?.status==='closed'||!state?.myBet){
     if(autoRemain>0){
-      document.getElementById('auto-status').textContent=`🔄 다음 라운드 대기... (${autoRemain}회 남음)`;
+      document.getElementById('auto-status').textContent= `🔄 다음 라운드 대기... (${autoRemain}회 남음)`;
       autoTimer=setTimeout(runAutoRound,3000);
     } else stopAutoBet();
   } else autoTimer=setTimeout(waitAutoResult,2000);
@@ -637,7 +578,6 @@ async function loadPt(){
     if(me){ myPt=me.point; document.getElementById('my-point').textContent=fmt(myPt)+' P'; }
   } catch(e){}
 }
-
 
 function goHome(){
   const p=new URLSearchParams(location.search);
