@@ -14,121 +14,46 @@
   --rabbit:#4a9eff;--turtle:#44cc88;
 }
 html,body{height:100%;width:100%;}
-body{
-  font-family:'Noto Sans KR',sans-serif;
-  background:var(--bg);color:var(--text);
-  min-height:100vh;display:flex;flex-direction:column;
-  overflow-x:hidden;
-}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;}
 
-/* 상단 */
-.topbar{
-  background:linear-gradient(180deg,#0e0e1e,#080810);
-  border-bottom:1px solid var(--border);
-  padding:12px 16px 10px;text-align:center;
-  position:sticky;top:0;z-index:50;
-}
+.topbar{background:linear-gradient(180deg,#0e0e1e,#080810);border-bottom:1px solid var(--border);padding:12px 16px 10px;text-align:center;position:sticky;top:0;z-index:50;}
 .casino-label{font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:var(--gold3);margin-bottom:3px;}
-.top-title{
-  font-family:'Cinzel',serif;font-size:18px;font-weight:900;
-  background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-}
+.top-title{font-family:'Cinzel',serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
 
-/* 포인트 */
-.point-bar{
-  background:var(--bg2);border-bottom:1px solid var(--border);
-  padding:8px 16px;display:flex;align-items:center;justify-content:space-between;
-}
+.point-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;justify-content:space-between;}
 .point-val{font-size:16px;font-weight:700;color:var(--gold);}
 .point-label{font-size:11px;color:var(--sub);}
 
-/* 상태 배지 */
 .status-row{padding:10px 14px;display:flex;align-items:center;justify-content:space-between;}
-.status-badge{
-  display:inline-flex;align-items:center;gap:5px;
-  padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;
-}
+.status-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;}
 .s-idle   {background:#1a1a2a;color:var(--sub);border:1px solid var(--border);}
 .s-betting{background:#1a1500;color:var(--gold);border:1px solid var(--gold3);animation:blink 1.5s infinite;}
 .s-running{background:#0a1a10;color:#44ee88;border:1px solid #22aa55;animation:blink 1s infinite;}
 .s-closed {background:#1a0a0a;color:#ee4444;border:1px solid #aa2222;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0.6}}
 
-/* 메인 스크롤 */
 .main{flex:1;overflow-y:auto;padding:0 14px 120px;display:flex;flex-direction:column;gap:12px;}
 
-/* 트랙 카드 */
-.track-card{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:14px;overflow:hidden;
-}
-.track-header{
-  padding:10px 14px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;
-}
+.track-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.track-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .track-title{font-family:'Cinzel',serif;font-size:11px;color:var(--gold);letter-spacing:1px;}
 
-/* 경주 트랙 - CSS 기반 */
-.track-wrap{
-  padding:16px;
-  background:linear-gradient(180deg,#060c08,#081008);
-}
-.track-lane{
-  position:relative;height:60px;border-radius:8px;
-  background:linear-gradient(90deg,#060e08,#081208);
-  border:1px solid rgba(255,255,255,0.06);
-  margin-bottom:8px;overflow:hidden;
-}
+.track-wrap{padding:16px;background:linear-gradient(180deg,#060c08,#081008);}
+.track-lane{position:relative;height:60px;border-radius:8px;background:linear-gradient(90deg,#060e08,#081208);border:1px solid rgba(255,255,255,0.06);margin-bottom:8px;overflow:hidden;}
 .track-lane:last-child{margin-bottom:0;}
-/* 줄무늬 */
-.track-lane::before{
-  content:'';position:absolute;inset:0;
-  background:repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(255,255,255,0.02) 40px,rgba(255,255,255,0.02) 41px);
-}
-.lane-label{
-  position:absolute;left:8px;top:50%;transform:translateY(-50%);
-  font-size:10px;font-weight:700;z-index:2;
-}
+.track-lane::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(255,255,255,0.02) 40px,rgba(255,255,255,0.02) 41px);}
+.lane-label{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;z-index:2;}
 .lane-label.rabbit{color:var(--rabbit);}
 .lane-label.turtle{color:var(--turtle);}
 
-/* 결승선 */
-.finish-line{
-  position:absolute;right:0;top:0;bottom:0;width:16px;
-  background:repeating-linear-gradient(180deg,#fff 0px,#fff 8px,#000 8px,#000 16px);
-  opacity:0.5;
-}
+.finish-line{position:absolute;right:0;top:0;bottom:0;width:16px;background:repeating-linear-gradient(180deg,#fff 0px,#fff 8px,#000 8px,#000 16px);opacity:0.5;}
 
-/* 캐릭터 */
-.racer{
-  position:absolute;top:50%;transform:translateY(-50%);
-  width:44px;height:44px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:24px;z-index:3;
-  transition:left 0.1s linear;
-  filter:drop-shadow(0 2px 8px rgba(0,0,0,0.5));
-}
-.racer.rabbit-racer{
-  left:8px;
-  background:radial-gradient(circle,#1a3555,#0a1a30);
-  border:2px solid var(--rabbit);
-  box-shadow:0 0 12px rgba(74,158,255,0.4);
-}
-.racer.turtle-racer{
-  left:8px;
-  background:radial-gradient(circle,#0a2a18,#051510);
-  border:2px solid var(--turtle);
-  box-shadow:0 0 12px rgba(68,204,136,0.4);
-}
-.racer.winner-glow{
-  box-shadow:0 0 20px rgba(255,215,0,0.8)!important;
-  border-color:var(--gold)!important;
-  animation:winPulse 0.5s ease-in-out infinite;
-}
+.racer{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;z-index:3;transition:left 0.1s linear;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.5));}
+.racer.rabbit-racer{left:8px;background:radial-gradient(circle,#1a3555,#0a1a30);border:2px solid var(--rabbit);box-shadow:0 0 12px rgba(74,158,255,0.4);}
+.racer.turtle-racer{left:8px;background:radial-gradient(circle,#0a2a18,#051510);border:2px solid var(--turtle);box-shadow:0 0 12px rgba(68,204,136,0.4);}
+.racer.winner-glow{box-shadow:0 0 20px rgba(255,215,0,0.8)!important;border-color:var(--gold)!important;animation:winPulse 0.5s ease-in-out infinite;}
 @keyframes winPulse{0%,100%{transform:translateY(-50%) scale(1)}50%{transform:translateY(-50%) scale(1.1)}}
 
-/* 베팅 풀 */
 .pool-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;}
 .pool-title{font-size:11px;color:var(--sub);letter-spacing:0.05em;margin-bottom:10px;}
 .pool-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
@@ -141,26 +66,12 @@ body{
 .pool-amt{font-size:11px;color:var(--sub);width:64px;text-align:right;}
 .total-pool{font-size:11px;color:var(--sub);text-align:right;margin-top:6px;}
 
-/* 내 베팅 카드 */
-.my-bet-card{
-  background:#0a1520;border:1px solid rgba(74,158,255,0.25);
-  border-radius:12px;padding:12px 14px;
-  display:flex;align-items:center;justify-content:space-between;
-}
+.my-bet-card{background:#0a1520;border:1px solid rgba(74,158,255,0.25);border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;}
 
-/* 베팅 섹션 */
 .bet-section{display:flex;flex-direction:column;gap:10px;}
-.bet-title{
-  font-family:'Cinzel',serif;font-size:12px;color:var(--gold);
-  letter-spacing:2px;text-align:center;padding:4px 0;
-}
+.bet-title{font-family:'Cinzel',serif;font-size:12px;color:var(--gold);letter-spacing:2px;text-align:center;padding:4px 0;}
 .bet-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.bet-opt{
-  border-radius:14px;border:2px solid var(--border);
-  background:var(--bg2);padding:14px 8px;
-  text-align:center;cursor:pointer;transition:all 0.18s;
-  display:flex;flex-direction:column;align-items:center;gap:5px;
-}
+.bet-opt{border-radius:14px;border:2px solid var(--border);background:var(--bg2);padding:14px 8px;text-align:center;cursor:pointer;transition:all 0.18s;display:flex;flex-direction:column;align-items:center;gap:5px;}
 .bet-opt:active{transform:scale(0.96);}
 .bet-opt.sel-r{border-color:var(--rabbit);background:#051525;box-shadow:0 0 16px rgba(74,158,255,0.25);}
 .bet-opt.sel-t{border-color:var(--turtle);background:#051a10;box-shadow:0 0 16px rgba(68,204,136,0.25);}
@@ -171,71 +82,32 @@ body{
 .opt-odds{font-size:11px;color:var(--gold);font-weight:600;}
 .opt-cnt{font-size:10px;color:var(--sub);}
 
-/* 금액 */
 .presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
-.preset{
-  padding:9px 4px;border-radius:8px;border:1px solid var(--border);
-  background:var(--bg3);color:var(--text);font-size:12px;
-  font-weight:600;cursor:pointer;text-align:center;
-}
+.preset{padding:9px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;text-align:center;}
 .preset:active{background:var(--bg4);}
 .amt-row{display:flex;gap:8px;align-items:center;}
-.amt-inp{
-  flex:1;background:var(--bg);border:1px solid var(--border);
-  border-radius:10px;color:var(--text);font-size:16px;
-  padding:11px 14px;outline:none;
-}
+.amt-inp{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;padding:11px 14px;outline:none;}
 .amt-inp:focus{border-color:var(--gold3);}
 
-/* 제출 버튼 */
-.bet-btn{
-  width:100%;padding:16px;border-radius:14px;border:none;
-  font-size:15px;font-weight:800;cursor:pointer;transition:all 0.2s;
-  background:linear-gradient(135deg,var(--gold),var(--gold3));
-  color:#0a0800;box-shadow:0 4px 16px rgba(212,168,67,0.25);
-}
+.bet-btn{width:100%;padding:16px;border-radius:14px;border:none;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,var(--gold),var(--gold3));color:#0a0800;box-shadow:0 4px 16px rgba(212,168,67,0.25);}
 .bet-btn.off{background:var(--border);color:#333;cursor:default;box-shadow:none;}
 .bet-btn:not(.off):active{transform:scale(0.98);}
 
-/* 종료 / 대기 메시지 */
-.idle-msg{
-  text-align:center;padding:28px 20px;
-  background:var(--bg2);border:1px solid var(--border);border-radius:14px;
-}
+.idle-msg{text-align:center;padding:28px 20px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;}
 .idle-icon{font-size:44px;margin-bottom:10px;}
 .idle-title{font-family:'Cinzel',serif;font-size:16px;color:var(--gold);margin-bottom:6px;}
 .idle-sub{font-size:12px;color:var(--sub);line-height:1.7;}
 
-/* 결과 오버레이 */
-.overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,0.96);
-  z-index:200;display:none;
-  flex-direction:column;align-items:center;justify-content:center;
-  gap:16px;padding:24px;text-align:center;
-}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.96);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;}
 .overlay.show{display:flex;}
 .ov-emoji{font-size:72px;animation:pop 0.5s ease-out;}
 @keyframes pop{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
-.ov-title{
-  font-family:'Cinzel',serif;font-size:26px;font-weight:900;
-  background:linear-gradient(135deg,var(--gold2),var(--gold));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-}
+.ov-title{font-family:'Cinzel',serif;font-size:26px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
 .ov-sub{font-size:13px;color:var(--sub);line-height:1.7;}
 .ov-payout{font-size:30px;font-weight:900;}
-.ov-close{
-  padding:13px 30px;border-radius:12px;
-  border:1px solid var(--gold3);background:transparent;
-  color:var(--gold);font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;
-}
+.ov-close{padding:13px 30px;border-radius:12px;border:1px solid var(--gold3);background:transparent;color:var(--gold);font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;}
 
-
-/* 타이머 */
-.timer-wrap{
-  background:linear-gradient(135deg,#1a1000,#0e0a00);
-  border:1px solid var(--gold3);border-radius:14px;padding:14px 16px;
-  display:flex;align-items:center;justify-content:space-between;
-}
+.timer-wrap{background:linear-gradient(135deg,#1a1000,#0e0a00);border:1px solid var(--gold3);border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;}
 .timer-label{font-size:11px;color:var(--gold3);letter-spacing:1px;}
 .timer-display{font-family:'Cinzel',serif;font-size:28px;font-weight:900;color:var(--gold2);letter-spacing:2px;}
 .timer-display.urgent{color:#ff4444;animation:timerUrgent 0.5s ease-in-out infinite;}
@@ -245,49 +117,23 @@ body{
 .timer-bar.urgent{background:linear-gradient(90deg,#ff4444,#cc0000);}
 .round-info{font-size:11px;color:var(--sub);text-align:right;}
 
-/* 토스트 */
-
-/* 베팅 취소 / 더블다운 / 자동베팅 */
 .bet-actions{display:flex;gap:8px;margin-top:0;}
-.cancel-btn{
-  flex:1;padding:11px;border-radius:12px;
-  border:1px solid #aa222244;background:transparent;
-  color:var(--red);font-size:13px;font-weight:700;cursor:pointer;
-}
+.cancel-btn{flex:1;padding:11px;border-radius:12px;border:1px solid #aa222244;background:transparent;color:var(--red);font-size:13px;font-weight:700;cursor:pointer;}
 .cancel-btn:active{background:#1a0505;}
-.double-btn{
-  flex:1;padding:11px;border-radius:12px;
-  border:1px solid var(--gold3);background:transparent;
-  color:var(--gold);font-size:13px;font-weight:700;cursor:pointer;
-}
+.double-btn{flex:1;padding:11px;border-radius:12px;border:1px solid var(--gold3);background:transparent;color:var(--gold);font-size:13px;font-weight:700;cursor:pointer;}
 .double-btn:active{background:#1a1500;}
-.auto-bet-wrap{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:14px;padding:14px;
-}
+.auto-bet-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;}
 .auto-title{font-size:12px;font-weight:700;color:var(--gold);margin-bottom:10px;}
 .auto-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
 .auto-label{font-size:12px;color:var(--sub);width:80px;}
-.auto-count-inp{
-  width:70px;background:var(--bg);border:1px solid var(--border);
-  border-radius:8px;color:var(--text);font-size:14px;padding:8px 10px;outline:none;
-}
-.auto-start-btn{
-  width:100%;padding:13px;border-radius:12px;border:none;
-  background:linear-gradient(135deg,#2255aa,#113388);
-  color:#fff;font-size:13px;font-weight:700;cursor:pointer;
-}
+.auto-count-inp{width:70px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:8px 10px;outline:none;}
+.auto-start-btn{width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#2255aa,#113388);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
 .auto-start-btn:active{opacity:0.85;}
 .auto-start-btn.running{background:linear-gradient(135deg,#aa2222,#881111);}
 .auto-status{font-size:12px;color:var(--sub);text-align:center;margin-top:6px;}
 
 .home-btn{position:fixed;bottom:20px;left:16px;z-index:100;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--sub);font-size:12px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
-.toast{
-  position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
-  background:var(--gold);color:#0a0800;
-  font-size:13px;font-weight:700;padding:10px 20px;border-radius:20px;
-  z-index:500;opacity:0;transition:opacity 0.2s;white-space:nowrap;pointer-events:none;
-}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--gold);color:#0a0800;font-size:13px;font-weight:700;padding:10px 20px;border-radius:20px;z-index:500;opacity:0;transition:opacity 0.2s;white-space:nowrap;pointer-events:none;}
 .toast.show{opacity:1;}
 .toast.err{background:#cc3333;color:#fff;}
 </style>
@@ -309,8 +155,6 @@ body{
   <div style="font-size:11px;color:var(--sub)" id="round-label"></div>
 </div>
 
-
-<!-- 3분 타이머 -->
 <div class="timer-wrap" id="timer-wrap" style="display:none">
   <div>
     <div class="timer-label">⏱ 베팅 마감까지</div>
@@ -323,28 +167,23 @@ body{
 </div>
 
 <div class="main">
-
-  <!-- 경주 트랙 -->
   <div class="track-card">
     <div class="track-header">
       <span class="track-title">RACE TRACK</span>
       <span style="font-size:11px;color:var(--sub)" id="track-status">경주 대기 중</span>
     </div>
     <div class="track-wrap">
-      <!-- 토끼 레인 -->
       <div class="track-lane" id="lane-rabbit">
         <span class="lane-label rabbit">🐇 토끼</span>
         <div class="racer rabbit-racer" id="racer-rabbit">🐇</div>
         <div class="finish-line"></div>
       </div>
-      <!-- 거북이 레인 -->
       <div class="track-lane" id="lane-turtle">
         <span class="lane-label turtle">🐢 거북이</span>
         <div class="racer turtle-racer" id="racer-turtle">🐢</div>
         <div class="finish-line"></div>
       </div>
     </div>
-    <!-- 배당률 표시 -->
     <div style="display:flex;gap:0;border-top:1px solid var(--border);">
       <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--border);">
         <div style="font-size:10px;color:var(--sub);margin-bottom:2px;">🐇 배당</div>
@@ -357,7 +196,6 @@ body{
     </div>
   </div>
 
-  <!-- 베팅 풀 -->
   <div class="pool-card">
     <div class="pool-title">📊 베팅 현황</div>
     <div class="pool-row">
@@ -373,7 +211,6 @@ body{
     <div class="total-pool" id="total-pool">총 베팅: 0 P</div>
   </div>
 
-  <!-- 내 베팅 (베팅 완료 후) -->
   <div id="my-bet-section" style="display:none">
     <div class="my-bet-card" id="my-bet-card">
       <div>
@@ -391,7 +228,6 @@ body{
     </div>
   </div>
 
-  <!-- 베팅 UI -->
   <div class="bet-section" id="bet-section" style="display:none">
     <div class="bet-title">— PLACE YOUR BET —</div>
     <div class="bet-options">
@@ -421,7 +257,6 @@ body{
     <button class="bet-btn off" id="bet-btn" onclick="doBet()">베팅할 항목을 선택해주세요</button>
   </div>
 
-  <!-- 자동 베팅 -->
   <div class="auto-bet-wrap" id="auto-bet-wrap" style="display:none">
     <div class="auto-title">🤖 자동 베팅</div>
     <div class="auto-row">
@@ -434,7 +269,6 @@ body{
     <div class="auto-status" id="auto-status"></div>
   </div>
 
-  <!-- 관전 모드 배너 -->
   <div id="spectator-banner" style="display:none;background:var(--bg2);border:1px solid #2255aa44;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
     <span style="font-size:18px">👁</span>
     <div style="flex:1">
@@ -444,17 +278,14 @@ body{
     <button onclick="exitSpectator()" style="padding:6px 12px;border-radius:8px;border:1px solid #2255aa44;background:transparent;color:var(--blue);font-size:11px;cursor:pointer">베팅하기</button>
   </div>
 
-  <!-- 대기 / 종료 메시지 -->
   <div class="idle-msg" id="idle-msg">
     <div class="idle-icon" id="idle-icon">⏳</div>
     <div class="idle-title" id="idle-title">경주 대기 중</div>
     <div class="idle-sub" id="idle-sub">관리자가 경주를 시작하면<br>베팅할 수 있어요</div>
     <button onclick="enterSpectator()" style="margin-top:10px;padding:8px 18px;border-radius:10px;border:1px solid #2255aa44;background:transparent;color:var(--blue);font-size:12px;cursor:pointer">👁 관전 모드로 보기</button>
   </div>
-
 </div>
 
-<!-- 결과 오버레이 -->
 <div class="overlay" id="overlay">
   <div class="ov-emoji" id="ov-emoji">🏆</div>
   <div class="ov-title" id="ov-title">우승!</div>
@@ -467,7 +298,6 @@ body{
 <button class="home-btn" onclick="goHome()">🏠 홈</button>
 
 <script>
-// ─── URL 파라미터 파싱 (텔레그램 WebApp 호환) ───
 function getUrlParam(key) {
   const sp = new URLSearchParams(location.search);
   if (sp.get(key)) return sp.get(key);
@@ -491,16 +321,14 @@ let prevSt  = null;
 let racing  = false;
 let raceAnim= null;
 
-// ── 캐릭터 위치 (% 기반) ──
-let rPos = 4, tPos = 4; // 레인 너비 대비 %
+let rPos = 4, tPos = 4;
 
 function setRacerPos(id, pct) {
   const el = document.getElementById(id);
   if (!el) return;
-  // 레인 너비 기준, 캐릭터 44px
   const lane = el.parentElement;
   const laneW = lane.offsetWidth;
-  const maxLeft = laneW - 52; // 44px + 8px margin
+  const maxLeft = laneW - 52;
   const left = Math.min(maxLeft, Math.max(8, (pct/100) * maxLeft));
   el.style.left = left + 'px';
 }
@@ -523,7 +351,6 @@ function animRace(winner, onDone) {
   function tick() {
     if (step >= total) {
       racing = false;
-      // 우승자 결승선
       if (winner === 'rabbit') { rPos = 96; tPos = 96 - 20 - Math.random()*15; }
       else                     { tPos = 96; rPos = 96 - 20 - Math.random()*15; }
       setRacerPos('racer-rabbit', rPos);
@@ -551,7 +378,6 @@ function animRace(winner, onDone) {
   tick();
 }
 
-// ── 유틸 ──
 function toast(msg, err=false) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -560,7 +386,6 @@ function toast(msg, err=false) {
 }
 function fmt(n) { return Number(n||0).toLocaleString(); }
 
-// ── 베팅 UI ──
 function pick(opt) {
   picked = opt;
   document.getElementById('opt-r').className = 'bet-opt' + (opt==='rabbit'?' sel-r':'');
@@ -596,35 +421,26 @@ function refreshBtn() {
   btn.textContent=`${lbl} · ${fmt(amt)}P → 예상 +${fmt(exp)}P`;
 }
 
-
-// ── 타이머 ──
 let timerInterval = null;
-
 function startTimer(timerInfo) {
   const wrap = document.getElementById('timer-wrap');
   const disp = document.getElementById('timer-display');
   const bar  = document.getElementById('timer-bar');
   if (!timerInfo) { wrap.style.display='none'; return; }
-
   wrap.style.display = 'flex';
   wrap.style.flexDirection = 'column';
-
   clearInterval(timerInterval);
-
   const totalSecs = timerInfo.totalSecs || 180;
   const startedAt = new Date(timerInfo.startedAt);
 
   function tick() {
-    const now     = new Date();
-    const elapsed = (now - startedAt) / 1000;
-    const remain  = Math.max(0, totalSecs - elapsed);
+    const elapsed = (new Date() - startedAt) / 1000;
+    const remain   = Math.max(0, totalSecs - elapsed);
     const mins    = Math.floor(remain / 60);
     const secs    = Math.floor(remain % 60);
-
     disp.textContent = `${mins}:${String(secs).padStart(2,'0')}`;
     const pct = (remain / totalSecs) * 100;
     bar.style.width = pct + '%';
-
     if (remain <= 30) {
       disp.className = 'timer-display urgent';
       bar.className  = 'timer-bar urgent';
@@ -632,7 +448,6 @@ function startTimer(timerInfo) {
       disp.className = 'timer-display';
       bar.className  = 'timer-bar';
     }
-
     if (remain <= 0) {
       clearInterval(timerInterval);
       disp.textContent = '0:00';
@@ -648,29 +463,21 @@ function stopTimer() {
   document.getElementById('timer-wrap').style.display = 'none';
 }
 
-// ── 상태 렌더 ──
 function render(s) {
   state = s;
-  const statusMap = {
-    idle:    ['s-idle',    '⏳ 대기 중'],
-    betting: ['s-betting', '🔴 베팅 진행 중'],
-    running: ['s-running', '🏃 경주 중'],
-    closed:  ['s-closed',  '🏁 경주 종료'],
-  };
+  const statusMap = { idle: ['s-idle','⏳ 대기 중'], betting: ['s-betting','🔴 베팅 진행 중'], running: ['s-running','🏃 경주 중'], closed: ['s-closed','🏁 경주 종료'] };
   const [cls, lbl] = statusMap[s.status] || statusMap.idle;
   const badge = document.getElementById('status-badge');
   badge.className = 'status-badge ' + cls;
   badge.textContent = lbl;
   document.getElementById('track-status').textContent = lbl;
 
-  // 배당
   const ro = s.odds?.rabbit || 2, to = s.odds?.turtle || 2;
   document.getElementById('rabbit-odds-disp').textContent = 'x ' + ro.toFixed(2);
   document.getElementById('turtle-odds-disp').textContent = 'x ' + to.toFixed(2);
   document.getElementById('odds-r-btn').textContent = 'x ' + ro.toFixed(2);
   document.getElementById('odds-t-btn').textContent = 'x ' + to.toFixed(2);
 
-  // 풀
   const rP = s.bets?.rabbit?.total||0, tP = s.bets?.turtle?.total||0;
   const tot = rP + tP;
   const rPct = tot>0 ? rP/tot*100 : 50;
@@ -683,7 +490,6 @@ function render(s) {
   document.getElementById('cnt-t').textContent  = (s.bets?.turtle?.count||0)+'명';
   document.getElementById('total-pool').textContent = '총 베팅: '+fmt(tot)+' P';
 
-  // 섹션 표시
   const betSec    = document.getElementById('bet-section');
   const myBetCard = document.getElementById('my-bet-card');
   const idleMsg   = document.getElementById('idle-msg');
@@ -695,7 +501,6 @@ function render(s) {
   const autoBetWrap = document.getElementById('auto-bet-wrap');
   if (autoBetWrap) autoBetWrap.style.display = 'none';
 
-  // 관전 모드면 bet-section 숨김
   if (spectatorMode && s.status === 'betting' && !s.myBet) {
     const banner = document.getElementById('spectator-banner');
     if(banner) banner.style.display = 'flex';
@@ -714,21 +519,13 @@ function render(s) {
     }
   } else if (s.status === 'idle') {
     idleMsg.style.display = 'block';
-    document.getElementById('idle-icon').textContent = '⏳';
-    document.getElementById('idle-title').textContent = '경주 대기 중';
-    document.getElementById('idle-sub').textContent   = '관리자가 경주를 시작하면\n베팅할 수 있어요';
     resetRacers();
   } else if (s.status === 'closed') {
     idleMsg.style.display = 'block';
-    document.getElementById('idle-icon').textContent = '🏁';
-    document.getElementById('idle-title').textContent = '경주 종료';
-    document.getElementById('idle-sub').textContent   = '다음 경주를 기다려주세요';
   }
-
   refreshBtn();
 }
 
-// ── 베팅 제출 ──
 async function doBet() {
   if (!picked || !state) return;
   const amt = parseInt(document.getElementById('amt').value)||0;
@@ -738,22 +535,17 @@ async function doBet() {
   try {
     const res  = await fetch('/casino/race/bet',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        roundId: state.roundId, groupId:parseInt(groupId),
-        userId:parseInt(userId), betOn:picked, amount:amt
-      })
+      body:JSON.stringify({ roundId: state.roundId, groupId:parseInt(groupId), userId:parseInt(userId), betOn:picked, amount:amt })
     });
     const data = await res.json();
     if (data.ok) {
-      vibrate([50]); playSound('bet'); toast(`✅ ${picked==='rabbit'?'🐇 토끼':'🐢 거북이'} ${fmt(amt)}P 베팅!`);
-      myPt -= amt;
-      document.getElementById('my-point').textContent = fmt(myPt)+' P';
+      vibrate([50]); playSound('bet'); toast(`✅ 베팅 성공!`);
+      myPt -= amt; document.getElementById('my-point').textContent = fmt(myPt)+' P';
       await load();
     } else { toast(data.error||'오류', true); refreshBtn(); }
   } catch(e) { toast('서버 오류', true); refreshBtn(); }
 }
 
-// ── 결과 오버레이 ──
 function showResult(s) {
   const winner = s.result;
   const myBetOn = s.myBet?.betOn;
@@ -771,63 +563,41 @@ function showResult(s) {
     document.getElementById('ov-sub').textContent    = '🎉 축하해요! 베팅 성공!';
     document.getElementById('ov-payout').textContent = `+${fmt(payout)} P 획득!`;
     document.getElementById('ov-payout').style.color = '#44ee88';
-    myPt += payout;
-    document.getElementById('my-point').textContent = fmt(myPt)+' P';
+    myPt += payout; document.getElementById('my-point').textContent = fmt(myPt)+' P';
   } else {
-    document.getElementById('ov-sub').textContent    = `아쉬워요. ${myBetOn==='rabbit'?'🐇 토끼':'🐢 거북이'}를 응원하셨군요.`;
+    document.getElementById('ov-sub').textContent    = `아쉬워요. 다음 기회에!`;
     document.getElementById('ov-payout').textContent = `-${fmt(s.myBet?.amount||0)} P`;
     document.getElementById('ov-payout').style.color = '#ee4444';
   }
   document.getElementById('overlay').classList.add('show');
 }
 
-function closeOverlay() {
-  document.getElementById('overlay').classList.remove('show');
-  load();
-}
-
-
-// ── 베팅 알림 (진동/소리) ──
-function vibrate(pattern) {
-  if (navigator.vibrate) navigator.vibrate(pattern);
-}
-
+function closeOverlay() { document.getElementById('overlay').classList.remove('show'); load(); }
+function vibrate(pattern) { if (navigator.vibrate) navigator.vibrate(pattern); }
 function playSound(type) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain= ctx.createGain();
+    const osc = ctx.createOscillator();const gain= ctx.createGain();
     osc.connect(gain); gain.connect(ctx.destination);
     if (type === 'win') {
       osc.frequency.setValueAtTime(523, ctx.currentTime);
-      osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
-      osc.frequency.setValueAtTime(784, ctx.currentTime + 0.2);
       gain.gain.setValueAtTime(0.3, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
       osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.5);
     } else if (type === 'lose') {
-      osc.frequency.setValueAtTime(300, ctx.currentTime);
-      osc.frequency.setValueAtTime(200, ctx.currentTime + 0.15);
+      osc.frequency.setValueAtTime(200, ctx.currentTime);
       gain.gain.setValueAtTime(0.2, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
       osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.4);
-    } else if (type === 'bet') {
-      osc.frequency.setValueAtTime(440, ctx.currentTime);
-      gain.gain.setValueAtTime(0.1, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.15);
     }
   } catch(e) {}
 }
 
-
-// ── 폴링 ──
 async function load() {
   try {
     const res  = await fetch(`/casino/race/state?groupId=${groupId}&userId=${userId}`);
     const data = await res.json();
     if (data.error) return;
-
     if (prevSt==='running' && data.status==='closed' && data.result && !racing) {
       animRace(data.result, ()=>showResult(data));
     } else if (data.status==='running' && prevSt!=='running') {
@@ -847,175 +617,6 @@ async function loadPt() {
   } catch(e) {}
 }
 
-
-
-// ── 관전 모드 ──
-let spectatorMode = false;
-
-function enterSpectator() {
-  spectatorMode = true;
-  const banner = document.getElementById('spectator-banner');
-  const betSec = document.getElementById('bet-section');
-  const autoBet= document.getElementById('auto-bet-wrap');
-  if(banner) banner.style.display = 'flex';
-  if(betSec) betSec.style.display = 'none';
-  if(autoBet) autoBet.style.display = 'none';
-  toast('👁 관전 모드 시작');
-}
-
-function exitSpectator() {
-  spectatorMode = false;
-  document.getElementById('spectator-banner').style.display = 'none';
-  load();
-}
-
-// ── 베팅 취소 ──
-async function cancelBet() {
-  if (!state?.myBet) return;
-  const btn = document.getElementById('cancel-btn');
-  btn.disabled = true; btn.textContent = '⏳ 취소 중...';
-  try {
-    const res  = await fetch('/casino/bet_cancel', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({roundId:state.roundId, groupId:parseInt(groupId), userId:parseInt(userId)})
-    });
-    const data = await res.json();
-    if (data.ok) {
-      toast(`✅ 베팅 취소 완료! +${fmt(data.refund)}P 환불`);
-      myPt += data.refund;
-      document.getElementById('my-point').textContent = fmt(myPt)+' P';
-      await load();
-    } else { toast(data.error||'오류', true); }
-  } catch(e) { toast('서버 오류', true); }
-  btn.disabled = false; btn.textContent = '❌ 베팅 취소';
-}
-
-// ── 더블다운 ──
-async function doDouble() {
-  if (!state?.myBet) return;
-  const myBet = state.myBet;
-  const doubled = myBet.amount * 2;
-  if (doubled > myPt) { toast('포인트 부족해요', true); return; }
-  if (!confirm(`현재 베팅의 2배(${fmt(doubled)}P)로 추가 베팅할까요?`)) return;
-
-  // 기존 취소 후 2배 재베팅
-  try {
-    // 취소
-    const r1 = await fetch('/casino/bet_cancel', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({roundId:state.roundId, groupId:parseInt(groupId), userId:parseInt(userId)})
-    });
-    const d1 = await r1.json();
-    if (!d1.ok) { toast(d1.error||'취소 실패', true); return; }
-    myPt += d1.refund;
-
-    // 2배 베팅
-    picked = myBet.betOn;
-    document.getElementById('amt').value = doubled;
-    await doBet();
-  } catch(e) { toast('서버 오류', true); }
-}
-
-// ── 자동 베팅 ──
-let autoRunning  = false;
-let autoRemain   = 0;
-let autoTimer    = null;
-
-function toggleAutoBet() {
-  if (autoRunning) {
-    stopAutoBet();
-  } else {
-    startAutoBet();
-  }
-}
-
-async function startAutoBet() {
-  if (!picked) { toast('베팅 항목을 먼저 선택해주세요', true); return; }
-  const amt = parseInt(document.getElementById('amt').value)||0;
-  if (amt < 10) { toast('금액을 입력해주세요', true); return; }
-  const count = parseInt(document.getElementById('auto-count').value)||3;
-  autoRemain  = count;
-  autoRunning = true;
-  const btn   = document.getElementById('auto-btn');
-  btn.className = 'auto-start-btn running';
-  btn.textContent = '⏹ 자동 베팅 중지';
-  runAutoRound();
-}
-
-async function runAutoRound() {
-  if (!autoRunning || autoRemain <= 0) { stopAutoBet(); return; }
-  document.getElementById('auto-status').textContent = `🤖 ${autoRemain}회 남음 · 베팅 대기 중...`;
-
-  // 현재 라운드 상태 확인
-  await load();
-  if (!state || state.status !== 'betting') {
-    // 다음 라운드 기다림
-    document.getElementById('auto-status').textContent = `⏳ 새 라운드 대기 중... (${autoRemain}회 남음)`;
-    autoTimer = setTimeout(runAutoRound, 3000);
-    return;
-  }
-  if (state.myBet) {
-    // 이미 베팅됨 → 결과 기다림
-    document.getElementById('auto-status').textContent = `✅ 베팅 완료 · 결과 대기 중... (${autoRemain}회 남음)`;
-    autoTimer = setTimeout(runAutoRound, 3000);
-    return;
-  }
-
-  // 베팅 실행
-  const amt = parseInt(document.getElementById('amt').value)||0;
-  if (amt > myPt) { toast('포인트 부족 — 자동 베팅 중지', true); stopAutoBet(); return; }
-
-  const btn_main = document.getElementById('bet-btn');
-  btn_main.className='bet-btn off'; btn_main.textContent='⏳ 자동 베팅 중...';
-
-  try {
-    const res  = await fetch('/casino/race/bet', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({roundId:state.roundId, groupId:parseInt(groupId),
-        userId:parseInt(userId), betOn:picked, amount:amt})
-    });
-    const data = await res.json();
-    if (data.ok) {
-      autoRemain--;
-      myPt -= amt;
-      document.getElementById('my-point').textContent = fmt(myPt)+' P';
-      document.getElementById('auto-status').textContent = `✅ 베팅 완료 · 결과 대기 중... (${autoRemain}회 남음)`;
-      await load();
-      // 결과 나올 때까지 폴링
-      autoTimer = setTimeout(waitForResult, 3000);
-    } else {
-      toast(data.error||'베팅 오류', true);
-      autoTimer = setTimeout(runAutoRound, 3000);
-    }
-  } catch(e) { autoTimer = setTimeout(runAutoRound, 3000); }
-  refreshBtn();
-}
-
-async function waitForResult() {
-  if (!autoRunning) return;
-  await load();
-  if (state?.status === 'closed' || !state?.myBet) {
-    // 결과 나옴 → 다음 라운드
-    if (autoRemain > 0) {
-      document.getElementById('auto-status').textContent = `🔄 다음 라운드 대기... (${autoRemain}회 남음)`;
-      autoTimer = setTimeout(runAutoRound, 3000);
-    } else {
-      stopAutoBet();
-    }
-  } else {
-    autoTimer = setTimeout(waitForResult, 2000);
-  }
-}
-
-function stopAutoBet() {
-  autoRunning = false;
-  if (autoTimer) clearTimeout(autoTimer);
-  const btn = document.getElementById('auto-btn');
-  if (btn) { btn.className='auto-start-btn'; btn.textContent='▶ 자동 베팅 시작'; }
-  document.getElementById('auto-status').textContent = autoRemain<=0 ? '✅ 자동 베팅 완료!' : '⏹ 자동 베팅 중지됨';
-}
-
-
 function goHome(){
   const p=new URLSearchParams(location.search);
   const uid=p.get('userId')||p.get('start')?.split('_')[0];
@@ -1023,11 +624,7 @@ function goHome(){
   location.href='/casino?userId='+uid+'&groupId='+gid;
 }
 
-async function init() {
-  await loadPt();
-  await load();
-  setInterval(load, 3000);
-}
+async function init() { await loadPt(); await load(); setInterval(load, 3000); }
 init();
 </script>
 </body>
