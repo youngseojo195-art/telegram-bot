@@ -85,6 +85,8 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
 /* 강제결과 버튼 */
 .force-btns{display:flex;gap:6px;margin-top:10px;}
 .force-btn{flex:1;padding:10px 6px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);color:var(--sub);font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all 0.15s;}
+.force-section{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:10px;}
+.force-section-title{font-size:11px;color:var(--gold);font-weight:700;margin-bottom:8px;letter-spacing:0.5px;}
 .force-btn.active-none  {border-color:var(--gold);background:#1a1500;color:var(--gold);}
 .force-btn.active-rabbit{border-color:var(--blue);background:#051525;color:var(--blue);}
 .force-btn.active-turtle{border-color:var(--green);background:#051a10;color:var(--green);}
@@ -175,6 +177,24 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
 
 <!-- ══ 대시보드 ══ -->
 <div class="screen show" id="screen-dash">
+  <!-- 카지노 ON/OFF -->
+  <div class="card">
+    <div class="card-title">🎰 카지노 운영 상태</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+      <div>
+        <div style="font-size:14px;font-weight:700" id="casino-status-text">🔒 현재: 마감</div>
+        <div style="font-size:11px;color:var(--sub);margin-top:3px">ON — 일반 유저 커맨드 허용 / OFF — 관리자만</div>
+      </div>
+      <label class="switch" style="transform:scale(1.3)">
+        <input type="checkbox" id="casino-open-toggle" onchange="toggleCasinoOpen(this.checked)">
+        <span class="sw-slider"></span>
+      </label>
+    </div>
+    <div id="casino-open-status-bar" style="margin-top:8px;padding:8px 12px;border-radius:10px;font-size:12px;text-align:center;background:var(--bg3);color:var(--sub)">
+      상태 불러오는 중...
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-title">TODAY</div>
     <div class="dash-grid">
@@ -973,9 +993,52 @@ async function loadLogs() {
 // ════════════
 // 초기화
 // ════════════
+// ════════════
+// 카지노 ON/OFF
+// ════════════
+async function loadCasinoOpenStatus() {
+  try {
+    const res  = await fetch(`/casino/open_status?groupId=${groupId}`);
+    const data = await res.json();
+    const isOpen = data.isOpen;
+    document.getElementById('casino-open-toggle').checked = isOpen;
+    const txt  = document.getElementById('casino-status-text');
+    const bar  = document.getElementById('casino-open-status-bar');
+    if (isOpen) {
+      txt.textContent = '🟢 현재: 오픈';
+      txt.style.color = 'var(--green)';
+      bar.textContent = '✅ 일반 유저도 /카지노, /슬롯 등 커맨드 사용 가능';
+      bar.style.background = '#0a1a10';
+      bar.style.color = 'var(--green)';
+    } else {
+      txt.textContent = '🔒 현재: 마감';
+      txt.style.color = 'var(--sub)';
+      bar.textContent = '🔒 관리자만 커맨드 사용 가능';
+      bar.style.background = 'var(--bg3)';
+      bar.style.color = 'var(--sub)';
+    }
+  } catch(e) {}
+}
+
+async function toggleCasinoOpen(isOpen) {
+  const res = await fetch('/casino/open_toggle', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({adminId, groupId, isOpen})
+  });
+  const data = await res.json();
+  if (data.ok) {
+    showToast(isOpen ? '✅ 카지노 오픈! 그룹에 알림 전송됨' : '🔒 카지노 마감됨');
+    loadCasinoOpenStatus();
+  } else {
+    showToast(data.error||'오류', true);
+    document.getElementById('casino-open-toggle').checked = !isOpen;
+  }
+}
+
 async function init() {
   if(!adminId){document.body.innerHTML='<div style="padding:40px;text-align:center;color:#ee4444">관리자만 접근 가능</div>';return;}
   loadDash();
+  loadCasinoOpenStatus();
   loadRaceState();
   setInterval(loadRaceState, 10000);
 }
