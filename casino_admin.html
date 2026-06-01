@@ -87,12 +87,12 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
 .force-btn{flex:1;padding:10px 6px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);color:var(--sub);font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all 0.15s;}
 .force-section{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:10px;}
 .force-section-title{font-size:11px;color:var(--gold);font-weight:700;margin-bottom:8px;letter-spacing:0.5px;}
-.force-btn.active-none  {border-color:var(--gold);background:#1a1500;color:var(--gold);}
-.force-btn.active-rabbit{border-color:var(--blue);background:#051525;color:var(--blue);}
-.force-btn.active-turtle{border-color:var(--green);background:#051a10;color:var(--green);}
-.force-btn.active-player{border-color:var(--blue);background:#051525;color:var(--blue);}
-.force-btn.active-banker{border-color:var(--red);background:#1a0505;color:var(--red);}
-.force-btn.active-tie   {border-color:var(--green);background:#051a10;color:var(--green);}
+.force-btn.active-none   {border-color:var(--gold);background:#1a1500;color:var(--gold);}
+.force-btn.active-rabbit {border-color:var(--blue);background:#051525;color:var(--blue);}
+.force-btn.active-turtle {border-color:var(--green);background:#051a10;color:var(--green);}
+.force-btn.active-player {border-color:var(--blue);background:#051525;color:var(--blue);}
+.force-btn.active-banker {border-color:var(--red);background:#1a0505;color:var(--red);}
+.force-btn.active-tie    {border-color:var(--green);background:#051a10;color:var(--green);}
 
 /* 유저 목록 */
 .search-wrap{position:relative;margin-bottom:10px;}
@@ -175,9 +175,7 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   </div>
 </div>
 
-<!-- ══ 대시보드 ══ -->
 <div class="screen show" id="screen-dash">
-  <!-- 카지노 ON/OFF -->
   <div class="card">
     <div class="card-title">🎰 카지노 운영 상태</div>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
@@ -220,7 +218,6 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   <button class="gold-btn" onclick="loadDash()">🔄 새로고침</button>
 </div>
 
-<!-- ══ 경주 ══ -->
 <div class="screen" id="screen-race">
   <div class="card">
     <div class="card-title">RACE CONTROL</div>
@@ -271,7 +268,6 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   </div>
 </div>
 
-<!-- ══ 바카라 ══ -->
 <div class="screen" id="screen-baccarat">
   <div class="card">
     <div class="card-title">BACCARAT CONTROL</div>
@@ -306,7 +302,6 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   </div>
 </div>
 
-<!-- ══ 경마 ══ -->
 <div class="screen" id="screen-horse">
   <div class="card">
     <div class="card-title">HORSE RACE CONTROL</div>
@@ -317,34 +312,11 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
     </div>
   </div>
   <div class="card">
-    <div class="card-title">HORSE SETTINGS</div>
+    <div class="card-title">🎯 승률 및 배당률 조작</div>
     <div id="horse-settings-wrap"></div>
     <div style="margin-top:10px">
-      <div style="font-size:11px;color:var(--sub);margin-bottom:6px">🎯 강제 우승마</div>
-      <select class="inp" id="horse-force">
-        <option value="none">🎲 랜덤</option>
-        <option value="1">⚡ 번개 강제 우승</option>
-        <option value="2">🌪️ 폭풍 강제 우승</option>
-        <option value="3">⭐ 황금 강제 우승</option>
-        <option value="4">💎 다이아 강제 우승</option>
-        <option value="5">🔥 불꽃 강제 우승</option>
-      </select>
-    </div>
-    <button class="gold-btn" style="margin-top:12px" onclick="saveHorseSettings()">💾 저장</button>
-  </div>
-  <div class="card">
-    <div class="card-title">AUTO ROUND</div>
-    <div class="setting-row">
-      <span class="setting-label">🔄 자동 라운드</span>
-      <label class="switch"><input type="checkbox" id="horse-auto" checked onchange="saveAutoConfig()"><span class="sw-slider"></span></label>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">🎯 승률 조작</div>
-    <div id="horse-settings-wrap2"></div>
-    <div style="margin-top:10px">
       <div style="font-size:11px;color:var(--sub);margin-bottom:6px">🏇 강제 우승마</div>
-      <select class="inp" id="horse-force2" onchange="document.getElementById('horse-force').value=this.value">
+      <select class="inp" id="horse-force">
         <option value="none">🎲 랜덤 (자동)</option>
         <option value="1">⚡ 번개 강제 우승</option>
         <option value="2">🌪️ 폭풍 강제 우승</option>
@@ -355,59 +327,27 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
     </div>
     <button class="gold-btn" style="margin-top:12px" onclick="saveHorseSettings()">💾 저장 적용</button>
   </div>
+  <div class="card">
+    <div class="card-title">AUTO ROUND</div>
+    <div class="setting-row">
+      <span class="setting-label">🔄 자동 라운드</span>
+      <label class="switch"><input type="checkbox" id="horse-auto" checked onchange="saveAutoConfig()"><span class="sw-slider"></span></label>
+    </div>
+  </div>
 </div>
 
-<!-- ══ 게임 설정 ══ -->
 <div class="screen" id="screen-settings">
   <div class="card">
-    <div class="card-title">🐢 경주 설정</div>
-    <div class="setting-row">
-      <span class="setting-label">🐇 토끼 승률</span>
-      <input type="range" id="race-win-rate" min="1" max="99" value="60" oninput="document.getElementById('race-win-val').textContent=this.value+'%'">
-      <span class="setting-val" id="race-win-val">60%</span>
-    </div>
-    <div class="setting-row">
-      <span class="setting-label">🏦 하우스 엣지</span>
-      <input type="range" id="race-house" min="0" max="20" value="5" oninput="document.getElementById('race-house-val').textContent=this.value+'%'">
-      <span class="setting-val" id="race-house-val">5%</span>
-    </div>
-    <div class="setting-row">
-      <span class="setting-label">💰 최소 베팅</span>
-      <input class="inp inp-sm" type="number" id="race-min-bet" value="10">
-      <span style="font-size:11px;color:var(--sub)">P</span>
-    </div>
-    <div class="setting-row">
-      <span class="setting-label">💰 최대 베팅</span>
-      <input class="inp inp-sm" type="number" id="race-max-bet" value="10000">
-      <span style="font-size:11px;color:var(--sub)">P</span>
-    </div>
-    <div class="setting-row">
-      <span class="setting-label">✅ 게임 활성화</span>
-      <label class="switch"><input type="checkbox" id="race-enabled" checked><span class="sw-slider"></span></label>
-    </div>
-    <div style="margin-top:10px">
-      <div style="font-size:11px;color:var(--sub);margin-bottom:6px">🎯 승부 조작</div>
-      <div class="force-btns">
-        <button class="force-btn active-none"   id="force-none"   onclick="setForce('none')">🎲 랜덤</button>
-        <button class="force-btn"               id="force-rabbit" onclick="setForce('rabbit')">🐇 토끼 고정</button>
-        <button class="force-btn"               id="force-turtle" onclick="setForce('turtle')">🐢 거북이 고정</button>
-      </div>
-    </div>
-    <button class="gold-btn" style="margin-top:12px" onclick="saveRaceSettings()">💾 경주 설정 저장</button>
-  </div>
-
-  <div class="card">
-    <div class="card-title">⚙️ 일일 한도 & 쿨다운</div>
+    <div class="card-title">⚙️ 카지노 한도 설정</div>
     <div class="setting-row">
       <span class="setting-label">📊 일일 베팅 한도</span>
       <input class="inp inp-sm" type="number" id="daily-limit" value="500000">
       <span style="font-size:11px;color:var(--sub)">P</span>
     </div>
-    <div style="font-size:11px;color:var(--sub);margin-top:6px">* 현재는 app.py 상수값. 변경 후 재배포 필요</div>
+    <div style="font-size:11px;color:var(--sub);margin-top:6px">* 글로벌 상수는 app.py 수정이 필요할 수 있습니다.</div>
   </div>
 </div>
 
-<!-- ══ 포인트 관리 ══ -->
 <div class="screen" id="screen-points">
   <div class="card">
     <div class="card-title">💰 개인 포인트 지급/차감</div>
@@ -447,7 +387,6 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   </div>
 </div>
 
-<!-- ══ 유저 관리 ══ -->
 <div class="screen" id="screen-users">
   <div class="card">
     <div class="card-title">👥 유저 목록</div>
@@ -467,7 +406,6 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   </div>
 </div>
 
-<!-- ══ 채팅 마일스톤 ══ -->
 <div class="screen" id="screen-chat">
   <div class="card">
     <div class="card-title">⚙️ 마일스톤 설정</div>
@@ -494,7 +432,6 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   </div>
 </div>
 
-<!-- ══ 출금 관리 ══ -->
 <div class="screen" id="screen-withdraw">
   <div class="card">
     <div class="card-title">💸 출금 신청 목록</div>
@@ -505,7 +442,6 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   </div>
 </div>
 
-<!-- ══ 로그 ══ -->
 <div class="screen" id="screen-logs">
   <div class="card">
     <div class="card-title">📋 포인트 지급 내역</div>
@@ -518,7 +454,7 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
 <div class="toast" id="toast"></div>
 
 <script>
-// URL 파라미터 파싱 (search + hash 둘 다 지원)
+// URL 파라미터 파싱
 const params  = new URLSearchParams(location.search);
 const hashParams = new URLSearchParams(location.hash.replace('#',''));
 
@@ -526,7 +462,6 @@ function getParam(key) {
   return params.get(key) || hashParams.get(key) || '';
 }
 
-// start=adminId_groupId 형식도 지원
 const startVal = getParam('start');
 let _adminId = getParam('adminId');
 let _groupId = getParam('groupId');
@@ -541,16 +476,13 @@ const groupId = parseInt(_groupId) || 0;
 
 console.log('[admin] adminId='+adminId+' groupId='+groupId);
 
-let raceState    = null;
+let raceState     = null;
 let baccaratState= null;
 let horseState   = null;
 let allUsers     = [];
 let forceResult  = 'none';
 let bacForce     = 'none';
 
-// ════════════
-// 유틸
-// ════════════
 function showToast(msg, err=false) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = 'toast show' + (err?' err':'');
@@ -597,12 +529,10 @@ async function loadDash() {
     wp.textContent = (weekProfit>=0?'+':'')+fmt(weekProfit)+'P';
     wp.className   = 'dash-val '+(weekProfit>=0?'profit':'loss');
 
-    // 전체 유저 수
     const ur = await fetch(`/casino/users?groupId=${groupId}`);
     const users = await ur.json();
     document.getElementById('d-total-users').textContent = users.length+'명';
 
-    // 게임별 통계
     const sr = await fetch(`/casino/stats?groupId=${groupId}&days=7`);
     const stats = await sr.json();
     const names = {race:'🐢 경주',baccarat:'🃏 바카라',horse:'🐴 경마',bigwheel:'🎡 빅휠',slots:'🎰 슬롯',roulette:'🎡 룰렛'};
@@ -710,7 +640,6 @@ async function loadHorseState() {
     horseState = await res.json();
     const labels = {idle:'⏳ 대기',betting:'🔴 베팅 중',running:'🏇 경주 중',closed:'🏁 종료'};
     document.getElementById('horse-status-lbl').textContent = labels[horseState.status]||'알 수 없음';
-    // 말 설정 렌더
     const horses = horseState.settings?.horses||[];
     document.getElementById('horse-settings-wrap').innerHTML = horses.map(h=>`
       <div class="setting-row">
@@ -724,6 +653,9 @@ async function loadHorseState() {
         <input class="inp inp-sm" type="number" id="ho-${h.id}" value="${h.base_odds}" step="0.1" style="width:70px">
         <span style="font-size:11px;color:var(--sub)">배</span>
       </div>`).join('');
+    if(horseState.settings?.force_result) {
+      document.getElementById('horse-force').value = horseState.settings.force_result;
+    }
   } catch(e) {}
 }
 async function horseOpen() {
@@ -755,7 +687,7 @@ async function saveHorseSettings() {
 }
 
 // ════════════
-// 자동 라운드
+// 자동 라운드 제어
 // ════════════
 async function saveAutoConfig() {
   const raceAuto   = document.getElementById('race-auto').checked;
@@ -768,7 +700,7 @@ async function saveAutoConfig() {
 }
 
 // ════════════
-// 경주 설정
+// 경주 설정 로드
 // ════════════
 function setForce(v) {
   forceResult = v;
@@ -807,7 +739,7 @@ async function saveRaceSettings() {
 }
 
 // ════════════
-// 포인트
+// 포인트 관리
 // ════════════
 async function loadUsersForSelect() {
   try {
@@ -830,24 +762,30 @@ function filterPtUsers() {
     u.name.toLowerCase().includes(q) || String(u.userId).includes(q)
   );
   renderPtSelect(filtered);
-  // 검색 결과 1개면 자동 선택
   if (filtered.length === 1) {
     document.getElementById('pt-user-select').value = filtered[0].userId;
   }
 }
 
 async function grantPoint() {
-  const userId = parseInt(document.getElementById('pt-user-select').value);
+  const targetId = parseInt(document.getElementById('pt-user-select').value);
   const amount = parseInt(document.getElementById('pt-amount').value);
   const reason = document.getElementById('pt-reason').value.trim()||'관리자 지급';
-  if(!userId){showToast('유저를 선택해주세요',true);return;}
+  if(!targetId){showToast('유저를 선택해주세요',true);return;}
   if(!amount){showToast('금액을 입력해주세요',true);return;}
-  const res = await fetch('/casino/point_grant',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({adminId,groupId,userId,amount,reason})});
+  
+  // ★ 백엔드 파라미터 규격(target_id -> userId) 싱크 매칭
+  const res = await fetch('/casino/point_grant',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({adminId, groupId, userId: targetId, amount, reason})
+  });
   const d = await res.json();
   if(d.ok){
     showToast(`✅ ${d.userName}님 ${fmt(Math.abs(amount))}P ${amount>0?'지급':'차감'}`);
     loadUsersForSelect();
+    document.getElementById('pt-amount').value = '';
+    document.getElementById('pt-reason').value = '';
   } else showToast(d.error||'오류',true);
 }
 
@@ -863,7 +801,7 @@ async function grantAllPoints() {
 }
 
 // ════════════
-// 유저 관리
+// 유저 리스트 및 제어
 // ════════════
 async function loadUsers() {
   try {
@@ -880,7 +818,6 @@ function renderUsers(users) {
       <span class="user-rank">${i+1}</span>
       <div style="flex:1">
         <div class="user-name">${u.name} ${u.blacklisted?'<span class="user-badge">차단</span>':''}</div>
-        <div style="font-size:10px;color:var(--sub)">총 베팅 ${fmt(u.totalBet)}P</div>
       </div>
       <span class="user-pt">${fmt(u.point)}P</span>
       <button class="outline-btn ${u.blacklisted?'green':'red'}" style="padding:5px 8px;font-size:10px"
@@ -926,7 +863,7 @@ async function loadBlacklist() {
 }
 
 // ════════════
-// 채팅 마일스톤
+// 마일스톤 현황
 // ════════════
 async function loadMilestoneSettings() {
   try {
@@ -990,7 +927,7 @@ async function grantMilestone(userId, milestone) {
 }
 
 // ════════════
-// 출금 관리
+// 정산 및 로그
 // ════════════
 async function loadWithdrawList() {
   try {
@@ -1029,9 +966,6 @@ async function processWithdraw(reqId, action) {
   loadWithdrawList();
 }
 
-// ════════════
-// 로그
-// ════════════
 async function loadLogs() {
   try {
     const res  = await fetch(`/casino/point_logs?groupId=${groupId}&limit=50`);
@@ -1047,12 +981,6 @@ async function loadLogs() {
   } catch(e) {}
 }
 
-// ════════════
-// 초기화
-// ════════════
-// ════════════
-// 카지노 ON/OFF
-// ════════════
 async function loadCasinoOpenStatus() {
   try {
     const res  = await fetch(`/casino/open_status?groupId=${groupId}`);
