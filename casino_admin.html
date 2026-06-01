@@ -247,6 +247,28 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
       <span class="setting-val" id="race-mins-val">3분</span>
     </div>
   </div>
+  <div class="card">
+    <div class="card-title">🎯 승률 조작</div>
+    <div class="setting-row">
+      <span class="setting-label">🐇 토끼 승률</span>
+      <input type="range" id="race-win-rate" min="1" max="99" value="60" oninput="document.getElementById('race-win-val').textContent=this.value+'%'">
+      <span class="setting-val" id="race-win-val">60%</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label">🏦 하우스 엣지</span>
+      <input type="range" id="race-house" min="0" max="20" value="5" oninput="document.getElementById('race-house-val').textContent=this.value+'%'">
+      <span class="setting-val" id="race-house-val">5%</span>
+    </div>
+    <div style="margin-top:10px">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:6px">🎯 강제 결과</div>
+      <div class="force-btns">
+        <button class="force-btn active-none"   id="force-none"   onclick="setForce('none')">🎲 랜덤</button>
+        <button class="force-btn"               id="force-rabbit" onclick="setForce('rabbit')">🐇 토끼 고정</button>
+        <button class="force-btn"               id="force-turtle" onclick="setForce('turtle')">🐢 거북이 고정</button>
+      </div>
+    </div>
+    <button class="gold-btn" style="margin-top:12px" onclick="saveRaceSettings()">💾 저장 적용</button>
+  </div>
 </div>
 
 <!-- ══ 바카라 ══ -->
@@ -316,6 +338,22 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
       <span class="setting-label">🔄 자동 라운드</span>
       <label class="switch"><input type="checkbox" id="horse-auto" checked onchange="saveAutoConfig()"><span class="sw-slider"></span></label>
     </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🎯 승률 조작</div>
+    <div id="horse-settings-wrap2"></div>
+    <div style="margin-top:10px">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:6px">🏇 강제 우승마</div>
+      <select class="inp" id="horse-force2" onchange="document.getElementById('horse-force').value=this.value">
+        <option value="none">🎲 랜덤 (자동)</option>
+        <option value="1">⚡ 번개 강제 우승</option>
+        <option value="2">🌪️ 폭풍 강제 우승</option>
+        <option value="3">⭐ 황금 강제 우승</option>
+        <option value="4">💎 다이아 강제 우승</option>
+        <option value="5">🔥 불꽃 강제 우승</option>
+      </select>
+    </div>
+    <button class="gold-btn" style="margin-top:12px" onclick="saveHorseSettings()">💾 저장 적용</button>
   </div>
 </div>
 
@@ -480,9 +518,28 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
 <div class="toast" id="toast"></div>
 
 <script>
+// URL 파라미터 파싱 (search + hash 둘 다 지원)
 const params  = new URLSearchParams(location.search);
-const adminId = parseInt(params.get('adminId')||0);
-const groupId = parseInt(params.get('groupId')||0);
+const hashParams = new URLSearchParams(location.hash.replace('#',''));
+
+function getParam(key) {
+  return params.get(key) || hashParams.get(key) || '';
+}
+
+// start=adminId_groupId 형식도 지원
+const startVal = getParam('start');
+let _adminId = getParam('adminId');
+let _groupId = getParam('groupId');
+if ((!_adminId || !_groupId) && startVal) {
+  const parts = startVal.split('_');
+  if (!_adminId) _adminId = parts[0] || '';
+  if (!_groupId) _groupId = parts[1] || '';
+}
+
+const adminId = parseInt(_adminId) || 0;
+const groupId = parseInt(_groupId) || 0;
+
+console.log('[admin] adminId='+adminId+' groupId='+groupId);
 
 let raceState    = null;
 let baccaratState= null;
@@ -1036,7 +1093,14 @@ async function toggleCasinoOpen(isOpen) {
 }
 
 async function init() {
-  if(!adminId){document.body.innerHTML='<div style="padding:40px;text-align:center;color:#ee4444">관리자만 접근 가능</div>';return;}
+  console.log('[init] adminId='+adminId+' groupId='+groupId);
+  if(!adminId || !groupId){
+    document.body.innerHTML='<div style="padding:40px;text-align:center;color:#ee4444;font-size:14px">'
+      +'⚠️ 관리자만 접근 가능해요<br><br>'
+      +'<small style="color:#888">adminId='+adminId+' groupId='+groupId+'</small>'
+      +'</div>';
+    return;
+  }
   loadDash();
   loadCasinoOpenStatus();
   loadRaceState();
