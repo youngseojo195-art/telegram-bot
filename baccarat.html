@@ -148,6 +148,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .ov-payout{font-size:28px;font-weight:900;}
 .ov-close{padding:13px 30px;border-radius:12px;border:1px solid var(--gold3);background:transparent;color:var(--gold);font-size:14px;font-weight:600;cursor:pointer;}
 
+
+.bet-actions{display:flex;gap:8px;margin-top:8px;}
+.cancel-btn{flex:1;padding:11px;border-radius:12px;border:1px solid #aa222244;background:transparent;color:#ee4444;font-size:13px;font-weight:700;cursor:pointer;}
+.cancel-btn:active{background:#1a0505;}
+
+.home-btn{position:fixed;bottom:20px;left:16px;z-index:100;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--sub);font-size:12px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--gold);color:#0a0800;font-size:13px;font-weight:700;padding:10px 20px;border-radius:20px;z-index:500;opacity:0;transition:opacity 0.2s;white-space:nowrap;pointer-events:none;}
 .toast.show{opacity:1;}
 .toast.err{background:#cc3333;color:#fff;}
@@ -204,14 +210,19 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   </div>
 
   <!-- 내 베팅 -->
-  <div class="my-bet-card" id="my-bet-card" style="display:none">
-    <div>
-      <div style="font-size:11px;color:var(--sub)">내 베팅</div>
-      <div style="font-size:14px;font-weight:700" id="my-bet-detail">—</div>
+  <div id="my-bet-section" style="display:none">
+    <div class="my-bet-card" id="my-bet-card">
+      <div>
+        <div style="font-size:11px;color:var(--sub)">내 베팅</div>
+        <div style="font-size:14px;font-weight:700" id="my-bet-detail">—</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:var(--sub)">예상 당첨</div>
+        <div style="font-size:14px;font-weight:700;color:var(--gold)" id="my-bet-exp">—</div>
+      </div>
     </div>
-    <div style="text-align:right">
-      <div style="font-size:11px;color:var(--sub)">예상 당첨</div>
-      <div style="font-size:14px;font-weight:700;color:var(--gold)" id="my-bet-exp">—</div>
+    <div class="bet-actions">
+      <button class="cancel-btn" id="cancel-btn" onclick="cancelBet()">❌ 베팅 취소</button>
     </div>
   </div>
 
@@ -267,6 +278,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   <button class="ov-close" onclick="closeOverlay()">확인</button>
 </div>
 <div class="toast" id="toast"></div>
+<button class="home-btn" onclick="goHome()">🏠 홈</button>
 
 <script>
 const p = new URLSearchParams(location.search);
@@ -358,7 +370,7 @@ function render(s){
       const oddsMap={player:1.95,banker:1.95,tie:8.0};
       document.getElementById('my-bet-detail').textContent=`${labels[s.myBet.betOn]} · ${fmt(s.myBet.amount)} P`;
       document.getElementById('my-bet-exp').textContent=`+${fmt(Math.floor(s.myBet.amount*(oddsMap[s.myBet.betOn]||2)))} P`;
-      myBetCard.style.display='flex';
+      const _mbs=document.getElementById('my-bet-section');if(_mbs)_mbs.style.display='block';
     } else { betSec.style.display='block'; }
   } else if(s.status==='idle'||s.status==='closed'){
     idleMsg.style.display='block';
@@ -388,6 +400,26 @@ function playRound(result, myBet){
   // 히스토리 추가
   history.push(result); if(history.length>30) history.shift();
   renderHistory();
+}
+
+
+function fmt(n){return Number(n||0).toLocaleString();}
+
+async function cancelBet() {
+  if(!state?.myBet) return;
+  const btn=document.getElementById('cancel-btn');
+  btn.disabled=true; btn.textContent='⏳...';
+  try {
+    const res=await fetch('/casino/bet_cancel',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({roundId:state.roundId,groupId:parseInt(groupId),userId:parseInt(userId)})});
+    const data=await res.json();
+    if(data.ok){
+      toast('✅ 베팅 취소 완료! +'+Number(data.refund).toLocaleString()+'P 환불');
+      myPt+=data.refund; document.getElementById('my-point').textContent=Number(myPt).toLocaleString()+' P';
+      await load();
+    } else toast(data.error||'오류',true);
+  } catch(e){ toast('서버 오류',true); }
+  btn.disabled=false; btn.textContent='❌ 베팅 취소';
 }
 
 async function doBet(){
@@ -458,6 +490,14 @@ async function loadPt(){
     const me=users.find(u=>String(u.userId)===String(userId));
     if(me){ myPt=me.point; document.getElementById('my-point').textContent=fmt(myPt)+' P'; }
   } catch(e){}
+}
+
+
+function goHome(){
+  const p=new URLSearchParams(location.search);
+  const uid=p.get('userId')||p.get('start')?.split('_')[0];
+  const gid=p.get('groupId')||p.get('start')?.split('_')[1];
+  location.href='/casino?userId='+uid+'&groupId='+gid;
 }
 
 async function init(){ await loadPt(); await load(); setInterval(load,3000); }
