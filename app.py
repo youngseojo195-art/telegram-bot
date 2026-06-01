@@ -9,10 +9,11 @@ import requests
 import urllib.parse
 import pytz
 import uuid
+import time
 from telebot import types
 from datetime import datetime, timedelta
 from flask import Flask, request, send_from_directory, send_file
-import os
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 BOT_TOKEN = '8046489365:AAHAFBz4Ca07KcjqI0EJl76aIAu-rlVHw-4'
@@ -22,7 +23,7 @@ app = Flask(__name__)
 KST = pytz.timezone('Asia/Seoul')
 UTC = pytz.utc
 
-ADMIN_IDS = [8698678650, 8236798970, 8621088096, 7319936275]
+ADMIN_IDS = [8698678650, 8621088096, 7319936275]
 
 BASEBALL_GIF_FILE_ID = "CgACAgUAAxkBAAMzagl3svn3G8Jr7JDeNhdXbodfQnIAAi8dAAJux0hUOyDPUXIJtRs7BA"
 NAEJEON_GIF_FILE_ID  = "CgACAgUAAxkBAAOGag0cXgdCIn_PggmqSmC0GM0GnC4AAkofAAKWbGhUMjetimSM_S47BA"
@@ -116,7 +117,7 @@ def get_user_level(total_bet):
 DAILY_MISSIONS = [
     {'id':'play3',  'desc':'오늘 3게임 참여',  'target':3,   'reward':500},
     {'id':'bet1000','desc':'1,000P 이상 베팅', 'target':1000,'reward':300},
-    {'id':'win1',   'desc':'1번 당첨',         'target':1,   'reward':700},
+    {'id':'win1',   'desc':'1번 당첨',          'target':1,   'reward':700},
 ]
 VOTE_START = "18:00"
 VOTE_END   = "18:30"
@@ -333,10 +334,6 @@ def init_db():
                 is_open BOOLEAN DEFAULT FALSE,
                 opened_by BIGINT,
                 updated_at TIMESTAMP DEFAULT NOW())""",
-            """CREATE TABLE IF NOT EXISTS refill_logs (
-                id SERIAL PRIMARY KEY, user_id BIGINT NOT NULL,
-                group_id BIGINT NOT NULL, first_name VARCHAR(255),
-                username VARCHAR(255), refill_date DATE NOT NULL)""",
         ]
         for ddl in extra_tables:
             try: c.execute(ddl); db.commit()
@@ -365,30 +362,6 @@ def init_db():
                 group_id BIGINT NOT NULL, user_id BIGINT NOT NULL,
                 reason TEXT, created_at TIMESTAMP DEFAULT NOW(),
                 PRIMARY KEY (group_id, user_id))""",
-            """CREATE TABLE IF NOT EXISTS point_logs (
-                id SERIAL PRIMARY KEY, group_id BIGINT NOT NULL,
-                user_id BIGINT NOT NULL, user_name VARCHAR(255),
-                amount INTEGER NOT NULL, reason TEXT,
-                admin_id BIGINT, created_at TIMESTAMP DEFAULT NOW())""",
-            """CREATE TABLE IF NOT EXISTS keyword_events (
-                id SERIAL PRIMARY KEY,
-                group_id BIGINT NOT NULL,
-                admin_id BIGINT NOT NULL,
-                title TEXT NOT NULL,
-                keyword VARCHAR(100) NOT NULL,
-                description TEXT DEFAULT '',
-                max_participants INTEGER DEFAULT 0,
-                is_active BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT NOW(),
-                ended_at TIMESTAMP)""",
-            """CREATE TABLE IF NOT EXISTS keyword_event_participants (
-                id SERIAL PRIMARY KEY,
-                event_id INTEGER REFERENCES keyword_events(id),
-                group_id BIGINT NOT NULL,
-                user_id BIGINT NOT NULL,
-                user_name VARCHAR(255),
-                joined_at TIMESTAMP DEFAULT NOW(),
-                UNIQUE(event_id, user_id))""",
         ]
         for ddl in casino_ddl:
             try: c.execute(ddl); db.commit()
@@ -573,74 +546,53 @@ def handle_kbo_callback(call):
 # ─────────────────────────────────────────────────────────
 # 메시지 핸들러
 # ─────────────────────────────────────────────────────────
-
-
 def check_keyword_event(user_id, first_name, username, group_id, text):
     """키워드 이벤트 참여 감지"""
     if not text: return
     text_stripped = text.strip()
     db = get_db(); c = db.cursor()
     try:
-        # 현재 활성 이벤트 조회
         c.execute("SELECT id,title,keyword,max_participants FROM keyword_events WHERE group_id=%s AND is_active=TRUE ORDER BY id DESC LIMIT 1",
                   (group_id,))
         ev = c.fetchone()
         if not ev: return
 
         ev_id, title, keyword, max_part = ev
-
-        # 키워드 일치 확인 (대소문자 무시)
         if text_stripped.lower() != keyword.lower(): return
 
-        # 이미 참여했는지 확인
         c.execute("SELECT 1 FROM keyword_event_participants WHERE event_id=%s AND user_id=%s", (ev_id, user_id))
         if c.fetchone(): return
 
-        # 최대 인원 확인
         if max_part > 0:
             c.execute("SELECT COUNT(*) FROM keyword_event_participants WHERE event_id=%s", (ev_id,))
             current = c.fetchone()[0]
             if current >= max_part:
                 try:
-                    bot.send_message(group_id,
-                        f"⚠️ <b>{title}</b> 이벤트 인원이 마감됐어요! ({max_part}명 완료)",
-                        parse_mode='HTML')
-                    # 이벤트 자동 종료
+                    bot.send_message(group_id, f"⚠️ <b>{title}</b> 이벤트 인원이 마감됐어요! ({max_part}명 완료)", parse_mode='HTML')
                     c.execute("UPDATE keyword_events SET is_active=FALSE,ended_at=NOW() WHERE id=%s", (ev_id,))
                     db.commit()
                 except: pass
                 return
 
-        # 참여 등록
         name = clean_name(first_name) or (f"@{username}" if username else f"id:{user_id}")
         c.execute("INSERT INTO keyword_event_participants(event_id,group_id,user_id,user_name) VALUES(%s,%s,%s,%s)",
                   (ev_id, group_id, user_id, name))
         db.commit()
 
-        # 현재 참여자 수
         c.execute("SELECT COUNT(*) FROM keyword_event_participants WHERE event_id=%s", (ev_id,))
         total = c.fetchone()[0]
 
-        # 참여 완료 메시지
         try:
             bot.send_message(group_id,
-                f"✅ <b>{name}</b>님 이벤트 참여 완료!\n"
-                f"🏷 <b>{title}</b>\n"
-                f"👥 현재 참여자: {total}명"
-                + (f" / {max_part}명" if max_part > 0 else ""),
+                f"✅ <b>{name}</b>님 이벤트 참여 완료!\n🏷 <b>{title}</b>\n👥 현재 참여자: {total}명" + (f" / {max_part}명" if max_part > 0 else ""),
                 parse_mode='HTML')
         except: pass
 
-        # 최대 인원 달성 시 자동 종료
         if max_part > 0 and total >= max_part:
             try:
                 c.execute("UPDATE keyword_events SET is_active=FALSE,ended_at=NOW() WHERE id=%s", (ev_id,))
                 db.commit()
-                bot.send_message(group_id,
-                    f"🎉 <b>{title}</b> 이벤트 인원 마감!\n"
-                    f"👥 총 {total}명 참여 완료!\n"
-                    f"📋 /이벤트참여자 — 참여자 목록 확인",
-                    parse_mode='HTML')
+                bot.send_message(group_id, f"🎉 <b>{title}</b> 이벤트 인원 마감!\n👥 총 {total}명 참여 완료!\n📋 /이벤트참여자 — 참여자 목록 확인", parse_mode='HTML')
             except: pass
 
     except Exception as e:
@@ -667,7 +619,6 @@ USER_BLOCKED_COMMANDS = [
     '/포인트랭킹', '/채팅', '/채팅랭킹',
     '/내전', '/이벤트', '/투표', '/게임',
 ]
-
 
 # ─────────────────────────────────────────────────────────
 # 쿨다운 / 일일한도 / 이상감지
@@ -816,7 +767,6 @@ def auto_race_round():
                         started=started_at.replace(tzinfo=UTC) if started_at.tzinfo is None else started_at.astimezone(UTC)
                         elapsed=(datetime.now(UTC)-started).total_seconds()
                         if elapsed>=settings.get('round_minutes',3)*60:
-                            # 자동 결과 처리
                             force=settings.get('force_result'); win_rate=settings.get('rabbit_win_rate',60); house=settings.get('house_edge',5)
                             winner=force if force in ['rabbit','turtle'] else ('rabbit' if random.randint(1,100)<=win_rate else 'turtle')
                             c.execute("SELECT bet_on,SUM(amount) FROM casino_bets WHERE round_id=%s GROUP BY bet_on",(round_id,))
@@ -907,10 +857,9 @@ def handle_all(message):
         group_id = message.chat.id; first_name = message.from_user.first_name or '사용자'
         username = message.from_user.username or ''; now_kst = datetime.now(KST); today = now_kst.date()
 
-        # ── 관리자 전용 커맨드 체크 ──
+        # ── 권한 및 차단 로직 수정 ──
         if message.chat.type in ['group', 'supergroup'] and text.strip().startswith('/') and user_id not in ADMIN_IDS:
             if any(text.strip().startswith(c) for c in USER_BLOCKED_COMMANDS):
-                # 카지노 ON 상태면 일반 유저도 허용
                 casino_on = False
                 try:
                     db2=get_db(); c2=db2.cursor()
@@ -920,11 +869,11 @@ def handle_all(message):
                     c2.close(); db2.close()
                 except: pass
 
+                # 카지노가 닫혀있을 때만 진입을 차단하고 리턴함 (열려있으면 통과)
                 if not casino_on:
                     try: bot.delete_message(group_id, message.message_id)
                     except: pass
                     try:
-                        import time
                         sent = bot.send_message(group_id, f"⚠️ {first_name}님, 현재 카지노가 닫혀있어요. 관리자만 사용 가능해요.")
                         time.sleep(3)
                         bot.delete_message(group_id, sent.message_id)
@@ -1036,7 +985,7 @@ def handle_all(message):
             if target.id == user_id: bot.reply_to(message, "⚠️ 자기 자신에게는 선물할 수 없어요!"); return
             if target.is_bot: bot.reply_to(message, "⚠️ 봇에게는 선물할 수 없어요!"); return
             my_point = get_point(user_id, group_id)
-            if my_point < amount: bot.reply_to(message, f"💸 포인트 부족!\n  보유: {my_point}포인트\n  필요: {amount}포인트"); return
+            if my_point < amount: bot.reply_to(message, f"💸 포인트 부족!\n 보유: {my_point}포인트\n 필요: {amount}포인트"); return
             target_name = target.first_name or '상대방'
             update_point(user_id, group_id, first_name, username, -amount)
             update_point(target.id, group_id, target_name, target.username or '', amount)
@@ -1060,21 +1009,22 @@ def handle_all(message):
             bot.reply_to(message, f"╔══ 💰 포인트 ══╗\n   👤 {first_name}님\n\n   💰 잔여: {get_point(user_id, group_id)}포인트\n╚══════════════════╝")
 
         elif text.strip() in ['/게임', '/게임@dopamin_ranking_bot']:
-            bot.reply_to(message, "🎮 게임 목록\n\n🎰 /슬롯 [배팅] - 슬롯머신\n🎡 /룰렛 [배팅] - 룰렛\n⚠️ 최소 배팅: 20포인트")
+            bot.reply_to(message, "🎮 게임 목록\n\n🎰 /슬롯 - 슬롯머신\n🎡 /룰렛 - 룰렛\n⚠️ 최소 배팅: 20포인트")
 
+        # ── 웹앱 연동부 WebAppInfo 공식 규격으로 교체 ──
         elif '/슬롯' in text:
             if message.chat.type == 'private': return
-            slots_url = f"{WEBAPP_BASE_URL}/casino/slots?userId={user_id}&groupId={group_id}&start={user_id}_{group_id}"
+            slots_url = f"{WEBAPP_BASE_URL}/casino/slots?userId={user_id}&groupId={group_id}"
             markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("🎰 슬롯머신 플레이", url=slots_url))
+            markup.add(types.InlineKeyboardButton("🎰 슬롯머신 플레이", web_app=types.WebAppInfo(url=slots_url)))
             bot.reply_to(message, "🎰", reply_markup=markup)
             send_dm_link(user_id, "🎰 <b>슬롯머신</b>", "최대 50배 잭팟 도전!", markup)
 
         elif '/룰렛' in text:
             if message.chat.type == 'private': return
-            roulette_url = f"{WEBAPP_BASE_URL}/casino/roulette?userId={user_id}&groupId={group_id}&start={user_id}_{group_id}"
+            roulette_url = f"{WEBAPP_BASE_URL}/casino/roulette?userId={user_id}&groupId={group_id}"
             markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("🎡 룰렛 플레이", url=roulette_url))
+            markup.add(types.InlineKeyboardButton("🎡 룰렛 플레이", web_app=types.WebAppInfo(url=roulette_url)))
             bot.reply_to(message, "🎡", reply_markup=markup)
             send_dm_link(user_id, "🎡 <b>룰렛</b>", "숫자 정확히 맞추면 35배!", markup)
 
@@ -1087,7 +1037,7 @@ def handle_all(message):
                 rows = c.fetchall()
             finally: c.close(); db.close()
             medals = ['🥇','🥈','🥉','4️⃣','5️⃣']
-            result = f"╔══ 🏆 주간 랭킹 ══╗\n   📅 {monday.strftime('%m/%d')} ~ {sunday.strftime('%m/%d')}\n\n"
+            result = f"╔══ 🏆 주간 랭킹 ══╗\n 📅 {monday.strftime('%m/%d')} ~ {sunday.strftime('%m/%d')}\n\n"
             for i, r in enumerate(rows):
                 result += f"   {medals[i]} {r[0] or r[1] or '익명':<10} {r[2]}개\n"
             if not rows: result += "   채팅 기록이 없어요 😅\n"
@@ -1149,7 +1099,7 @@ def handle_all(message):
             parts = text.strip().split(); game_arg = parts[1] if len(parts) > 1 else ''
             game_map = {'롤':'lol','서든':'sa5','lol':'lol','sa':'sa5','sa5':'sa5','sa6':'sa6'}
             game_type = game_map.get(game_arg)
-            if not game_type: bot.reply_to(message, "⚔️ 사용법: /내전수정 롤  또는  /내전수정 서든"); return
+            if not game_type: bot.reply_to(message, "⚔️ 사용법: /내전수정 롤 또는 /내전수정 서든"); return
             db = get_db(); c = db.cursor()
             try:
                 c.execute("SELECT room_id FROM naejeon_rooms WHERE group_id=%s AND game_type=%s ORDER BY created_at DESC LIMIT 1", (group_id, game_type))
@@ -1165,12 +1115,11 @@ def handle_all(message):
 
         elif text.strip().startswith('/카지노'):
             if message.chat.type == 'private': return
-            casino_url = f"{WEBAPP_BASE_URL}/casino?userId={user_id}&groupId={group_id}&start={user_id}_{group_id}"
+            casino_url = f"{WEBAPP_BASE_URL}/casino?userId={user_id}&groupId={group_id}"
             markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("🎰 카지노 입장", url=casino_url))
+            markup.add(types.InlineKeyboardButton("🎰 카지노 입장", web_app=types.WebAppInfo(url=casino_url)))
             bot.reply_to(message, "🎰", reply_markup=markup)
-            send_dm_link(user_id, "🎰 <b>도파민 카지노</b>",
-                "🐢 경주 · 🃏 바카라 · 🐴 경마\n🎡 빅휠 · 🎰 슬롯 · 🎡 룰렛", markup)
+            send_dm_link(user_id, "🎰 <b>도파민 카지노</b>", "🐢 경주 · 🃏 바카라 · 🐴 경마\n🎡 빅휠 · 🎰 슬롯 · 🎡 룰렛", markup)
 
         elif text.strip().startswith('/카지노관리') or text.strip().startswith('/casino_admin'):
             if user_id not in ADMIN_IDS:
@@ -1180,7 +1129,6 @@ def handle_all(message):
             markup.add(types.InlineKeyboardButton("👑 관리자 페이지", url=admin_url))
             bot.reply_to(message, "👑 카지노 관리자 페이지", reply_markup=markup)
 
-        # ── /투표 ── ★ | 구분자 사용 (음수 groupId 문제 해결) ★
         elif text.strip().startswith('/이벤트종료'):
             if message.chat.type == 'private': return
             if user_id not in ADMIN_IDS: bot.reply_to(message,"⚠️ 관리자 전용"); return
@@ -1214,18 +1162,13 @@ def handle_all(message):
         elif text.strip().startswith('/이벤트'):
             if message.chat.type == 'private': return
             if user_id not in ADMIN_IDS: bot.reply_to(message,"⚠️ 관리자 전용"); return
-            # 사용법: /이벤트 제목 | 키워드 | 설명(선택) | 최대인원(선택)
             args=text.strip().replace('/이벤트','').strip()
             if not args:
                 bot.reply_to(message,
-                    "📌 <b>이벤트 사용법</b>\n"
-                    "/이벤트 제목 | 키워드 | 설명 | 최대인원\n\n"
-                    "<b>예시:</b>\n"
-                    "/이벤트 출석이벤트 | 참여 | 먼저 '참여' 입력한 10명 추첨! | 10\n\n"
+                    "📌 <b>이벤트 사용법</b>\n/이벤트 제목 | 키워드 | 설명 | 최대인원\n\n"
+                    "<b>예시:</b>\n/이벤트 출석이벤트 | 참여 | 먼저 '참여' 입력한 10명 추첨! | 10\n\n"
                     "※ 참여자가 채팅창에 키워드를 입력하면 자동 참여돼요\n"
-                    "/이벤트종료 — 이벤트 종료\n"
-                    "/이벤트참여자 — 참여자 목록",
-                    parse_mode='HTML')
+                    "/이벤트종료 — 이벤트 종료\n/이벤트참여자 — 참여자 목록", parse_mode='HTML')
                 return
             parts_ev=[p.strip() for p in args.split('|')]
             title_ev   = parts_ev[0] if len(parts_ev)>0 else '이벤트'
@@ -1235,7 +1178,6 @@ def handle_all(message):
 
             db=get_db();c=db.cursor()
             try:
-                # 기존 이벤트 종료
                 c.execute("UPDATE keyword_events SET is_active=FALSE,ended_at=NOW() WHERE group_id=%s AND is_active=TRUE",(group_id,))
                 c.execute("INSERT INTO keyword_events(group_id,admin_id,title,keyword,description,max_participants) VALUES(%s,%s,%s,%s,%s,%s) RETURNING id",
                           (group_id,user_id,title_ev,keyword_ev,desc_ev,max_ev))
@@ -1246,12 +1188,9 @@ def handle_all(message):
             desc_str=f"\n📢 {desc_ev}" if desc_ev else ""
             bot.send_message(group_id,
                 f"🎉 <b>이벤트 시작!</b>\n──────────────────\n"
-                f"🏷 <b>{title_ev}</b>{desc_str}{max_str}\n"
-                f"──────────────────\n"
+                f"🏷 <b>{title_ev}</b>{desc_str}{max_str}\n──────────────────\n"
                 f"💬 채팅창에 <b>{keyword_ev}</b> 를 입력하면 자동 참여돼요!\n"
-                f"📌 /이벤트참여자 — 참여자 확인\n"
-                f"📌 /이벤트종료 — 이벤트 종료",
-                parse_mode='HTML')
+                f"📌 /이벤트참여자 — 참여자 확인\n📌 /이벤트종료 — 이벤트 종료", parse_mode='HTML')
 
         elif text.strip().startswith('/투표'):
             if message.chat.type == 'private': return
@@ -1262,15 +1201,14 @@ def handle_all(message):
                 c.execute("INSERT INTO vote_rooms (room_id, group_id, admin_id) VALUES (%s,%s,%s)", (room_id, group_id, user_id))
                 db.commit()
             finally: c.close(); db.close()
-            param = f"{user_id}|{group_id}|{room_id}"   # ★ | 구분자
+            param = f"{user_id}|{group_id}|{room_id}"
             vote_url = f"{WEBAPP_BASE_URL}/vote?start={param}"
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("⚙️ 이벤트 설정하기", url=vote_url))
             bot.reply_to(message,
                 "🎰 <b>도파민 투표 이벤트</b>\n──────────────────\n"
                 "아래 버튼을 눌러 이벤트 내용, 타임어택 시간,\n추첨 스타일을 설정하고 스타트를 눌러주세요!\n\n"
-                "⚠️ 관리자만 설정 화면이 보입니다.",
-                reply_markup=markup, parse_mode='HTML')
+                "⚠️ 관리자만 설정 화면이 보입니다.", reply_markup=markup, parse_mode='HTML')
 
         elif text.strip().startswith('/내전취소'):
             if message.chat.type == 'private': return
@@ -1278,7 +1216,7 @@ def handle_all(message):
             parts = text.strip().split(); game_arg = parts[1] if len(parts) > 1 else ''
             game_map = {'롤':'lol','서든':'sa','lol':'lol','sa':'sa','sa5':'sa5','sa6':'sa6'}
             game_type = game_map.get(game_arg)
-            if not game_type: bot.reply_to(message, "⚔️ 사용법: /내전취소 롤  또는  /내전취소 서든"); return
+            if not game_type: bot.reply_to(message, "⚔️ 사용법: /내전취소 롤 또는 /내전취소 서든"); return
             db = get_db(); c = db.cursor()
             try:
                 if game_type == 'sa':
@@ -1353,12 +1291,10 @@ def kbo_submit():
 
         if len(teams) != 5: return {'ok': False, 'error': '5개 팀을 선택해주세요.'}, 400
 
-        # ★ 관리자 검증: isAdmin=True면 adminUserId가 실제 관리자인지 확인
         if is_admin_req:
             if not admin_user_id or int(admin_user_id) not in ADMIN_IDS:
                 return {'ok': False, 'error': '관리자 권한이 없어요.'}, 403
         else:
-            # 일반 유저: 참여 가능 시간 체크
             now_kst = datetime.now(KST)
             if not is_vote_time(now_kst):
                 return {'ok': False, 'error': '참여 가능 시간이 아니에요.'}, 403
@@ -1367,7 +1303,6 @@ def kbo_submit():
         c.execute("SELECT first_name, username FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
         row = c.fetchone()
 
-        # ★ userName 우선 (직접 입력), 없으면 points 테이블
         user_name_from_client = (data.get('userName') or '').strip()
         if user_name_from_client:
             first_name = clean_name(user_name_from_client)
@@ -1412,7 +1347,7 @@ def kbo_list():
         for row in rows:
             uid = row[0]; first = clean_name(row[1] or ''); uname = row[2] or ''
             name = first if first else (('@' + uname) if uname else ('id:' + str(uid)))
-            result.append({'userId': uid, 'name': name, 'teams': row[3].split(',')})  # ★ userId 추가
+            result.append({'userId': uid, 'name': name, 'teams': row[3].split(',')})
         return result, 200
     except: return [], 500
     finally: c.close(); db.close()
@@ -1433,7 +1368,6 @@ def kbo_hot():
 
 @app.route('/kbo/my')
 def kbo_my():
-    """오늘 내 예측 조회 + 참여 가능 시간 여부 반환"""
     db = get_db(); c = db.cursor()
     try:
         user_id  = int(request.args.get('userId', 0))
@@ -1728,7 +1662,7 @@ def vote_room():
             'roomId': row[0], 'groupId': row[1], 'content': row[2] or '',
             'mins': row[3], 'winners': row[4], 'animStyle': row[5] or 'slot',
             'started': bool(row[6]), 'ended': bool(row[7]),
-            'endTime': to_utc_iso(row[8]),   # ★ UTC ISO Z 포맷
+            'endTime': to_utc_iso(row[8]),
             'participants': parts
         }, 200
     except Exception as e: return {'error': str(e)}, 500
@@ -1745,12 +1679,12 @@ def vote_start():
         content    = data.get('content', '').strip()
         anim_style = data.get('animStyle', 'slot')
         winners    = int(data.get('winners', 1))
-        mins       = safe_mins(data.get('mins'))   # ★ 안전 변환
+        mins       = safe_mins(data.get('mins'))
 
         if user_id not in ADMIN_IDS: return {'ok': False, 'error': '관리자만 시작할 수 있어요.'}, 403
         if not content: return {'ok': False, 'error': '이벤트 내용을 입력해주세요.'}, 400
 
-        end_time = datetime.now(UTC) + timedelta(minutes=mins) if mins else None  # ★ UTC 저장
+        end_time = datetime.now(UTC) + timedelta(minutes=mins) if mins else None
 
         c.execute("""UPDATE vote_rooms
             SET content=%s, mins=%s, winners=%s, anim_style=%s, started=TRUE, ended=FALSE, end_time=%s
@@ -1765,7 +1699,7 @@ def vote_start():
         time_str   = f"{mins}분 타임어택" if mins else "제한 시간 없음"
         anim_names = {'slot':'🎰 슬롯머신','roulette':'🎡 룰렛','highlight':'⚡ 랜덤 하이라이트'}
         anim_label = anim_names.get(anim_style, anim_style)
-        param    = f"{user_id}|{group_id}|{room_id}"   # ★ | 구분자
+        param    = f"{user_id}|{group_id}|{room_id}"
         vote_url = f"{WEBAPP_BASE_URL}/vote?start={param}"
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton("🙋 이벤트 참여하기", url=vote_url))
@@ -1793,7 +1727,6 @@ def vote_join():
         if not row: return {'ok': False, 'error': '이벤트를 찾을 수 없어요.'}, 404
         if not row[0]: return {'ok': False, 'error': '아직 시작되지 않은 이벤트예요.'}, 400
         if row[1]: return {'ok': False, 'error': '이미 종료된 이벤트예요.'}, 400
-        # ★ 이름 우선순위: 직접 입력 → points 테이블 → id:숫자
         name = clean_name(user_name_from_client) if user_name_from_client else None
         if not name:
             c.execute("SELECT first_name, username FROM points WHERE user_id=%s ORDER BY id DESC LIMIT 1", (user_id,))
@@ -1854,7 +1787,6 @@ def vote_draw():
     finally: c.close(); db.close()
 
 
-
 # ═══════════════════════════════════════════════════════
 # 카지노 기본 설정
 # ═══════════════════════════════════════════════════════
@@ -1882,12 +1814,12 @@ DEFAULT_CASINO_SETTINGS = {
     },
     "bigwheel": {
         "segments": [
-            {"label":"2배","multiplier":2,"color":"#2266cc","probability":30},
-            {"label":"3배","multiplier":3,"color":"#22aa66","probability":20},
-            {"label":"5배","multiplier":5,"color":"#cc8800","probability":15},
-            {"label":"10배","multiplier":10,"color":"#aa2222","probability":10},
-            {"label":"20배","multiplier":20,"color":"#882288","probability":5},
-            {"label":"꽝","multiplier":0,"color":"#222233","probability":20},
+            {"label":"2배","multiplier":2,"color":"#2266cc","prob":30},
+            {"label":"3배","multiplier":3,"color":"#22aa66","prob":20},
+            {"label":"5배","multiplier":5,"color":"#cc8800","prob":15},
+            {"label":"10배","multiplier":10,"color":"#aa2222","prob":10},
+            {"label":"20배","multiplier":20,"color":"#882288","prob":5},
+            {"label":"꽝","multiplier":0,"color":"#222233","prob":20},
         ],
         "min_bet": 10, "max_bet": 10000, "house_edge": 5, "enabled": True
     }
@@ -1915,14 +1847,6 @@ def save_casino_settings(group_id, game_id, settings):
         db.commit()
     finally: c.close(); db.close()
 
-def calc_dynamic_odds(bets_by_option, total_pool, option, house_edge=5):
-    """베팅 풀 기반 동적 배당률 계산"""
-    option_pool = bets_by_option.get(option, 0)
-    if option_pool == 0 or total_pool == 0:
-        return 2.0
-    raw_odds = (total_pool * (1 - house_edge/100)) / option_pool
-    return max(1.1, round(raw_odds, 2))
-
 def is_casino_blacklisted(group_id, user_id):
     db = get_db(); c = db.cursor()
     try:
@@ -1935,11 +1859,6 @@ def is_casino_blacklisted(group_id, user_id):
 # ─────────────────────────────────────────────────────────
 @app.route('/casino')
 def serve_casino(): return send_from_directory(BASE_DIR, 'casino.html')
-
-@app.route('/casino/null')
-def serve_casino_null():
-    from flask import redirect
-    return redirect('/casino')
 
 @app.route('/casino/admin')
 def serve_casino_admin(): return send_from_directory(BASE_DIR, 'casino_admin.html')
@@ -2033,7 +1952,6 @@ def casino_refill():
 
 @app.route('/casino/point_grant', methods=['POST'])
 def casino_point_grant():
-    """관리자 포인트 지급/차감"""
     db = get_db(); c = db.cursor()
     try:
         data      = request.get_json()
@@ -2058,18 +1976,13 @@ def casino_point_grant():
         db.commit()
         action = "지급" if amount > 0 else "차감"
         bot.send_message(group_id,
-            f"💰 <b>관리자 포인트 {action}</b>\n"
-            f"👤 {user_name}님\n"
-            f"{'➕' if amount>0 else '➖'} {abs(amount):,}P\n"
-            f"💼 잔여: {new_point:,}P\n"
-            f"📝 사유: {reason}", parse_mode='HTML')
+            f"💰 <b>관리자 포인트 {action}</b>\n👤 {user_name}님\n{'➕' if amount>0 else '➖'} {abs(amount):,}P\n💼 잔여: {new_point:,}P\n📝 사유: {reason}", parse_mode='HTML')
         return {'ok': True, 'newPoint': new_point, 'userName': user_name}, 200
     except Exception as e: return {'ok': False, 'error': str(e)}, 500
     finally: c.close(); db.close()
 
 @app.route('/casino/point_grant_all', methods=['POST'])
 def casino_point_grant_all():
-    """전체 유저 포인트 일괄 지급"""
     db = get_db(); c = db.cursor()
     try:
         data     = request.get_json()
@@ -2090,10 +2003,7 @@ def casino_point_grant_all():
             c.execute("INSERT INTO point_logs (group_id, user_id, user_name, amount, reason, admin_id) VALUES (%s,%s,%s,%s,%s,%s)",
                       (group_id, uid, name, amount, reason, admin_id))
         db.commit()
-        bot.send_message(group_id,
-            f"🎁 <b>전체 포인트 지급!</b>\n"
-            f"👥 {len(rows)}명에게 {amount:,}P 지급\n"
-            f"📝 사유: {reason}", parse_mode='HTML')
+        bot.send_message(group_id, f"🎁 <b>전체 포인트 지급!</b>\n👥 {len(rows)}명에게 {amount:,}P 지급\n📝 사유: {reason}", parse_mode='HTML')
         return {'ok': True, 'count': len(rows)}, 200
     except Exception as e: return {'ok': False, 'error': str(e)}, 500
     finally: c.close(); db.close()
@@ -2122,7 +2032,7 @@ def casino_add_blacklist():
         group_id  = int(data.get('groupId', 0))
         target_id = int(data.get('userId', 0))
         reason    = data.get('reason', '')
-        action    = data.get('action', 'add')   # add or remove
+        action    = data.get('action', 'add')
         if admin_id not in ADMIN_IDS:
             return {'ok': False, 'error': '관리자만 사용할 수 있어요.'}, 403
         if action == 'remove':
@@ -2137,7 +2047,6 @@ def casino_add_blacklist():
 
 @app.route('/casino/stats')
 def casino_stats():
-    """게임별 통계"""
     db = get_db(); c = db.cursor()
     try:
         group_id = int(request.args.get('groupId', 0))
@@ -2181,7 +2090,6 @@ def casino_point_logs():
 
 @app.route('/casino/users')
 def casino_users():
-    """유저 목록 + 포인트"""
     db = get_db(); c = db.cursor()
     try:
         group_id = int(request.args.get('groupId', 0))
@@ -2218,14 +2126,12 @@ def race_state():
         round_id = row[0]; status = row[1]; result = row[2]
         user_id  = int(request.args.get('userId', 0))
 
-        # 베팅 현황
         c.execute("""SELECT bet_on, SUM(amount), COUNT(*)
                      FROM casino_bets WHERE round_id=%s GROUP BY bet_on""", (round_id,))
         bets_raw = c.fetchall()
         bets = {r[0]: {'total': r[1], 'count': r[2]} for r in bets_raw}
         total_pool = sum(b['total'] for b in bets.values())
 
-        # 배당률 계산
         settings = get_casino_settings(group_id, 'race')
         house    = settings.get('house_edge', 5)
         odds = {}
@@ -2236,7 +2142,6 @@ def race_state():
             else:
                 odds[opt] = settings.get(f'{opt}_odds', 2.0)
 
-        # 내 베팅
         my_bet = None
         if user_id:
             c.execute("SELECT bet_on, amount FROM casino_bets WHERE round_id=%s AND user_id=%s", (round_id, user_id))
@@ -2260,7 +2165,6 @@ def race_state():
 
 @app.route('/casino/race/open', methods=['POST'])
 def race_open():
-    """관리자가 베팅 오픈"""
     db = get_db(); c = db.cursor()
     try:
         data     = request.get_json()
@@ -2268,7 +2172,6 @@ def race_open():
         group_id = int(data.get('groupId', 0))
         if admin_id not in ADMIN_IDS:
             return {'ok': False, 'error': '관리자만 시작할 수 있어요.'}, 403
-        # 기존 진행중인 게임 확인
         c.execute("SELECT id FROM casino_games WHERE group_id=%s AND game_id='race' AND status NOT IN ('closed','cancelled')", (group_id,))
         if c.fetchone():
             return {'ok': False, 'error': '이미 진행 중인 경주가 있어요.'}, 400
@@ -2280,13 +2183,7 @@ def race_open():
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton("🐢 경주 베팅하기", url=casino_url))
         bot.send_message(group_id,
-            f"🏁 <b>도파민 경주 시작!</b>\n"
-            f"──────────────────\n"
-            f"🐇 토끼 vs 🐢 거북이\n"
-            f"💰 최소 베팅: {settings.get('min_bet',10):,}P\n"
-            f"💰 최대 베팅: {settings.get('max_bet',10000):,}P\n"
-            f"──────────────────\n"
-            f"아래 버튼을 눌러 베팅하세요!", reply_markup=markup, parse_mode='HTML')
+            f"🏁 <b>도파민 경주 시작!</b>\n──────────────────\n🐇 토끼 vs 🐢 거북이\n💰 최소 베팅: {settings.get('min_bet',10):,}P\n💰 최대 베팅: {settings.get('max_bet',10000):,}P\n──────────────────\n아래 버튼을 눌러 베팅하세요!", reply_markup=markup, parse_mode='HTML')
         return {'ok': True, 'roundId': round_id}, 200
     except Exception as e: return {'ok': False, 'error': str(e)}, 500
     finally: c.close(); db.close()
@@ -2319,12 +2216,10 @@ def race_bet():
         if not row or row[0] != 'betting':
             return {'ok': False, 'error': '베팅 시간이 아니에요.'}, 400
 
-        # 이미 베팅했는지
         c.execute("SELECT id FROM casino_bets WHERE round_id=%s AND user_id=%s", (round_id, user_id))
         if c.fetchone():
             return {'ok': False, 'error': '이미 베팅하셨어요.'}, 400
 
-        # 포인트 차감
         c.execute("SELECT point FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
         pt_row = c.fetchone()
         if not pt_row or pt_row[0] < amount:
@@ -2333,7 +2228,6 @@ def race_bet():
         c.execute("INSERT INTO casino_bets (game_id, round_id, group_id, user_id, user_name, bet_on, amount) VALUES ('race',%s,%s,%s,%s,%s,%s)",
                   (round_id, group_id, user_id, user_name, bet_on, amount))
         db.commit()
-        label = '🐇 토끼' if bet_on == 'rabbit' else '🐢 거북이'
         return {'ok': True, 'betOn': bet_on, 'amount': amount}, 200
     except Exception as e:
         import traceback; print(traceback.format_exc())
@@ -2342,7 +2236,6 @@ def race_bet():
 
 @app.route('/casino/race/start', methods=['POST'])
 def race_start():
-    """관리자가 경주 시작 (베팅 마감)"""
     db = get_db(); c = db.cursor()
     try:
         data     = request.get_json()
@@ -2359,7 +2252,6 @@ def race_start():
 
 @app.route('/casino/race/result', methods=['POST'])
 def race_result():
-    """경주 결과 처리"""
     db = get_db(); c = db.cursor()
     try:
         data     = request.get_json()
@@ -2374,26 +2266,18 @@ def race_result():
         win_rate    = settings.get('rabbit_win_rate', 60)
         house_edge  = settings.get('house_edge', 5)
 
-        # 결과 결정
-        if force in ['rabbit','turtle']:
-            winner = force
-        else:
-            winner = 'rabbit' if random.randint(1,100) <= win_rate else 'turtle'
+        if force in ['rabbit','turtle']: winner = force
+        else: winner = 'rabbit' if random.randint(1,100) <= win_rate else 'turtle'
 
-        # 베팅 현황
         c.execute("SELECT bet_on, SUM(amount) FROM casino_bets WHERE round_id=%s GROUP BY bet_on", (round_id,))
         pool_rows = c.fetchall()
         pools = {r[0]: r[1] for r in pool_rows}
         total_pool = sum(pools.values())
         winner_pool = pools.get(winner, 0)
 
-        # 배당률 계산
-        if winner_pool > 0:
-            odds = max(1.1, (total_pool * (1-house_edge/100)) / winner_pool)
-        else:
-            odds = 2.0
+        if winner_pool > 0: odds = max(1.1, (total_pool * (1-house_edge/100)) / winner_pool)
+        else: odds = 2.0
 
-        # 당첨자 정산
         c.execute("SELECT id, user_id, user_name, amount FROM casino_bets WHERE round_id=%s AND bet_on=%s", (round_id, winner))
         winners = c.fetchall()
         winner_list = []
@@ -2403,7 +2287,6 @@ def race_result():
             c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s", (payout, bet[1], group_id))
             winner_list.append({'name': bet[2], 'amount': bet[3], 'payout': payout})
 
-        # 패자 처리
         c.execute("UPDATE casino_bets SET won=FALSE, payout=0 WHERE round_id=%s AND bet_on!=%s", (round_id, winner))
         c.execute("UPDATE casino_games SET status='closed', result=%s, ended_at=NOW() WHERE id=%s", (winner, round_id))
         db.commit()
@@ -2414,22 +2297,13 @@ def race_result():
         if not winner_text: winner_text = "베팅 참여자 없음"
 
         bot.send_message(group_id,
-            f"🏁 <b>경주 결과!</b>\n──────────────────\n"
-            f"🥇 <b>우승: {label}</b>  vs  {loser_label}\n"
-            f"📊 배당률: {odds:.2f}배\n"
-            f"💰 총 베팅: {total_pool:,}P\n──────────────────\n"
-            f"<b>당첨자:</b>\n{winner_text}", parse_mode='HTML')
+            f"🏁 <b>경주 결과!</b>\n──────────────────\n🥇 <b>우승: {label}</b>  vs  {loser_label}\n📊 배당률: {odds:.2f}배\n💰 총 베팅: {total_pool:,}P\n──────────────────\n<b>당첨자:</b>\n{winner_text}", parse_mode='HTML')
 
         return {'ok': True, 'winner': winner, 'odds': odds, 'winners': winner_list}, 200
     except Exception as e:
         import traceback; print(traceback.format_exc())
         return {'ok': False, 'error': str(e)}, 500
     finally: c.close(); db.close()
-
-# ─────────────────────────────────────────────────────────
-# /카지노 커맨드
-# ─────────────────────────────────────────────────────────
-
 
 
 # ─────────────────────────────────────────────────────────
@@ -2446,7 +2320,6 @@ def slots_spin():
         group_id = int(data.get('groupId', 0))
         user_id  = int(data.get('userId', 0))
         amount   = int(data.get('amount', 0))
-        # ★ 클라이언트가 보낸 result 무시 - 서버에서 독립 결정
 
         if is_casino_blacklisted(group_id, user_id):
             return {'ok': False, 'error': '게임 이용이 제한된 계정이에요.'}, 403
@@ -2458,7 +2331,6 @@ def slots_spin():
         if not pt or pt[0] < amount:
             return {'ok': False, 'error': '포인트가 부족해요.'}, 400
 
-        # ★ 서버에서 결과 결정
         SYMBOLS = ['🍋','🍒','🍇','⭐','7️⃣','💎']
         WEIGHTS = [30, 25, 20, 15, 7, 3]
         def weighted_rand():
@@ -2472,7 +2344,6 @@ def slots_spin():
         s1, s2, s3 = weighted_rand(), weighted_rand(), weighted_rand()
         result = [s1, s2, s3]
 
-        # 배당 계산
         MULT_3 = {'🍋':3,'🍒':4,'🍇':5,'⭐':7,'7️⃣':10,'💎':50}
         if s1 == s2 == s3:
             payout = amount * MULT_3.get(s1, 3)
@@ -2481,7 +2352,6 @@ def slots_spin():
         else:
             payout = 0
 
-        # 포인트 처리
         house_cut  = int(payout * 0.05) if payout > 0 else 0
         net_payout = max(0, payout - house_cut)
         c.execute("UPDATE points SET point=point-%s,total_bet=COALESCE(total_bet,0)+%s WHERE user_id=%s AND group_id=%s",
@@ -2489,14 +2359,12 @@ def slots_spin():
         if net_payout > 0:
             c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s", (net_payout, user_id, group_id))
 
-        # 기록
         c.execute("INSERT INTO casino_games (game_id,group_id,status,result,settings,ended_at) VALUES ('slots',%s,'closed',%s,%s,NOW())",
                   (group_id, ''.join(result), json.dumps({'amount':amount,'payout':net_payout})))
         db.commit()
         add_daily_bet(user_id, group_id, amount)
         update_mission(user_id, group_id, 'play3')
         if net_payout > 0: update_mission(user_id, group_id, 'win1')
-        # ★ 서버 결과 반환
         return {'ok': True, 'payout': net_payout, 'result': result}, 200
     except Exception as e:
         import traceback; print(traceback.format_exc())
@@ -2516,9 +2384,6 @@ def roulette_spin():
         amount    = int(data.get('amount', 0))
         bet_type  = data.get('betType', '')
         bet_value = data.get('betValue')
-        result    = int(data.get('result', 0))
-        won       = bool(data.get('won', False))
-        payout    = int(data.get('payout', 0))
 
         if is_casino_blacklisted(group_id, user_id):
             return {'ok': False, 'error': '게임 이용이 제한된 계정이에요.'}, 403
@@ -2530,9 +2395,7 @@ def roulette_spin():
         if not pt or pt[0] < amount:
             return {'ok': False, 'error': '포인트가 부족해요.'}, 400
 
-        # 서버에서 결과 검증 (클라이언트 조작 방지)
         NUM_COLORS = {0:'green',1:'red',2:'black',3:'red',4:'black',5:'red',6:'black',7:'red',8:'black',9:'red',10:'black',11:'black',12:'red',13:'black',14:'red',15:'black',16:'red',17:'black',18:'red',19:'red',20:'black',21:'red',22:'black',23:'red',24:'black',25:'red',26:'black',27:'red',28:'black',29:'black',30:'red',31:'black',32:'red',33:'black',34:'red',35:'black',36:'red'}
-        # 서버에서 독립적으로 결과 결정 (클라이언트 결과 무시)
         srv_result = random.randint(0, 36)
         color = NUM_COLORS.get(srv_result, 'black')
         srv_won = False
@@ -2544,7 +2407,6 @@ def roulette_spin():
             elif bet_value == 'high': srv_won = 19<=srv_result<=36
         elif bet_type == 'number': srv_won = (int(bet_value)==srv_result)
 
-        odds_map = {'number':35,'color_green':14}
         if bet_type == 'number': odds = 35
         elif bet_type == 'color' and bet_value == 'green': odds = 14
         else: odds = 2
@@ -2559,7 +2421,6 @@ def roulette_spin():
         c.execute("INSERT INTO casino_games (game_id,group_id,status,result,settings,ended_at) VALUES ('roulette',%s,'closed',%s,%s,NOW())",
                   (group_id, str(srv_result), json.dumps({'amount':amount,'betType':bet_type,'betValue':str(bet_value),'payout':net_payout})))
         db.commit()
-        # 클라이언트에 서버 결과 반환
         return {'ok': True, 'result': srv_result, 'won': srv_won, 'payout': net_payout}, 200
     except Exception as e:
         import traceback; print(traceback.format_exc())
@@ -2626,7 +2487,7 @@ def baccarat_bet():
         if not row or row[0]!='betting': return {'ok':False,'error':'베팅 시간이 아니에요.'},400
         c.execute("SELECT id FROM casino_bets WHERE round_id=%s AND user_id=%s",(round_id,user_id))
         if c.fetchone(): return {'ok':False,'error':'이미 베팅하셨어요.'},400
-        c.execute("SELECT point FROM points WHERE user_id=%s AND group_id=%s",(user_id,group_id))
+        c.execute("SELECT point FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
         pt=c.fetchone()
         if not pt or pt[0]<amount: return {'ok':False,'error':'포인트가 부족해요.'},400
         c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s",(amount,user_id,group_id))
@@ -2734,7 +2595,7 @@ def horse_bet():
         if not row or row[0]!='betting': return {'ok':False,'error':'베팅 시간이 아니에요.'},400
         c.execute("SELECT id FROM casino_bets WHERE round_id=%s AND user_id=%s",(round_id,user_id))
         if c.fetchone(): return {'ok':False,'error':'이미 베팅하셨어요.'},400
-        c.execute("SELECT point FROM points WHERE user_id=%s AND group_id=%s",(user_id,group_id))
+        c.execute("SELECT point FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
         pt=c.fetchone()
         if not pt or pt[0]<amount: return {'ok':False,'error':'포인트가 부족해요.'},400
         c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s",(amount,user_id,group_id))
@@ -2807,7 +2668,6 @@ def bigwheel_spin():
         pt=c.fetchone()
         if not pt or pt[0]<amount: return {'ok':False,'error':'포인트가 부족해요.'},400
 
-        # 결과 결정
         total_prob=sum(s.get('prob',10) for s in segs)
         r=random.randint(1,total_prob); acc=0; result_idx=len(segs)-1
         for i,s in enumerate(segs):
@@ -2819,14 +2679,13 @@ def bigwheel_spin():
         house_cut=int(amount*(settings.get('house_edge',5)/100))
         net_payout=max(0,payout-house_cut) if payout>0 else 0
 
-        # 포인트 처리
         c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s",(amount,user_id,group_id))
         if net_payout>0:
             c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s",(net_payout,user_id,group_id))
 
-        # 기록
-        c.execute("INSERT INTO casino_games (game_id,group_id,status,result,settings,ended_at) VALUES ('bigwheel',%s,'closed',%s,%s,NOW())",(group_id,result_seg['label'],json.dumps(settings)))
-        round_id=c.lastrowid if hasattr(c,'lastrowid') else None
+        # ★ PostgreSQL 호환성을 위해 RETURNING id 적용
+        c.execute("INSERT INTO casino_games (game_id,group_id,status,result,settings,ended_at) VALUES ('bigwheel',%s,'closed',%s,%s,NOW()) RETURNING id",(group_id,result_seg['label'],json.dumps(settings)))
+        round_id=c.fetchone()[0]
         db.commit()
         return {'ok':True,'resultIdx':result_idx,'result':result_seg,'payout':net_payout},200
     except Exception as e:
@@ -2835,9 +2694,8 @@ def bigwheel_spin():
     finally: c.close();db.close()
 
 # ─────────────────────────────────────────────────────────
-# 누락 라우트 보완
+# 기타 관리 및 설정 라우트
 # ─────────────────────────────────────────────────────────
-
 @app.route('/casino/open_status', methods=['GET'])
 def casino_open_status_route():
     db=get_db(); c=db.cursor()
@@ -3105,7 +2963,6 @@ def casino_auto_config():
     except Exception as e: return {'ok':False,'error':str(e)},500
     finally: c.close();db.close()
 
-
 @app.route('/casino/bet_cancel', methods=['POST'])
 def bet_cancel():
     db=get_db();c=db.cursor()
@@ -3137,7 +2994,7 @@ def bet_cancel():
 
 
 # ─────────────────────────────────────────────────────────
-# Webhook
+# Webhook 및 시작 제어부
 # ─────────────────────────────────────────────────────────
 @app.route('/' + BOT_TOKEN, methods=['POST'])
 def webhook():
@@ -3155,9 +3012,18 @@ def webhook():
 @app.route('/')
 def index(): return 'Bot is running!', 200
 
-try:
-    init_db(); print("DB 초기화 성공!")
-except Exception as e: print(f"DB init error: {e}")
-
+# 서버 기동 시 실행부 수정
 if __name__ == '__main__':
+    try:
+        init_db()
+        print("DB 초기화 성공!")
+    except Exception as e: 
+        print(f"DB init error: {e}")
+        
+    # ── 경마/경주 자동 라운드 스케줄러 기동 ──
+    try:
+        start_scheduler()
+    except Exception as e:
+        print(f"스케줄러 기동 실패: {e}")
+
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
