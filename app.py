@@ -89,6 +89,31 @@ KBO_TEAMS_DISPLAY = {
 }
 
 WEBAPP_BASE_URL = os.environ.get('WEBAPP_URL', 'https://telegram-bot-14vg.onrender.com')
+
+# ── 채팅 포인트 마일스톤 ──
+CHAT_MILESTONES = {100: 500, 300: 1000, 500: 2000, 1000: 5000}
+
+# ── 레벨 시스템 ──
+LEVELS = [
+    {'name':'브론즈',  'emoji':'🥉', 'min_bet':0,      'max_bet':5000},
+    {'name':'실버',    'emoji':'🥈', 'min_bet':10000,  'max_bet':8000},
+    {'name':'골드',    'emoji':'🥇', 'min_bet':50000,  'max_bet':15000},
+    {'name':'플래티넘','emoji':'💎', 'min_bet':200000, 'max_bet':30000},
+    {'name':'다이아',  'emoji':'👑', 'min_bet':500000, 'max_bet':50000},
+]
+
+def get_user_level(total_bet):
+    lvl = LEVELS[0]
+    for l in LEVELS:
+        if total_bet >= l['min_bet']: lvl = l
+    return lvl
+
+# ── 데일리 미션 정의 ──
+DAILY_MISSIONS = [
+    {'id':'play3',  'desc':'오늘 3게임 참여',  'target':3,   'reward':500},
+    {'id':'bet1000','desc':'1,000P 이상 베팅', 'target':1000,'reward':300},
+    {'id':'win1',   'desc':'1번 당첨',         'target':1,   'reward':700},
+]
 VOTE_START = "18:00"
 VOTE_END   = "18:30"
 
@@ -554,6 +579,238 @@ USER_BLOCKED_COMMANDS = [
     '/포인트랭킹', '/채팅', '/채팅랭킹',
     '/내전', '/이벤트', '/투표', '/게임',
 ]
+
+
+# ─────────────────────────────────────────────────────────
+# 쿨다운 / 일일한도 / 이상감지
+# ─────────────────────────────────────────────────────────
+COOLDOWN_SECS = 30
+DAILY_BET_LIMIT = 500000
+SUSPICIOUS_THRESHOLD = 100000
+
+def check_cooldown(user_id, group_id, game_id):
+    db=get_db();c=db.cursor()
+    try:
+        c.execute("SELECT last_bet FROM bet_cooldowns WHERE user_id=%s AND group_id=%s AND game_id=%s",(user_id,group_id,game_id))
+        row=c.fetchone()
+        if not row: return False
+        last=row[0]
+        if last.tzinfo is None: last=UTC.localize(last)
+        else: last=last.astimezone(UTC)
+        return (datetime.now(UTC)-last).total_seconds()<COOLDOWN_SECS
+    finally: c.close();db.close()
+
+def set_cooldown(user_id, group_id, game_id):
+    db=get_db();c=db.cursor()
+    try:
+        c.execute("""INSERT INTO bet_cooldowns(user_id,group_id,game_id,last_bet) VALUES(%s,%s,%s,NOW())
+            ON CONFLICT(user_id,group_id,game_id) DO UPDATE SET last_bet=NOW()""",(user_id,group_id,game_id))
+        db.commit()
+    finally: c.close();db.close()
+
+def check_daily_limit(user_id, group_id, amount):
+    db=get_db();c=db.cursor()
+    try:
+        today=datetime.now(KST).date()
+        c.execute("SELECT total FROM daily_bet_totals WHERE user_id=%s AND group_id=%s AND bet_date=%s",(user_id,group_id,today))
+        row=c.fetchone(); current=row[0] if row else 0
+        return (current+amount)>DAILY_BET_LIMIT
+    finally: c.close();db.close()
+
+def add_daily_bet(user_id, group_id, amount):
+    db=get_db();c=db.cursor()
+    try:
+        today=datetime.now(KST).date()
+        c.execute("""INSERT INTO daily_bet_totals(user_id,group_id,bet_date,total) VALUES(%s,%s,%s,%s)
+            ON CONFLICT(user_id,group_id,bet_date) DO UPDATE SET total=daily_bet_totals.total+%s""",(user_id,group_id,today,amount,amount))
+        db.commit()
+    finally: c.close();db.close()
+
+def check_suspicious(group_id, user_id, amount, game_id):
+    if amount>=SUSPICIOUS_THRESHOLD:
+        for admin_id in ADMIN_IDS:
+            try: bot.send_message(admin_id,f"⚠️ <b>이상 베팅 감지</b>\n게임: {game_id}\n유저: {user_id}\n금액: {amount:,}P",parse_mode='HTML')
+            except: pass
+
+# ─────────────────────────────────────────────────────────
+# 데일리 미션
+# ─────────────────────────────────────────────────────────
+def update_mission(user_id, group_id, mission_id, increment=1):
+    db=get_db();c=db.cursor()
+    try:
+        today=datetime.now(KST).date()
+        mission=next((m for m in DAILY_MISSIONS if m['id']==mission_id),None)
+        if not mission: return
+        c.execute("""INSERT INTO daily_missions(user_id,group_id,mission_id,mission_date,progress)
+            VALUES(%s,%s,%s,%s,%s) ON CONFLICT(user_id,group_id,mission_id,mission_date)
+            DO UPDATE SET progress=LEAST(daily_missions.progress+%s,%s)
+            WHERE NOT daily_missions.completed""",
+            (user_id,group_id,mission_id,today,increment,increment,mission['target']))
+        c.execute("SELECT progress,completed FROM daily_missions WHERE user_id=%s AND group_id=%s AND mission_id=%s AND mission_date=%s",
+                  (user_id,group_id,mission_id,today))
+        row=c.fetchone()
+        if row and not row[1] and row[0]>=mission['target']:
+            c.execute("UPDATE daily_missions SET completed=TRUE WHERE user_id=%s AND group_id=%s AND mission_id=%s AND mission_date=%s",
+                      (user_id,group_id,mission_id,today))
+            c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s",(mission['reward'],user_id,group_id))
+            c.execute("INSERT INTO point_logs(group_id,user_id,user_name,amount,reason) SELECT %s,%s,first_name,%s,%s FROM points WHERE user_id=%s AND group_id=%s",
+                      (group_id,user_id,mission['reward'],f"데일리 미션: {mission['desc']}",user_id,group_id))
+        db.commit()
+    except Exception as e: print(f"mission error: {e}"); db.rollback()
+    finally: c.close();db.close()
+
+# ─────────────────────────────────────────────────────────
+# 채팅 마일스톤
+# ─────────────────────────────────────────────────────────
+def get_milestone_settings(group_id):
+    db=get_db();c=db.cursor()
+    try:
+        c.execute("SELECT milestones,enabled FROM chat_milestone_settings WHERE group_id=%s",(group_id,))
+        row=c.fetchone()
+        if row and row[0]: return {'milestones':row[0],'enabled':row[1]}
+        return {'milestones':CHAT_MILESTONES,'enabled':True}
+    finally: c.close();db.close()
+
+def check_chat_milestone(user_id, group_id, first_name, username):
+    db=get_db();c=db.cursor()
+    try:
+        ms_cfg=get_milestone_settings(group_id)
+        if not ms_cfg.get('enabled',True): return
+        milestones=ms_cfg.get('milestones',CHAT_MILESTONES)
+        milestone_map={int(k):v for k,v in milestones.items()} if isinstance(milestones,dict) else CHAT_MILESTONES
+        today=datetime.now(KST).date()
+        c.execute("SELECT COUNT(*) FROM chat_logs WHERE user_id=%s AND group_id=%s AND DATE(message_date)=%s",(user_id,group_id,today))
+        cnt=c.fetchone()[0]
+        for milestone,reward in milestone_map.items():
+            if cnt>=milestone:
+                c.execute("SELECT 1 FROM chat_milestone_logs WHERE user_id=%s AND group_id=%s AND milestone=%s AND rewarded_date=%s",
+                          (user_id,group_id,milestone,today))
+                if not c.fetchone():
+                    c.execute("INSERT INTO chat_milestone_logs(user_id,group_id,milestone,rewarded_date) VALUES(%s,%s,%s,%s)",
+                              (user_id,group_id,milestone,today))
+                    c.execute("""INSERT INTO points(user_id,group_id,first_name,username,point)
+                        VALUES(%s,%s,%s,%s,%s) ON CONFLICT(user_id,group_id)
+                        DO UPDATE SET point=points.point+%s""",(user_id,group_id,first_name,username,reward,reward))
+                    c.execute("INSERT INTO point_logs(group_id,user_id,user_name,amount,reason) VALUES(%s,%s,%s,%s,%s)",
+                              (group_id,user_id,first_name,reward,f'채팅 {milestone}회 달성'))
+                    db.commit()
+                    try: bot.send_message(group_id,f"🎉 <b>{first_name}</b>님 오늘 채팅 <b>{milestone}회</b> 달성!\n💰 보너스 <b>{reward:,}P</b> 지급!",parse_mode='HTML')
+                    except: pass
+        db.commit()
+    except Exception as e:
+        print(f"chat_milestone error: {e}")
+        try: db.rollback()
+        except: pass
+    finally: c.close();db.close()
+
+# ─────────────────────────────────────────────────────────
+# 자동 라운드
+# ─────────────────────────────────────────────────────────
+def auto_race_round():
+    db=get_db();c=db.cursor()
+    try:
+        c.execute("SELECT DISTINCT group_id FROM casino_games WHERE game_id='race' AND created_at>NOW()-INTERVAL '30 days'")
+        groups=[r[0] for r in c.fetchall()]
+        c.execute("SELECT group_id FROM auto_round_config WHERE race_auto=TRUE")
+        groups=list(set(groups+[r[0] for r in c.fetchall()]))
+        for group_id in groups:
+            try:
+                settings=get_casino_settings(group_id,'race')
+                if not settings.get('auto_round',True): continue
+                c.execute("SELECT id,status,started_at FROM casino_games WHERE group_id=%s AND game_id='race' AND status NOT IN ('closed','cancelled') ORDER BY id DESC LIMIT 1",(group_id,))
+                row=c.fetchone()
+                if not row:
+                    c.execute("INSERT INTO casino_games(game_id,group_id,status,settings,started_at) VALUES('race',%s,'betting',%s,NOW())",(group_id,json.dumps(settings)))
+                    db.commit()
+                else:
+                    round_id,status,started_at=row
+                    if started_at and status=='betting':
+                        started=started_at.replace(tzinfo=UTC) if started_at.tzinfo is None else started_at.astimezone(UTC)
+                        elapsed=(datetime.now(UTC)-started).total_seconds()
+                        if elapsed>=settings.get('round_minutes',3)*60:
+                            # 자동 결과 처리
+                            force=settings.get('force_result'); win_rate=settings.get('rabbit_win_rate',60); house=settings.get('house_edge',5)
+                            winner=force if force in ['rabbit','turtle'] else ('rabbit' if random.randint(1,100)<=win_rate else 'turtle')
+                            c.execute("SELECT bet_on,SUM(amount) FROM casino_bets WHERE round_id=%s GROUP BY bet_on",(round_id,))
+                            pools={r[0]:r[1] for r in c.fetchall()}; total_pool=sum(pools.values()); winner_pool=pools.get(winner,0)
+                            odds=max(1.1,(total_pool*(1-house/100))/winner_pool) if winner_pool>0 else 2.0
+                            c.execute("SELECT id,user_id,amount FROM casino_bets WHERE round_id=%s AND bet_on=%s",(round_id,winner))
+                            for bet in c.fetchall():
+                                payout=int(bet[2]*odds)
+                                c.execute("UPDATE casino_bets SET won=TRUE,payout=%s WHERE id=%s",(payout,bet[0]))
+                                c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s",(payout,bet[1],group_id))
+                            c.execute("UPDATE casino_bets SET won=FALSE,payout=0 WHERE round_id=%s AND bet_on!=%s",(round_id,winner))
+                            c.execute("UPDATE casino_games SET status='closed',result=%s,ended_at=NOW() WHERE id=%s",(winner,round_id))
+                            c.execute("INSERT INTO casino_games(game_id,group_id,status,settings,started_at) VALUES('race',%s,'betting',%s,NOW())",(group_id,json.dumps(settings)))
+                            db.commit()
+            except Exception as e:
+                print(f"auto_race error {group_id}: {e}")
+                try: db.rollback()
+                except: pass
+    except Exception as e: print(f"auto_race_round error: {e}")
+    finally:
+        try: c.close();db.close()
+        except: pass
+
+def auto_horse_round():
+    db=get_db();c=db.cursor()
+    try:
+        c.execute("SELECT DISTINCT group_id FROM casino_games WHERE game_id='horse' AND created_at>NOW()-INTERVAL '30 days'")
+        groups=[r[0] for r in c.fetchall()]
+        c.execute("SELECT group_id FROM auto_round_config WHERE horse_auto=TRUE")
+        groups=list(set(groups+[r[0] for r in c.fetchall()]))
+        for group_id in groups:
+            try:
+                settings=get_casino_settings(group_id,'horse')
+                if not settings.get('auto_round',True): continue
+                c.execute("SELECT id,status,started_at FROM casino_games WHERE group_id=%s AND game_id='horse' AND status NOT IN ('closed','cancelled') ORDER BY id DESC LIMIT 1",(group_id,))
+                row=c.fetchone()
+                if not row:
+                    c.execute("INSERT INTO casino_games(game_id,group_id,status,settings,started_at) VALUES('horse',%s,'betting',%s,NOW())",(group_id,json.dumps(settings)))
+                    db.commit()
+                else:
+                    round_id,status,started_at=row
+                    if started_at and status=='betting':
+                        started=started_at.replace(tzinfo=UTC) if started_at.tzinfo is None else started_at.astimezone(UTC)
+                        elapsed=(datetime.now(UTC)-started).total_seconds()
+                        if elapsed>=settings.get('round_minutes',3)*60:
+                            horses=settings.get('horses',DEFAULT_CASINO_SETTINGS['horse']['horses'])
+                            force=settings.get('force_result')
+                            if force:
+                                winner_h=next((h for h in horses if str(h['id'])==str(force) or h['name']==force),None) or horses[0]
+                            else:
+                                total_rate=sum(h.get('win_rate',20) for h in horses); r=random.randint(1,total_rate); acc=0; winner_h=horses[-1]
+                                for h in horses:
+                                    acc+=h.get('win_rate',20)
+                                    if r<=acc: winner_h=h; break
+                            winner_id=str(winner_h['id']); odds=winner_h.get('base_odds',2.5)
+                            c.execute("SELECT id,user_id,amount,bet_on FROM casino_bets WHERE round_id=%s",(round_id,))
+                            for bet in c.fetchall():
+                                if str(bet[3])==winner_id:
+                                    payout=int(bet[2]*odds)
+                                    c.execute("UPDATE casino_bets SET won=TRUE,payout=%s WHERE id=%s",(payout,bet[0]))
+                                    c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s",(payout,bet[1],group_id))
+                                else:
+                                    c.execute("UPDATE casino_bets SET won=FALSE,payout=0 WHERE id=%s",(bet[0],))
+                            c.execute("UPDATE casino_games SET status='closed',result=%s,ended_at=NOW() WHERE id=%s",(winner_id,round_id))
+                            c.execute("INSERT INTO casino_games(game_id,group_id,status,settings,started_at) VALUES('horse',%s,'betting',%s,NOW())",(group_id,json.dumps(settings)))
+                            db.commit()
+            except Exception as e:
+                print(f"auto_horse error {group_id}: {e}")
+                try: db.rollback()
+                except: pass
+    except Exception as e: print(f"auto_horse_round error: {e}")
+    finally:
+        try: c.close();db.close()
+        except: pass
+
+def start_scheduler():
+    from apscheduler.schedulers.background import BackgroundScheduler
+    scheduler=BackgroundScheduler(timezone=UTC)
+    scheduler.add_job(auto_race_round,'interval',seconds=30,id='auto_race')
+    scheduler.add_job(auto_horse_round,'interval',seconds=30,id='auto_horse')
+    scheduler.start()
+    print("✅ 스케줄러 시작")
 
 @bot.message_handler(func=lambda m: True)
 def handle_all(message):
@@ -2474,8 +2731,243 @@ def bigwheel_spin():
     finally: c.close();db.close()
 
 # ─────────────────────────────────────────────────────────
-# 베팅 취소 (마감 30초 전까지)
+# 누락 라우트 보완
 # ─────────────────────────────────────────────────────────
+
+@app.route('/casino/check_admin')
+def casino_check_admin():
+    try:
+        uid = int(request.args.get('userId',0) or request.args.get('adminId',0))
+        return {'isAdmin': uid in ADMIN_IDS}, 200
+    except: return {'isAdmin': False}, 200
+
+@app.route('/casino/dashboard')
+def casino_dashboard():
+    db=get_db();c=db.cursor()
+    try:
+        group_id=int(request.args.get('groupId',0))
+        today=datetime.now(KST).date()
+        c.execute("SELECT COALESCE(SUM(amount),0) FROM casino_bets WHERE group_id=%s AND DATE(created_at)=%s",(group_id,today))
+        today_bet=c.fetchone()[0]
+        c.execute("SELECT COALESCE(SUM(payout),0) FROM casino_bets WHERE group_id=%s AND won=TRUE AND DATE(created_at)=%s",(group_id,today))
+        today_payout=c.fetchone()[0]
+        c.execute("SELECT COUNT(DISTINCT user_id) FROM casino_bets WHERE group_id=%s AND DATE(created_at)=%s",(group_id,today))
+        dau=c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM casino_games WHERE group_id=%s AND DATE(created_at)=%s",(group_id,today))
+        rounds=c.fetchone()[0]
+        c.execute("SELECT COALESCE(SUM(amount),0) FROM casino_bets WHERE group_id=%s AND created_at>=NOW()-INTERVAL '7 days'",(group_id,))
+        week_bet=c.fetchone()[0]
+        c.execute("SELECT COALESCE(SUM(payout),0) FROM casino_bets WHERE group_id=%s AND won=TRUE AND created_at>=NOW()-INTERVAL '7 days'",(group_id,))
+        week_payout=c.fetchone()[0]
+        return {'todayBet':int(today_bet),'todayPayout':int(today_payout),'todayProfit':int(today_bet-today_payout),
+                'dau':dau,'rounds':rounds,'weekBet':int(week_bet),'weekProfit':int(week_bet-week_payout)},200
+    except Exception as e: return {'error':str(e)},500
+    finally: c.close();db.close()
+
+@app.route('/casino/missions')
+def casino_missions():
+    db=get_db();c=db.cursor()
+    try:
+        group_id=int(request.args.get('groupId',0)); user_id=int(request.args.get('userId',0))
+        today=datetime.now(KST).date()
+        result=[]
+        for m in DAILY_MISSIONS:
+            c.execute("SELECT progress,completed FROM daily_missions WHERE user_id=%s AND group_id=%s AND mission_id=%s AND mission_date=%s",
+                      (user_id,group_id,m['id'],today))
+            row=c.fetchone()
+            result.append({'id':m['id'],'desc':m['desc'],'target':m['target'],'reward':m['reward'],
+                           'progress':row[0] if row else 0,'completed':row[1] if row else False})
+        return result,200
+    except Exception as e: return [],500
+    finally: c.close();db.close()
+
+@app.route('/casino/user_level')
+def casino_user_level():
+    db=get_db();c=db.cursor()
+    try:
+        group_id=int(request.args.get('groupId',0)); user_id=int(request.args.get('userId',0))
+        c.execute("SELECT COALESCE(total_bet,0) FROM points WHERE user_id=%s AND group_id=%s",(user_id,group_id))
+        row=c.fetchone(); total_bet=row[0] if row else 0
+        lvl=get_user_level(total_bet)
+        return {'level':lvl,'totalBet':total_bet},200
+    except: return {'level':LEVELS[0],'totalBet':0},200
+    finally: c.close();db.close()
+
+@app.route('/casino/my_bets')
+def casino_my_bets():
+    db=get_db();c=db.cursor()
+    try:
+        group_id=int(request.args.get('groupId',0)); user_id=int(request.args.get('userId',0))
+        limit=int(request.args.get('limit',30))
+        c.execute("""SELECT game_id,bet_on,amount,payout,won,created_at
+            FROM casino_bets WHERE group_id=%s AND user_id=%s
+            ORDER BY created_at DESC LIMIT %s""",(group_id,user_id,limit))
+        rows=c.fetchall()
+        return [{'game':r[0],'choice':r[1],'amount':r[2],'payout':r[3],
+                 'result':'win' if r[4] else ('lose' if r[4]==False else 'pending'),
+                 'createdAt':r[5].isoformat() if r[5] else None} for r in rows],200
+    except Exception as e: return [],500
+    finally: c.close();db.close()
+
+@app.route('/casino/withdraw', methods=['POST'])
+def casino_withdraw():
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json()
+        user_id=int(data.get('userId',0)); group_id=int(data.get('groupId',0))
+        amount=int(data.get('amount',0)); note=data.get('note','')
+        if amount<=0: return {'ok':False,'error':'금액을 입력해주세요.'},400
+        c.execute("SELECT first_name,username,point FROM points WHERE user_id=%s AND group_id=%s",(user_id,group_id))
+        row=c.fetchone()
+        if not row or row[2]<amount: return {'ok':False,'error':'포인트가 부족해요.'},400
+        name=row[0] or row[1] or f"id:{user_id}"
+        c.execute("INSERT INTO withdrawal_requests(group_id,user_id,user_name,amount,note) VALUES(%s,%s,%s,%s,%s)",
+                  (group_id,user_id,name,amount,note))
+        db.commit()
+        for admin_id in ADMIN_IDS:
+            try: bot.send_message(admin_id,f"💸 <b>출금 신청</b>\n👤 {name}\n💰 {amount:,}P\n📝 {note or '없음'}",parse_mode='HTML')
+            except: pass
+        return {'ok':True},200
+    except Exception as e: return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
+@app.route('/casino/withdraw_list')
+def casino_withdraw_list():
+    db=get_db();c=db.cursor()
+    try:
+        group_id=int(request.args.get('groupId',0))
+        c.execute("SELECT id,user_name,amount,status,note,created_at FROM withdrawal_requests WHERE group_id=%s ORDER BY created_at DESC LIMIT 50",(group_id,))
+        rows=c.fetchall()
+        return [{'id':r[0],'userName':r[1],'amount':r[2],'status':r[3],'note':r[4],
+                 'createdAt':r[5].isoformat() if r[5] else None} for r in rows],200
+    except: return [],500
+    finally: c.close();db.close()
+
+@app.route('/casino/withdraw_process', methods=['POST'])
+def casino_withdraw_process():
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json()
+        admin_id=int(data.get('adminId',0)); req_id=int(data.get('requestId',0))
+        action=data.get('action','approve')
+        if admin_id not in ADMIN_IDS: return {'ok':False,'error':'관리자 전용'},403
+        c.execute("SELECT user_id,group_id,amount,user_name,status FROM withdrawal_requests WHERE id=%s",(req_id,))
+        row=c.fetchone()
+        if not row: return {'ok':False,'error':'신청 없음'},404
+        if row[4]!='pending': return {'ok':False,'error':'이미 처리됨'},400
+        user_id,group_id,amount,user_name=row[0],row[1],row[2],row[3]
+        if action=='approve':
+            c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s",(amount,user_id,group_id))
+            c.execute("INSERT INTO point_logs(group_id,user_id,user_name,amount,reason,admin_id) VALUES(%s,%s,%s,%s,%s,%s)",
+                      (group_id,user_id,user_name,-amount,'출금 승인',admin_id))
+            c.execute("UPDATE withdrawal_requests SET status='approved',processed_at=NOW() WHERE id=%s",(req_id,))
+        else:
+            c.execute("UPDATE withdrawal_requests SET status='rejected',processed_at=NOW() WHERE id=%s",(req_id,))
+        db.commit()
+        return {'ok':True},200
+    except Exception as e: return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
+@app.route('/casino/chat_milestone_settings', methods=['GET'])
+def get_chat_milestone_settings():
+    try:
+        group_id=int(request.args.get('groupId',0))
+        cfg=get_milestone_settings(group_id)
+        return cfg,200
+    except Exception as e: return {'error':str(e)},500
+
+@app.route('/casino/chat_milestone_settings', methods=['POST'])
+def save_chat_milestone_settings():
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json()
+        admin_id=int(data.get('adminId',0)); group_id=int(data.get('groupId',0))
+        if admin_id not in ADMIN_IDS: return {'ok':False,'error':'관리자 전용'},403
+        milestones=data.get('milestones',CHAT_MILESTONES); enabled=data.get('enabled',True)
+        c.execute("""INSERT INTO chat_milestone_settings(group_id,milestones,enabled,updated_at)
+            VALUES(%s,%s,%s,NOW()) ON CONFLICT(group_id)
+            DO UPDATE SET milestones=%s,enabled=%s,updated_at=NOW()""",
+            (group_id,json.dumps(milestones),enabled,json.dumps(milestones),enabled))
+        db.commit()
+        return {'ok':True},200
+    except Exception as e: return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
+@app.route('/casino/chat_milestone_status')
+def chat_milestone_status():
+    db=get_db();c=db.cursor()
+    try:
+        group_id=int(request.args.get('groupId',0))
+        today=datetime.now(KST).date()
+        c.execute("""SELECT p.user_id,COALESCE(p.first_name,p.username,CAST(p.user_id AS VARCHAR)) as name,
+            COUNT(cl.id) as today_count
+            FROM points p LEFT JOIN chat_logs cl
+            ON cl.user_id=p.user_id AND cl.group_id=p.group_id AND DATE(cl.message_date)=%s
+            WHERE p.group_id=%s GROUP BY p.user_id,p.first_name,p.username ORDER BY today_count DESC""",(today,group_id))
+        users=c.fetchall()
+        c.execute("SELECT user_id,milestone FROM chat_milestone_logs WHERE group_id=%s AND rewarded_date=%s",(group_id,today))
+        rewarded={(r[0],r[1]) for r in c.fetchall()}
+        cfg=get_milestone_settings(group_id)
+        milestones={int(k):v for k,v in cfg.get('milestones',CHAT_MILESTONES).items()} if isinstance(cfg.get('milestones'),dict) else CHAT_MILESTONES
+        result=[]
+        for u in users:
+            uid,name,cnt=u
+            ms_status={}
+            for m,r in milestones.items():
+                ms_status[str(m)]={'achieved':cnt>=m,'rewarded':(uid,m) in rewarded,'reward':r}
+            result.append({'userId':uid,'name':name,'todayCount':cnt,'milestones':ms_status})
+        return result,200
+    except Exception as e: return [],500
+    finally: c.close();db.close()
+
+@app.route('/casino/chat_milestone_grant', methods=['POST'])
+def chat_milestone_grant():
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json()
+        admin_id=int(data.get('adminId',0)); group_id=int(data.get('groupId',0))
+        target_id=int(data.get('userId',0)); milestone=int(data.get('milestone',0))
+        if admin_id not in ADMIN_IDS: return {'ok':False,'error':'관리자 전용'},403
+        cfg=get_milestone_settings(group_id)
+        milestones={int(k):v for k,v in cfg.get('milestones',CHAT_MILESTONES).items()} if isinstance(cfg.get('milestones'),dict) else CHAT_MILESTONES
+        reward=milestones.get(milestone)
+        if not reward: return {'ok':False,'error':'유효하지 않은 마일스톤'},400
+        today=datetime.now(KST).date()
+        c.execute("SELECT first_name,username FROM points WHERE user_id=%s AND group_id=%s",(target_id,group_id))
+        row=c.fetchone()
+        if not row: return {'ok':False,'error':'유저 없음'},404
+        name=row[0] or row[1] or f"id:{target_id}"
+        c.execute("SELECT 1 FROM chat_milestone_logs WHERE user_id=%s AND group_id=%s AND milestone=%s AND rewarded_date=%s",
+                  (target_id,group_id,milestone,today))
+        if c.fetchone(): return {'ok':False,'error':'오늘 이미 지급됨'},400
+        c.execute("INSERT INTO chat_milestone_logs(user_id,group_id,milestone,rewarded_date) VALUES(%s,%s,%s,%s)",
+                  (target_id,group_id,milestone,today))
+        c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s",(reward,target_id,group_id))
+        c.execute("INSERT INTO point_logs(group_id,user_id,user_name,amount,reason,admin_id) VALUES(%s,%s,%s,%s,%s,%s)",
+                  (group_id,target_id,name,reward,f'채팅 {milestone}회 달성 (관리자 지급)',admin_id))
+        db.commit()
+        return {'ok':True,'reward':reward,'userName':name},200
+    except Exception as e: return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
+@app.route('/casino/auto_config', methods=['POST'])
+def casino_auto_config():
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json(); admin_id=int(data.get('adminId',0)); group_id=int(data.get('groupId',0))
+        if admin_id not in ADMIN_IDS: return {'ok':False,'error':'관리자 전용'},403
+        race_auto=data.get('raceAuto',True); horse_auto=data.get('horseAuto',True)
+        round_minutes=int(data.get('roundMinutes',3))
+        c.execute("""INSERT INTO auto_round_config(group_id,race_auto,horse_auto,round_minutes,updated_at)
+            VALUES(%s,%s,%s,%s,NOW()) ON CONFLICT(group_id)
+            DO UPDATE SET race_auto=%s,horse_auto=%s,round_minutes=%s,updated_at=NOW()""",
+            (group_id,race_auto,horse_auto,round_minutes,race_auto,horse_auto,round_minutes))
+        db.commit()
+        return {'ok':True},200
+    except Exception as e: return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
+
 @app.route('/casino/bet_cancel', methods=['POST'])
 def bet_cancel():
     db=get_db();c=db.cursor()
