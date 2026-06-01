@@ -229,7 +229,59 @@ body{
   color:var(--gold);font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;
 }
 
+
+/* 타이머 */
+.timer-wrap{
+  background:linear-gradient(135deg,#1a1000,#0e0a00);
+  border:1px solid var(--gold3);border-radius:14px;padding:14px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.timer-label{font-size:11px;color:var(--gold3);letter-spacing:1px;}
+.timer-display{font-family:'Cinzel',serif;font-size:28px;font-weight:900;color:var(--gold2);letter-spacing:2px;}
+.timer-display.urgent{color:#ff4444;animation:timerUrgent 0.5s ease-in-out infinite;}
+@keyframes timerUrgent{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.7;transform:scale(1.05)}}
+.timer-bar-wrap{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:8px;}
+.timer-bar{height:100%;border-radius:2px;transition:width 1s linear;background:linear-gradient(90deg,var(--gold2),var(--gold));}
+.timer-bar.urgent{background:linear-gradient(90deg,#ff4444,#cc0000);}
+.round-info{font-size:11px;color:var(--sub);text-align:right;}
+
 /* 토스트 */
+
+/* 베팅 취소 / 더블다운 / 자동베팅 */
+.bet-actions{display:flex;gap:8px;margin-top:0;}
+.cancel-btn{
+  flex:1;padding:11px;border-radius:12px;
+  border:1px solid #aa222244;background:transparent;
+  color:var(--red);font-size:13px;font-weight:700;cursor:pointer;
+}
+.cancel-btn:active{background:#1a0505;}
+.double-btn{
+  flex:1;padding:11px;border-radius:12px;
+  border:1px solid var(--gold3);background:transparent;
+  color:var(--gold);font-size:13px;font-weight:700;cursor:pointer;
+}
+.double-btn:active{background:#1a1500;}
+.auto-bet-wrap{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:14px;padding:14px;
+}
+.auto-title{font-size:12px;font-weight:700;color:var(--gold);margin-bottom:10px;}
+.auto-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.auto-label{font-size:12px;color:var(--sub);width:80px;}
+.auto-count-inp{
+  width:70px;background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-size:14px;padding:8px 10px;outline:none;
+}
+.auto-start-btn{
+  width:100%;padding:13px;border-radius:12px;border:none;
+  background:linear-gradient(135deg,#2255aa,#113388);
+  color:#fff;font-size:13px;font-weight:700;cursor:pointer;
+}
+.auto-start-btn:active{opacity:0.85;}
+.auto-start-btn.running{background:linear-gradient(135deg,#aa2222,#881111);}
+.auto-status{font-size:12px;color:var(--sub);text-align:center;margin-top:6px;}
+
+.home-btn{position:fixed;bottom:20px;left:16px;z-index:100;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--sub);font-size:12px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
 .toast{
   position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
   background:var(--gold);color:#0a0800;
@@ -255,6 +307,19 @@ body{
 <div class="status-row">
   <div class="status-badge s-idle" id="status-badge">⏳ 대기 중</div>
   <div style="font-size:11px;color:var(--sub)" id="round-label"></div>
+</div>
+
+
+<!-- 3분 타이머 -->
+<div class="timer-wrap" id="timer-wrap" style="display:none">
+  <div>
+    <div class="timer-label">⏱ 베팅 마감까지</div>
+    <div class="timer-display" id="timer-display">3:00</div>
+    <div class="timer-bar-wrap">
+      <div class="timer-bar" id="timer-bar" style="width:100%"></div>
+    </div>
+  </div>
+  <div class="round-info" id="round-info-box">라운드 정보</div>
 </div>
 
 <div class="main">
@@ -309,14 +374,20 @@ body{
   </div>
 
   <!-- 내 베팅 (베팅 완료 후) -->
-  <div class="my-bet-card" id="my-bet-card" style="display:none">
-    <div>
-      <div style="font-size:11px;color:var(--sub)">내 베팅</div>
-      <div style="font-size:14px;font-weight:700" id="my-bet-detail">—</div>
+  <div id="my-bet-section" style="display:none">
+    <div class="my-bet-card" id="my-bet-card">
+      <div>
+        <div style="font-size:11px;color:var(--sub)">내 베팅</div>
+        <div style="font-size:14px;font-weight:700" id="my-bet-detail">—</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:var(--sub)">예상 당첨</div>
+        <div style="font-size:14px;font-weight:700;color:var(--gold)" id="my-bet-exp">—</div>
+      </div>
     </div>
-    <div style="text-align:right">
-      <div style="font-size:11px;color:var(--sub)">예상 당첨</div>
-      <div style="font-size:14px;font-weight:700;color:var(--gold)" id="my-bet-exp">—</div>
+    <div class="bet-actions" style="margin-top:8px">
+      <button class="cancel-btn" id="cancel-btn" onclick="cancelBet()">❌ 베팅 취소</button>
+      <button class="double-btn" onclick="doDouble()">✕2 더블다운</button>
     </div>
   </div>
 
@@ -350,11 +421,35 @@ body{
     <button class="bet-btn off" id="bet-btn" onclick="doBet()">베팅할 항목을 선택해주세요</button>
   </div>
 
+  <!-- 자동 베팅 -->
+  <div class="auto-bet-wrap" id="auto-bet-wrap" style="display:none">
+    <div class="auto-title">🤖 자동 베팅</div>
+    <div class="auto-row">
+      <span class="auto-label">반복 횟수</span>
+      <input class="auto-count-inp" type="number" id="auto-count" value="3" min="1" max="20" placeholder="횟수">
+      <span style="font-size:12px;color:var(--sub)">회</span>
+    </div>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:8px">선택한 항목과 금액으로 자동 반복 베팅해요</div>
+    <button class="auto-start-btn" id="auto-btn" onclick="toggleAutoBet()">▶ 자동 베팅 시작</button>
+    <div class="auto-status" id="auto-status"></div>
+  </div>
+
+  <!-- 관전 모드 배너 -->
+  <div id="spectator-banner" style="display:none;background:var(--bg2);border:1px solid #2255aa44;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+    <span style="font-size:18px">👁</span>
+    <div style="flex:1">
+      <div style="font-size:12px;font-weight:700;color:var(--blue)">관전 모드</div>
+      <div style="font-size:11px;color:var(--sub)">베팅 없이 경주를 구경 중이에요</div>
+    </div>
+    <button onclick="exitSpectator()" style="padding:6px 12px;border-radius:8px;border:1px solid #2255aa44;background:transparent;color:var(--blue);font-size:11px;cursor:pointer">베팅하기</button>
+  </div>
+
   <!-- 대기 / 종료 메시지 -->
   <div class="idle-msg" id="idle-msg">
     <div class="idle-icon" id="idle-icon">⏳</div>
     <div class="idle-title" id="idle-title">경주 대기 중</div>
     <div class="idle-sub" id="idle-sub">관리자가 경주를 시작하면<br>베팅할 수 있어요</div>
+    <button onclick="enterSpectator()" style="margin-top:10px;padding:8px 18px;border-radius:10px;border:1px solid #2255aa44;background:transparent;color:var(--blue);font-size:12px;cursor:pointer">👁 관전 모드로 보기</button>
   </div>
 
 </div>
@@ -369,6 +464,7 @@ body{
 </div>
 
 <div class="toast" id="toast"></div>
+<button class="home-btn" onclick="goHome()">🏠 홈</button>
 
 <script>
 const p       = new URLSearchParams(location.search);
@@ -487,6 +583,58 @@ function refreshBtn() {
   btn.textContent=`${lbl} · ${fmt(amt)}P → 예상 +${fmt(exp)}P`;
 }
 
+
+// ── 타이머 ──
+let timerInterval = null;
+
+function startTimer(timerInfo) {
+  const wrap = document.getElementById('timer-wrap');
+  const disp = document.getElementById('timer-display');
+  const bar  = document.getElementById('timer-bar');
+  if (!timerInfo) { wrap.style.display='none'; return; }
+
+  wrap.style.display = 'flex';
+  wrap.style.flexDirection = 'column';
+
+  clearInterval(timerInterval);
+
+  const totalSecs = timerInfo.totalSecs || 180;
+  const startedAt = new Date(timerInfo.startedAt);
+
+  function tick() {
+    const now     = new Date();
+    const elapsed = (now - startedAt) / 1000;
+    const remain  = Math.max(0, totalSecs - elapsed);
+    const mins    = Math.floor(remain / 60);
+    const secs    = Math.floor(remain % 60);
+
+    disp.textContent = `${mins}:${String(secs).padStart(2,'0')}`;
+    const pct = (remain / totalSecs) * 100;
+    bar.style.width = pct + '%';
+
+    if (remain <= 30) {
+      disp.className = 'timer-display urgent';
+      bar.className  = 'timer-bar urgent';
+    } else {
+      disp.className = 'timer-display';
+      bar.className  = 'timer-bar';
+    }
+
+    if (remain <= 0) {
+      clearInterval(timerInterval);
+      disp.textContent = '0:00';
+      bar.style.width  = '0%';
+    }
+  }
+  tick();
+  timerInterval = setInterval(tick, 500);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  document.getElementById('timer-wrap').style.display = 'none';
+}
+
 // ── 상태 렌더 ──
 function render(s) {
   state = s;
@@ -529,16 +677,27 @@ function render(s) {
   betSec.style.display    = 'none';
   myBetCard.style.display = 'none';
   idleMsg.style.display   = 'none';
+  const myBetSection = document.getElementById('my-bet-section');
+  if (myBetSection) myBetSection.style.display = 'none';
+  const autoBetWrap = document.getElementById('auto-bet-wrap');
+  if (autoBetWrap) autoBetWrap.style.display = 'none';
 
-  if (s.status === 'betting') {
+  // 관전 모드면 bet-section 숨김
+  if (spectatorMode && s.status === 'betting' && !s.myBet) {
+    const banner = document.getElementById('spectator-banner');
+    if(banner) banner.style.display = 'flex';
+  }
+
+  if (s.status === 'betting' && !spectatorMode) {
     if (s.myBet) {
       const lbl  = s.myBet.betOn==='rabbit'?'🐇 토끼':'🐢 거북이';
       const odds = s.myBet.betOn==='rabbit'?ro:to;
       document.getElementById('my-bet-detail').textContent = `${lbl} · ${fmt(s.myBet.amount)} P`;
       document.getElementById('my-bet-exp').textContent    = `+${fmt(Math.floor(s.myBet.amount*odds))} P`;
-      myBetCard.style.display = 'flex';
+      if (myBetSection) myBetSection.style.display = 'block';
     } else {
       betSec.style.display = 'flex';
+      if (autoBetWrap) autoBetWrap.style.display = 'block';
     }
   } else if (s.status === 'idle') {
     idleMsg.style.display = 'block';
@@ -573,7 +732,7 @@ async function doBet() {
     });
     const data = await res.json();
     if (data.ok) {
-      toast(`✅ ${picked==='rabbit'?'🐇 토끼':'🐢 거북이'} ${fmt(amt)}P 베팅!`);
+      vibrate([50]); playSound('bet'); toast(`✅ ${picked==='rabbit'?'🐇 토끼':'🐢 거북이'} ${fmt(amt)}P 베팅!`);
       myPt -= amt;
       document.getElementById('my-point').textContent = fmt(myPt)+' P';
       await load();
@@ -614,6 +773,41 @@ function closeOverlay() {
   load();
 }
 
+
+// ── 베팅 알림 (진동/소리) ──
+function vibrate(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+function playSound(type) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain= ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    if (type === 'win') {
+      osc.frequency.setValueAtTime(523, ctx.currentTime);
+      osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
+      osc.frequency.setValueAtTime(784, ctx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.5);
+    } else if (type === 'lose') {
+      osc.frequency.setValueAtTime(300, ctx.currentTime);
+      osc.frequency.setValueAtTime(200, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.4);
+    } else if (type === 'bet') {
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.15);
+    }
+  } catch(e) {}
+}
+
+
 // ── 폴링 ──
 async function load() {
   try {
@@ -638,6 +832,182 @@ async function loadPt() {
     const me    = users.find(u=>String(u.userId)===String(userId));
     if (me) { myPt=me.point; document.getElementById('my-point').textContent=fmt(myPt)+' P'; }
   } catch(e) {}
+}
+
+
+
+// ── 관전 모드 ──
+let spectatorMode = false;
+
+function enterSpectator() {
+  spectatorMode = true;
+  const banner = document.getElementById('spectator-banner');
+  const betSec = document.getElementById('bet-section');
+  const autoBet= document.getElementById('auto-bet-wrap');
+  if(banner) banner.style.display = 'flex';
+  if(betSec) betSec.style.display = 'none';
+  if(autoBet) autoBet.style.display = 'none';
+  toast('👁 관전 모드 시작');
+}
+
+function exitSpectator() {
+  spectatorMode = false;
+  document.getElementById('spectator-banner').style.display = 'none';
+  load();
+}
+
+// ── 베팅 취소 ──
+async function cancelBet() {
+  if (!state?.myBet) return;
+  const btn = document.getElementById('cancel-btn');
+  btn.disabled = true; btn.textContent = '⏳ 취소 중...';
+  try {
+    const res  = await fetch('/casino/bet_cancel', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({roundId:state.roundId, groupId:parseInt(groupId), userId:parseInt(userId)})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      toast(`✅ 베팅 취소 완료! +${fmt(data.refund)}P 환불`);
+      myPt += data.refund;
+      document.getElementById('my-point').textContent = fmt(myPt)+' P';
+      await load();
+    } else { toast(data.error||'오류', true); }
+  } catch(e) { toast('서버 오류', true); }
+  btn.disabled = false; btn.textContent = '❌ 베팅 취소';
+}
+
+// ── 더블다운 ──
+async function doDouble() {
+  if (!state?.myBet) return;
+  const myBet = state.myBet;
+  const doubled = myBet.amount * 2;
+  if (doubled > myPt) { toast('포인트 부족해요', true); return; }
+  if (!confirm(`현재 베팅의 2배(${fmt(doubled)}P)로 추가 베팅할까요?`)) return;
+
+  // 기존 취소 후 2배 재베팅
+  try {
+    // 취소
+    const r1 = await fetch('/casino/bet_cancel', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({roundId:state.roundId, groupId:parseInt(groupId), userId:parseInt(userId)})
+    });
+    const d1 = await r1.json();
+    if (!d1.ok) { toast(d1.error||'취소 실패', true); return; }
+    myPt += d1.refund;
+
+    // 2배 베팅
+    picked = myBet.betOn;
+    document.getElementById('amt').value = doubled;
+    await doBet();
+  } catch(e) { toast('서버 오류', true); }
+}
+
+// ── 자동 베팅 ──
+let autoRunning  = false;
+let autoRemain   = 0;
+let autoTimer    = null;
+
+function toggleAutoBet() {
+  if (autoRunning) {
+    stopAutoBet();
+  } else {
+    startAutoBet();
+  }
+}
+
+async function startAutoBet() {
+  if (!picked) { toast('베팅 항목을 먼저 선택해주세요', true); return; }
+  const amt = parseInt(document.getElementById('amt').value)||0;
+  if (amt < 10) { toast('금액을 입력해주세요', true); return; }
+  const count = parseInt(document.getElementById('auto-count').value)||3;
+  autoRemain  = count;
+  autoRunning = true;
+  const btn   = document.getElementById('auto-btn');
+  btn.className = 'auto-start-btn running';
+  btn.textContent = '⏹ 자동 베팅 중지';
+  runAutoRound();
+}
+
+async function runAutoRound() {
+  if (!autoRunning || autoRemain <= 0) { stopAutoBet(); return; }
+  document.getElementById('auto-status').textContent = `🤖 ${autoRemain}회 남음 · 베팅 대기 중...`;
+
+  // 현재 라운드 상태 확인
+  await load();
+  if (!state || state.status !== 'betting') {
+    // 다음 라운드 기다림
+    document.getElementById('auto-status').textContent = `⏳ 새 라운드 대기 중... (${autoRemain}회 남음)`;
+    autoTimer = setTimeout(runAutoRound, 3000);
+    return;
+  }
+  if (state.myBet) {
+    // 이미 베팅됨 → 결과 기다림
+    document.getElementById('auto-status').textContent = `✅ 베팅 완료 · 결과 대기 중... (${autoRemain}회 남음)`;
+    autoTimer = setTimeout(runAutoRound, 3000);
+    return;
+  }
+
+  // 베팅 실행
+  const amt = parseInt(document.getElementById('amt').value)||0;
+  if (amt > myPt) { toast('포인트 부족 — 자동 베팅 중지', true); stopAutoBet(); return; }
+
+  const btn_main = document.getElementById('bet-btn');
+  btn_main.className='bet-btn off'; btn_main.textContent='⏳ 자동 베팅 중...';
+
+  try {
+    const res  = await fetch('/casino/race/bet', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({roundId:state.roundId, groupId:parseInt(groupId),
+        userId:parseInt(userId), betOn:picked, amount:amt})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      autoRemain--;
+      myPt -= amt;
+      document.getElementById('my-point').textContent = fmt(myPt)+' P';
+      document.getElementById('auto-status').textContent = `✅ 베팅 완료 · 결과 대기 중... (${autoRemain}회 남음)`;
+      await load();
+      // 결과 나올 때까지 폴링
+      autoTimer = setTimeout(waitForResult, 3000);
+    } else {
+      toast(data.error||'베팅 오류', true);
+      autoTimer = setTimeout(runAutoRound, 3000);
+    }
+  } catch(e) { autoTimer = setTimeout(runAutoRound, 3000); }
+  refreshBtn();
+}
+
+async function waitForResult() {
+  if (!autoRunning) return;
+  await load();
+  if (state?.status === 'closed' || !state?.myBet) {
+    // 결과 나옴 → 다음 라운드
+    if (autoRemain > 0) {
+      document.getElementById('auto-status').textContent = `🔄 다음 라운드 대기... (${autoRemain}회 남음)`;
+      autoTimer = setTimeout(runAutoRound, 3000);
+    } else {
+      stopAutoBet();
+    }
+  } else {
+    autoTimer = setTimeout(waitForResult, 2000);
+  }
+}
+
+function stopAutoBet() {
+  autoRunning = false;
+  if (autoTimer) clearTimeout(autoTimer);
+  const btn = document.getElementById('auto-btn');
+  if (btn) { btn.className='auto-start-btn'; btn.textContent='▶ 자동 베팅 시작'; }
+  document.getElementById('auto-status').textContent = autoRemain<=0 ? '✅ 자동 베팅 완료!' : '⏹ 자동 베팅 중지됨';
+}
+
+
+function goHome(){
+  const p=new URLSearchParams(location.search);
+  const uid=p.get('userId')||p.get('start')?.split('_')[0];
+  const gid=p.get('groupId')||p.get('start')?.split('_')[1];
+  location.href='/casino?userId='+uid+'&groupId='+gid;
 }
 
 async function init() {
