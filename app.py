@@ -2,6 +2,7 @@ import os
 import re
 import json
 import random
+import threading
 import telebot
 import psycopg2
 import requests
@@ -327,6 +328,11 @@ def init_db():
                 user_name VARCHAR(255),
                 joined_at TIMESTAMP DEFAULT NOW(),
                 UNIQUE(event_id, user_id))""",
+            """CREATE TABLE IF NOT EXISTS casino_open_status (
+                group_id BIGINT PRIMARY KEY,
+                is_open BOOLEAN DEFAULT FALSE,
+                opened_by BIGINT,
+                updated_at TIMESTAMP DEFAULT NOW())""",
             """CREATE TABLE IF NOT EXISTS refill_logs (
                 id SERIAL PRIMARY KEY, user_id BIGINT NOT NULL,
                 group_id BIGINT NOT NULL, first_name VARCHAR(255),
@@ -904,15 +910,26 @@ def handle_all(message):
         # ── 관리자 전용 커맨드 체크 ──
         if message.chat.type in ['group', 'supergroup'] and text.strip().startswith('/') and user_id not in ADMIN_IDS:
             if any(text.strip().startswith(c) for c in USER_BLOCKED_COMMANDS):
-                try: bot.delete_message(group_id, message.message_id)
-                except: pass
+                # 카지노 ON 상태면 일반 유저도 허용
+                casino_on = False
                 try:
-                    import time
-                    sent = bot.send_message(group_id, f"⚠️ {first_name}님, 해당 커맨드는 관리자만 사용할 수 있어요.")
-                    time.sleep(3)
-                    bot.delete_message(group_id, sent.message_id)
+                    db2=get_db(); c2=db2.cursor()
+                    c2.execute("SELECT is_open FROM casino_open_status WHERE group_id=%s",(group_id,))
+                    row2=c2.fetchone()
+                    casino_on = bool(row2[0]) if row2 else False
+                    c2.close(); db2.close()
                 except: pass
-                return
+
+                if not casino_on:
+                    try: bot.delete_message(group_id, message.message_id)
+                    except: pass
+                    try:
+                        import time
+                        sent = bot.send_message(group_id, f"⚠️ {first_name}님, 현재 카지노가 닫혀있어요. 관리자만 사용 가능해요.")
+                        time.sleep(3)
+                        bot.delete_message(group_id, sent.message_id)
+                    except: pass
+                    return
 
         if '/test' in text:
             bot.reply_to(message, f"봇 작동 중! ✅\n내 user_id: {user_id}")
@@ -1919,6 +1936,11 @@ def is_casino_blacklisted(group_id, user_id):
 @app.route('/casino')
 def serve_casino(): return send_from_directory(BASE_DIR, 'casino.html')
 
+@app.route('/casino/null')
+def serve_casino_null():
+    from flask import redirect
+    return redirect('/casino')
+
 @app.route('/casino/admin')
 def serve_casino_admin(): return send_from_directory(BASE_DIR, 'casino_admin.html')
 
@@ -2815,6 +2837,40 @@ def bigwheel_spin():
 # ─────────────────────────────────────────────────────────
 # 누락 라우트 보완
 # ─────────────────────────────────────────────────────────
+
+@app.route('/casino/open_status', methods=['GET'])
+def casino_open_status_route():
+    db=get_db(); c=db.cursor()
+    try:
+        group_id=int(request.args.get('groupId',0))
+        c.execute("SELECT is_open FROM casino_open_status WHERE group_id=%s",(group_id,))
+        row=c.fetchone()
+        return {'isOpen': bool(row[0]) if row else False}, 200
+    except: return {'isOpen':False}, 200
+    finally: c.close(); db.close()
+
+@app.route('/casino/open_toggle', methods=['POST'])
+def casino_open_toggle():
+    db=get_db(); c=db.cursor()
+    try:
+        data=request.get_json()
+        admin_id=int(data.get('adminId',0))
+        group_id=int(data.get('groupId',0))
+        is_open=bool(data.get('isOpen',False))
+        if admin_id not in ADMIN_IDS: return {'ok':False,'error':'관리자 전용'},403
+        c.execute(
+            "INSERT INTO casino_open_status(group_id,is_open,opened_by,updated_at) VALUES(%s,%s,%s,NOW())"
+            " ON CONFLICT(group_id) DO UPDATE SET is_open=%s,opened_by=%s,updated_at=NOW()",
+            (group_id,is_open,admin_id,is_open,admin_id))
+        db.commit()
+        try:
+            msg = ("🎰 <b>카지노 오픈!</b>\n──────────────────\n지금 /카지노 를 입력해서 게임을 즐겨보세요!" if is_open
+                   else "🔒 <b>카지노 마감</b>\n──────────────────\n카지노가 잠시 닫혔어요.")
+            bot.send_message(group_id, msg, parse_mode='HTML')
+        except: pass
+        return {'ok':True,'isOpen':is_open}, 200
+    except Exception as e: return {'ok':False,'error':str(e)},500
+    finally: c.close(); db.close()
 
 @app.route('/casino/check_admin')
 def casino_check_admin():
