@@ -51,7 +51,6 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 <b>[평생]</b> · <a href="https://t.me/gamte59/96">스피드벳</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/44">지엑스뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/60">우루스뱃</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/70">미우카지노</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/72">그랜드파리</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/74">룰라뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/78">소울카지노</a>
@@ -75,10 +74,6 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/58">김여포</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/64">대문팀</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/92">관짝</a>
-
-♠️ <b>홀덤</b>
-──────────────────
-<b>[도파민]</b> · <a href="https://t.me/gamte59/69">룽지홀덤</a>
 
 💼 <b>이체 알바</b>
 ──────────────────
