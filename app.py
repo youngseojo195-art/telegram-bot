@@ -48,7 +48,7 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 ──────────────────
 <b>[평생]</b> · <a href="https://t.me/gamte59/31">렛츠뱃</a>
 <b>[평생]</b> · <a href="https://t.me/gamte59/94">띵벳</a>
-<b>[평생]</b> · <a href="https://t.me/gamte59/96">스피드벳</a>
+<b>[평생]</b> · <a href="https://t.me/gamte59/123">스피드벳</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/44">지엑스뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/60">우루스뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/72">그랜드파리</a>
@@ -58,6 +58,7 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/100">벨라벳</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/100">부자벳</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/111">로얄클럽</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/121">벳클뱃</a>
 
 💸 <b>급전</b>
 ──────────────────
