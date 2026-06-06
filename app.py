@@ -47,7 +47,7 @@ def send_affiliate_gif(chat_id):
 AFFILIATE_TEXT = """🎰 <b>카지노</b>
 ──────────────────
 <b>[평생]</b> · <a href="https://t.me/gamte59/31">렛츠뱃</a>
-<b>[평생]</b> · <a href="https://t.me/gamte59/94">띵벳</a>
+<b>[평생]</b> · <a href="https://t.me/gamte59/127">띵벳</a>
 <b>[평생]</b> · <a href="https://t.me/gamte59/123">스피드벳</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/44">지엑스뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/60">우루스뱃</a>
@@ -55,10 +55,11 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/74">룰라뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/78">소울카지노</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/84">123GAME카지노</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/100">벨라벳</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/100">부자벳</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/100">벨라뱃</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/100">부자뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/111">로얄클럽</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/121">벳클라우드</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/125">리얼뱃</a>
 
 💸 <b>급전</b>
 ──────────────────
