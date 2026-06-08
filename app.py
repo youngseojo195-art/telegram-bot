@@ -60,6 +60,7 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/111">로얄클럽</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/121">벳클라우드</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/125">라엘뱃</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/128">부엉이뱃</a>
 
 💸 <b>급전</b>
 ──────────────────
