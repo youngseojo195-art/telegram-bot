@@ -1,735 +1,149 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>도파민 카지노</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+KR:wght@400;600;700;900&display=swap" rel="stylesheet">
-<style>
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-:root{
-  --gold:#d4a843;--gold2:#f0c96a;--gold3:#8b6914;
-  --bg:#080810;--bg2:#0e0e1c;--bg3:#161628;--bg4:#1e1e35;
-  --border:#2a2a45;--text:#e8e0cc;--sub:#6a6a8a;
-}
-body.light{--bg:#f4f0e8;--bg2:#fff;--bg3:#f0ece0;--bg4:#e8e4d8;--border:#d4c8a8;--text:#2a2010;--sub:#887755;}
-html,body{height:100%;width:100%;}
-body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;}
+// ── CASINO CORE ── 서버 없이 동작하는 공통 로직
+window.CasinoCore = (() => {
 
-body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(212,168,67,0.1) 0%,transparent 60%);pointer-events:none;z-index:0;}
+  // ── 포인트 관리 (localStorage) ──
+  function getKey(gid, uid) { return `casino_pt_${gid}_${uid}`; }
 
-/* 헤더 */
-.hero{position:relative;z-index:1;padding:22px 20px 16px;text-align:center;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#0e0e20,#080810);}
-.hero-label{font-family:'Cinzel',serif;font-size:9px;letter-spacing:5px;color:var(--gold3);margin-bottom:5px;}
-.hero-title{font-family:'Cinzel',serif;font-size:26px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.2;margin-bottom:3px;}
-.hero-sub{font-size:11px;color:var(--sub);letter-spacing:2px;}
-
-/* 유저 바 */
-.user-bar{position:relative;z-index:1;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:12px;}
-.user-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gold3),#4a2800);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;border:1px solid var(--gold3);}
-.user-info{flex:1;}
-.user-name{font-size:13px;font-weight:700;}
-.user-level{font-size:10px;color:var(--gold3);margin-top:1px;}
-.point-val{font-size:18px;font-weight:900;color:var(--gold);}
-.point-unit{font-size:10px;color:var(--sub);}
-
-/* 출석/리필 */
-.daily-btns{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--border);}
-.daily-btn{padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:8px;}
-.daily-btn:active{transform:scale(0.97);}
-.daily-btn.done{opacity:0.45;cursor:default;}
-.daily-btn-icon{font-size:20px;}
-.daily-btn-info{flex:1;}
-.daily-btn-title{font-size:12px;font-weight:700;}
-.daily-btn-sub{font-size:10px;color:var(--sub);margin-top:1px;}
-.daily-btn-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:linear-gradient(135deg,var(--gold),var(--gold3));color:#0a0800;white-space:nowrap;}
-.daily-btn.done .daily-btn-badge{background:var(--border);color:var(--sub);}
-
-/* 메인 스크롤 */
-.main{position:relative;z-index:1;flex:1;overflow-y:auto;padding:14px 14px 80px;}
-
-.section-label{font-family:'Cinzel',serif;font-size:10px;color:var(--gold3);letter-spacing:3px;margin-bottom:10px;padding:0 2px;}
-
-/* 게임 그리드 2x3 */
-.game-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
-
-.game-card{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:18px;overflow:hidden;cursor:pointer;
-  transition:all 0.2s;position:relative;
-  aspect-ratio:1/1.1;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:8px;padding:16px 10px;
-  box-shadow:0 4px 20px rgba(0,0,0,0.3);
-}
-.game-card:active{transform:scale(0.96);}
-.game-card::after{content:'';position:absolute;inset:0;border-radius:18px;background:linear-gradient(135deg,rgba(255,255,255,0.04) 0%,transparent 60%);pointer-events:none;}
-
-.game-icon{font-size:44px;line-height:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5));}
-.game-name{font-family:'Cinzel',serif;font-size:13px;font-weight:700;text-align:center;letter-spacing:0.5px;}
-.game-short{font-size:10px;color:var(--sub);text-align:center;line-height:1.4;}
-.game-badge{
-  position:absolute;top:10px;right:10px;
-  font-size:9px;font-weight:700;padding:2px 7px;border-radius:6px;letter-spacing:0.5px;
-}
-.badge-live{background:linear-gradient(135deg,#cc2222,#881111);color:#fff;animation:blink 1.5s infinite;}
-.badge-new{background:linear-gradient(135deg,var(--gold),var(--gold3));color:#0a0800;}
-.badge-hot{background:linear-gradient(135deg,#cc5500,#883300);color:#fff;}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0.6}}
-
-/* 카드별 색상 */
-.card-race    {background:linear-gradient(160deg,#060e18,#0a1828);border-color:#1a3a5a44;}
-.card-horse   {background:linear-gradient(160deg,#060e06,#0a1808);border-color:#1a3a1a44;}
-.card-baccarat{background:linear-gradient(160deg,#140806,#200e08);border-color:#3a1a0a44;}
-.card-bigwheel{background:linear-gradient(160deg,#100618,#180828);border-color:#2a1a3a44;}
-.card-slots   {background:linear-gradient(160deg,#0e0618,#160828);border-color:#2a1a4a44;}
-.card-roulette{background:linear-gradient(160deg,#14060a,#200810);border-color:#3a1a1a44;}
-
-/* 미션 */
-.missions-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px;}
-.missions-title{font-family:'Cinzel',serif;font-size:10px;color:var(--gold3);letter-spacing:2px;margin-bottom:10px;}
-.mission-item{display:flex;align-items:center;gap:10px;background:var(--bg3);border-radius:10px;padding:8px 12px;margin-bottom:6px;}
-.mission-item:last-child{margin-bottom:0;}
-.mission-icon{font-size:16px;flex-shrink:0;}
-.mission-info{flex:1;}
-.mission-desc{font-size:12px;font-weight:600;}
-.mission-prog{font-size:10px;color:var(--sub);margin-top:2px;}
-.mission-bar-bg{height:3px;background:var(--bg4);border-radius:2px;margin-top:4px;overflow:hidden;}
-.mission-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--gold3),var(--gold));transition:width 0.4s;}
-.mission-reward{font-size:11px;font-weight:700;color:var(--gold);flex-shrink:0;}
-
-/* 통계 */
-.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
-.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;}
-.stat-val{font-size:20px;font-weight:900;color:var(--gold);}
-.stat-label{font-size:10px;color:var(--sub);margin-top:2px;}
-
-/* 게임 상세 모달 */
-.game-modal{position:fixed;inset:0;background:rgba(0,0,0,0.94);z-index:200;display:none;align-items:flex-end;justify-content:center;}
-.game-modal.show{display:flex;animation:slideUp 0.25s ease-out;}
-@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.game-modal-box{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:24px 24px 0 0;
-  width:100%;max-width:480px;
-  padding:0 0 40px;
-  max-height:85vh;overflow-y:auto;
-}
-.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0;}
-.modal-hero{
-  padding:28px 20px 20px;text-align:center;
-  position:relative;
-}
-.modal-icon{font-size:64px;margin-bottom:12px;filter:drop-shadow(0 8px 16px rgba(0,0,0,0.5));}
-.modal-game-name{font-family:'Cinzel',serif;font-size:22px;font-weight:900;margin-bottom:6px;}
-.modal-desc{font-size:13px;color:var(--sub);line-height:1.7;padding:0 10px;}
-.modal-divider{height:1px;background:var(--border);margin:16px 20px;}
-.modal-info { padding:0 20px;display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
-.modal-info-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);border-radius:10px;}
-.modal-info-label{font-size:12px;color:var(--sub);}
-.modal-info-val{font-size:13px;font-weight:700;color:var(--text);}
-.modal-info-val.gold{color:var(--gold);}
-.modal-info-val.green{color:#44cc88;}
-.modal-info-val.red{color:#ee4444;}
-.modal-tags{display:flex;flex-wrap:wrap;gap:6px;padding:0 20px;margin-bottom:20px;}
-.modal-tag{font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid;font-weight:600;}
-.modal-enter-btn{
-  margin:0 20px;width:calc(100% - 40px);
-  padding:18px;border-radius:16px;border:none;
-  font-size:16px;font-weight:900;cursor:pointer;
-  background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));
-  color:#0a0800;letter-spacing:0.5px;
-  box-shadow:0 6px 24px rgba(212,168,67,0.35);
-}
-.modal-enter-btn:active{transform:scale(0.98);opacity:0.9;}
-.modal-close{position:absolute;top:16px;right:16px;background:transparent;border:none;color:var(--sub);font-size:22px;cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;}
-
-/* 출금 */
-.withdraw-section{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px;}
-.wd-inp{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;padding:10px 12px;outline:none;margin-bottom:8px;}
-.wd-inp:focus{border-color:var(--gold3);}
-.wd-btn{width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#2255aa,#113388);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
-.wd-btn:active{opacity:0.85;}
-
-/* 팝업 */
-.popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:300;display:none;align-items:center;justify-content:center;padding:20px;}
-.popup-overlay.show{display:flex;}
-.popup-box{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:100%;max-width:320px;text-align:center;display:flex;flex-direction:column;gap:14px;animation:popIn 0.3s ease-out;}
-@keyframes popIn{0%{transform:scale(0.8);opacity:0}100%{transform:scale(1);opacity:1}}
-.popup-emoji{font-size:52px;}
-.popup-title{font-family:'Cinzel',serif;font-size:18px;font-weight:900;color:var(--gold);}
-.popup-amount{font-size:30px;font-weight:900;color:#44ee88;text-shadow:0 0 20px rgba(68,238,136,0.5);}
-.popup-sub{font-size:13px;color:var(--sub);line-height:1.6;}
-.popup-close{padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--gold),var(--gold3));color:#0a0800;font-size:14px;font-weight:700;cursor:pointer;}
-
-/* 베팅 내역 모달 */
-.history-modal{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:200;display:none;flex-direction:column;}
-.history-modal.show{display:flex;}
-.history-header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:var(--bg2);}
-.history-title{font-family:'Cinzel',serif;font-size:14px;color:var(--gold);}
-.history-close{background:transparent;border:none;color:var(--sub);font-size:20px;cursor:pointer;}
-.history-list{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
-.history-item{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;}
-.history-item.win{border-color:#22aa5544;}
-.history-item.lose{border-color:#aa222244;}
-.history-game-icon{font-size:22px;width:32px;text-align:center;}
-.history-info{flex:1;}
-.history-game{font-size:12px;font-weight:700;}
-.history-choice{font-size:10px;color:var(--sub);margin-top:2px;}
-.history-result{text-align:right;}
-.history-payout{font-size:14px;font-weight:900;}
-.history-payout.win{color:#44ee88;}
-.history-payout.lose{color:#ee4444;}
-.history-bet-amt{font-size:10px;color:var(--sub);margin-top:2px;}
-
-/* 테마/홈 버튼 */
-.theme-btn{position:fixed;bottom:20px;right:16px;z-index:100;width:42px;height:42px;border-radius:50%;border:1px solid var(--border);background:var(--bg2);font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
-
-/* 토스트 */
-.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--gold);color:#0a0800;font-size:13px;font-weight:700;padding:10px 20px;border-radius:20px;z-index:2000;opacity:0;transition:opacity 0.2s;white-space:nowrap;pointer-events:none;}
-.toast.show{opacity:1;}
-.toast.err{background:#cc3333;color:#fff;}
-
-/* 로딩 */
-.loading{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
-.loading-title{font-family:'Cinzel',serif;font-size:22px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-.loading-bar-wrap{width:160px;height:3px;background:var(--bg3);border-radius:3px;overflow:hidden;}
-.loading-bar{height:100%;background:linear-gradient(90deg,var(--gold3),var(--gold2));border-radius:3px;animation:loadAnim 1.5s ease-in-out infinite;}
-@keyframes loadAnim{0%{width:0;margin-left:0}50%{width:100%;margin-left:0}100%{width:0;margin-left:100%}}
-</style>
-</head>
-<body>
-
-<div class="loading" id="loading">
-  <div style="font-size:44px">🎰</div>
-  <div class="loading-title">DOPAMINE CASINO</div>
-  <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
-</div>
-
-<div class="hero">
-  <div class="hero-label">WELCOME TO</div>
-  <div class="hero-title">DOPAMINE<br>CASINO</div>
-  <div class="hero-sub">✦ PLAY SMART · WIN BIG ✦</div>
-</div>
-
-<div class="user-bar">
-  <div class="user-avatar">🎰</div>
-  <div class="user-info">
-    <div class="user-name" id="user-name-label">로딩 중...</div>
-    <div class="user-level" id="user-level-label">🥉 브론즈</div>
-  </div>
-  <div style="text-align:right">
-    <div class="point-val" id="my-point">—</div>
-    <div class="point-unit">POINTS</div>
-  </div>
-</div>
-
-<div class="daily-btns">
-  <div class="daily-btn" id="attend-btn" onclick="doAttend()">
-    <div class="daily-btn-icon">📅</div>
-    <div class="daily-btn-info">
-      <div class="daily-btn-title">출석 체크</div>
-      <div class="daily-btn-sub">매일 1회</div>
-    </div>
-    <div class="daily-btn-badge" id="attend-badge">+100P</div>
-  </div>
-  <div class="daily-btn" id="refill-btn" onclick="doRefill()">
-    <div class="daily-btn-icon">💧</div>
-    <div class="daily-btn-info">
-      <div class="daily-btn-title">포인트 리필</div>
-      <div class="daily-btn-sub">일 5회 가능</div>
-    </div>
-    <div class="daily-btn-badge" id="refill-badge">+100P</div>
-  </div>
-</div>
-
-<div class="main">
-
-  <div class="missions-wrap" id="missions-wrap" style="display:none">
-    <div class="missions-title">✦ DAILY MISSIONS</div>
-    <div id="mission-list"></div>
-  </div>
-
-  <div class="section-label">GAMES</div>
-  <div class="game-grid">
-
-    <div class="game-card card-race" onclick="openModal('race')">
-      <div class="game-badge badge-live">LIVE</div>
-      <div class="game-icon">🐇</div>
-      <div class="game-name" style="color:#7ab8ff">GRAND<br>RACE</div>
-      <div class="game-short">토끼 vs 거북이<br>자동 3분 라운드</div>
-    </div>
-
-    <div class="game-card card-horse" onclick="openModal('horse')">
-      <div class="game-badge badge-live">LIVE</div>
-      <div class="game-icon">🐴</div>
-      <div class="game-name" style="color:#88cc55">HORSE<br>RACING</div>
-      <div class="game-short">5마리 경마<br>최대 7배 배당</div>
-    </div>
-
-    <div class="game-card card-baccarat" onclick="openModal('baccarat')">
-      <div class="game-badge badge-new">NEW</div>
-      <div class="game-icon">🃏</div>
-      <div class="game-name" style="color:#ffaa66">BACCARAT</div>
-      <div class="game-short">P vs B<br>타이 8배</div>
-    </div>
-
-    <div class="game-card card-bigwheel" onclick="openModal('bigwheel')">
-      <div class="game-icon">🎡</div>
-      <div class="game-name" style="color:#cc88ff">BIG<br>WHEEL</div>
-      <div class="game-short">행운의 휠<br>최대 20배</div>
-    </div>
-
-    <div class="game-card card-slots" onclick="openModal('slots')">
-      <div class="game-badge badge-hot">HOT</div>
-      <div class="game-icon">🎰</div>
-      <div class="game-name" style="color:#cc88ff">SLOT<br>MACHINE</div>
-      <div class="game-short">3릴 슬롯<br>잭팟 50배</div>
-    </div>
-
-    <div class="game-card card-roulette" onclick="openModal('roulette')">
-      <div class="game-icon">🎡</div>
-      <div class="game-name" style="color:#ff8888">ROULETTE</div>
-      <div class="game-short">유럽식 룰렛<br>숫자 35배</div>
-    </div>
-
-  </div>
-
-  <div class="stats-row">
-    <div class="stat-card">
-      <div class="stat-val" id="my-rank">—</div>
-      <div class="stat-label">MY RANK</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-val" id="total-players">—</div>
-      <div class="stat-label">PLAYERS</div>
-    </div>
-  </div>
-
-  <button onclick="openHistory()" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--sub);font-size:13px;cursor:pointer;margin-bottom:14px">
-    📋 내 베팅 내역 보기
-  </button>
-
-  <div class="withdraw-section">
-    <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold3);letter-spacing:2px;margin-bottom:10px">💸 WITHDRAW</div>
-    <input class="wd-inp" type="number" id="wd-amount" placeholder="출금 신청 포인트 (최소 1,000P)">
-    <input class="wd-inp" type="text" id="wd-note" placeholder="메모 (연락처 등)">
-    <button class="wd-btn" onclick="doWithdraw()">💸 출금 신청하기</button>
-    <div style="font-size:11px;color:var(--sub);margin-top:6px">신청 후 관리자가 확인하여 처리해드려요</div>
-  </div>
-
-</div>
-
-<div class="game-modal" id="game-modal" onclick="closeModal(event)">
-  <div class="game-modal-box" id="modal-box">
-    <div class="modal-handle"></div>
-    <div class="modal-hero">
-      <button class="modal-close" onclick="closeModalBtn()">✕</button>
-      <div class="modal-icon" id="modal-icon">🎰</div>
-      <div class="modal-game-name" id="modal-name">게임</div>
-      <div class="modal-desc" id="modal-desc"></div>
-    </div>
-    <div class="modal-divider"></div>
-    <div class="modal-info" id="modal-info"></div>
-    <div class="modal-tags" id="modal-tags"></div>
-    <button class="modal-enter-btn" id="modal-enter-btn" onclick="enterGame()">
-      🎮 게임 입장하기
-    </button>
-  </div>
-</div>
-
-<div class="popup-overlay" id="attend-popup">
-  <div class="popup-box">
-    <div class="popup-emoji" id="attend-emoji">📅</div>
-    <div class="popup-title" id="attend-title">출석 완료!</div>
-    <div class="popup-amount" id="attend-amount">+100 P</div>
-    <div class="popup-sub" id="attend-sub">오늘도 출석했어요!</div>
-    <button class="popup-close" onclick="closePopup('attend-popup')">확인</button>
-  </div>
-</div>
-
-<div class="popup-overlay" id="refill-popup">
-  <div class="popup-box">
-    <div class="popup-emoji" id="refill-emoji">💧</div>
-    <div class="popup-title" id="refill-title">리필 완료!</div>
-    <div class="popup-amount" id="refill-amount">+100 P</div>
-    <div class="popup-sub" id="refill-sub">포인트가 충전됐어요!</div>
-    <button class="popup-close" onclick="closePopup('refill-popup')">확인</button>
-  </div>
-</div>
-
-<div class="history-modal" id="history-modal">
-  <div class="history-header">
-    <div class="history-title">📋 내 베팅 내역</div>
-    <button class="history-close" onclick="closeHistory()">✕</button>
-  </div>
-  <div class="history-list" id="history-list"></div>
-</div>
-
-<button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="테마">🌙</button>
-<div class="toast" id="toast"></div>
-
-<script>
-// URL 파라미터 파싱 (search, hash, startapp 전부 지원)
-function getUrlParam(key) {
-  const sp = new URLSearchParams(location.search);
-  if (sp.get(key)) return sp.get(key);
-  const hp = new URLSearchParams(location.hash.replace(/^#/, ''));
-  if (hp.get(key)) return hp.get(key);
-  const startParam = sp.get('tgWebAppStartParam') || hp.get('tgWebAppStartParam') || sp.get('start') || hp.get('start') || '';
-  if (startParam) {
-    const parts = startParam.split('_');
-    if (key === 'userId'  && parts[0]) return parts[0];
-    if (key === 'groupId' && parts[1]) return parts[1];
-  }
-  return null;
-}
-const userId  = getUrlParam('userId');
-const groupId = getUrlParam('groupId');
-console.log('[casino] userId='+userId+' groupId='+groupId);
-let myPt = 0, currentGame = null;
-
-function toast(msg, err=false) {
-  const t=document.getElementById('toast');t.textContent=msg;
-  t.className='toast show'+(err?' err':'');setTimeout(()=>t.className='toast',2500);
-}
-function fmt(n){return Number(n||0).toLocaleString();}
-function closePopup(id){document.getElementById(id).classList.remove('show');}
-
-// ── 테마 ──
-function toggleTheme(){
-  const isLight=document.body.classList.toggle('light');
-  document.getElementById('theme-btn').textContent=isLight?'☀️':'🌙';
-  localStorage.setItem('casino_theme',isLight?'light':'dark');
-}
-function initTheme(){
-  if(localStorage.getItem('casino_theme')==='light'){
-    document.body.classList.add('light');
-    const b=document.getElementById('theme-btn');if(b)b.textContent='☀️';
-  }
-}
-
-// ── 게임 데이터 ──
-const GAMES = {
-  race: {
-    icon:'🐇', name:'GRAND RACE', color:'#7ab8ff',
-    desc:'토끼와 거북이 중 하나에 베팅하세요.\n베팅 풀 기반 동적 배당률 — 3분마다 자동으로 라운드가 진행돼요.',
-    info:[
-      {label:'게임 방식', val:'다인 베팅', cls:''},
-      {label:'라운드', val:'3분 자동', cls:'green'},
-      {label:'최소 베팅', val:'10 P', cls:''},
-      {label:'최대 베팅', val:'10,000 P', cls:''},
-      {label:'배당률', val:'동적 배당', cls:'gold'},
-    ],
-    tags:[{t:'LIVE', c:'#ee4444'},{t:'동적배당', c:'#4a9eff'},{t:'자동3분', c:'#44cc88'}],
-  },
-  horse: {
-    icon:'🐴', name:'HORSE RACING', color:'#88cc55',
-    desc:'5마리 말 중 우승마를 예측하세요.\n각 말마다 배당률이 달라요 — 고배당 말에 도전해보세요!',
-    info:[
-      {label:'게임 방식', val:'다인 베팅', cls:''},
-      {label:'라운드', val:'3분 자동', cls:'green'},
-      {label:'최소 베팅', val:'10 P', cls:''},
-      {label:'최대 배당', val:'최대 7배', cls:'gold'},
-      {label:'말 수', val:'5마리', cls:''},
-    ],
-    tags:[{t:'LIVE', c:'#ee4444'},{t:'고배당', c:'#88cc55'},{t:'자동3분', c:'#44cc88'}],
-  },
-  baccarat: {
-    icon:'🃏', name:'BACCARAT', color:'#ffaa66',
-    desc:'플레이어, 뱅커, 타이 중 하나에 베팅하세요.\n클래식 카지노 카드 게임을 즐겨보세요.',
-    info:[
-      {label:'게임 방식', val:'다인 베팅', cls:''},
-      {label:'Player 배당', val:'x 1.95', cls:'gold'},
-      {label:'Banker 배당', val:'x 1.95', cls:'gold'},
-      {label:'Tie 배당', val:'x 8.0', cls:'gold'},
-      {label:'최소 베팅', val:'10 P', cls:''},
-    ],
-    tags:[{t:'카드게임', c:'#ff8844'},{t:'타이x8', c:'#ffaa33'}],
-  },
-  bigwheel: {
-    icon:'🎡', name:'BIG WHEEL', color:'#cc88ff',
-    desc:'행운의 룰렛 휠을 돌려보세요!\n혼자서 즉시 플레이 — 최대 20배 배당에 도전!',
-    info:[
-      {label:'게임 방식', val:'1인 즉시', cls:'green'},
-      {label:'최대 배당', val:'x 20', cls:'gold'},
-      {label:'최소 베팅', val:'10 P', cls:''},
-      {label:'최대 베팅', val:'10,000 P', cls:''},
-    ],
-    tags:[{t:'즉시플레이', c:'#cc88ff'},{t:'최대x20', c:'#aa66ee'}],
-  },
-  slots: {
-    icon:'🎰', name:'SLOT MACHINE', color:'#cc88ff',
-    desc:'3개의 릴을 돌려 같은 심볼을 맞추세요!\n💎 잭팟이 나오면 무려 50배 배당!',
-    info:[
-      {label:'게임 방식', val:'1인 즉시', cls:'green'},
-      {label:'잭팟 배당', val:'x 50 💎', cls:'gold'},
-      {label:'3개 일치', val:'x 3~10', cls:''},
-      {label:'2개 일치', val:'x 1.5', cls:''},
-      {label:'최소 베팅', val:'20 P', cls:''},
-    ],
-    tags:[{t:'즉시플레이', c:'#cc88ff'},{t:'JACKPOT x50', c:'#f0c96a'}],
-  },
-  roulette: {
-    icon:'🎡', name:'ROULETTE', color:'#ff8888',
-    desc:'유럽식 룰렛! 숫자, 색상, 홀짝 중 선택하세요.\n숫자를 정확히 맞추면 35배 배당!',
-    info:[
-      {label:'게임 방식', val:'1인 즉시', cls:'green'},
-      {label:'숫자 적중', val:'x 35', cls:'gold'},
-      {label:'RED/BLACK', val:'x 2', cls:''},
-      {label:'GREEN (0)', val:'x 14', cls:'gold'},
-      {label:'홀수/짝수', val:'x 2', cls:''},
-    ],
-    tags:[{t:'즉시플레이', c:'#ff6666'},{t:'숫자x35', c:'#ee4444'}],
-  },
-};
-
-// ── 게임 모달 ──
-function openModal(gameId) {
-  const g = GAMES[gameId];
-  if (!g) return;
-  currentGame = gameId;
-
-  document.getElementById('modal-icon').textContent = g.icon;
-  document.getElementById('modal-name').textContent = g.name;
-  document.getElementById('modal-name').style.color  = g.color;
-  document.getElementById('modal-desc').textContent  = g.desc;
-
-  document.getElementById('modal-info').innerHTML = g.info.map(row=>`
-    <div class="modal-info-row">
-      <span class="modal-info-label">${row.label}</span>
-      <span class="modal-info-val ${row.cls}">${row.val}</span>
-    </div>`).join('');
-
-  document.getElementById('modal-tags').innerHTML = g.tags.map(t=>`
-    <span class="modal-tag" style="border-color:${t.c}44;color:${t.c}">${t.t}</span>`).join('');
-
-  document.getElementById('modal-enter-btn').style.background =
-    `linear-gradient(135deg,${g.color},${g.color}99)`;
-
-  document.getElementById('game-modal').classList.add('show');
-}
-
-function closeModal(e) {
-  if (e.target === document.getElementById('game-modal')) closeModalBtn();
-}
-function closeModalBtn() {
-  document.getElementById('game-modal').classList.remove('show');
-  currentGame = null;
-}
-
-// ──★ 수정한 게임 입장 핵심 함수 (2중 안전 방어 로직) ──
-function enterGame() {
-  const p = new URLSearchParams(location.search);
-  const uid = p.get('userId') || p.get('start')?.split('_')[0] || userId;
-  const gid = p.get('groupId') || p.get('start')?.split('_')[1] || groupId;
-
-  // 1차적으로 현재 타겟팅된 변수 확인 후, 유실되었다면 모달창 제목에서 기습 판별
-  let gameKey = currentGame;
-  if (!gameKey) {
-    const modalNameText = document.getElementById('modal-name')?.textContent || '';
-    if (modalNameText.includes('RACE')) gameKey = 'race';
-    else if (modalNameText.includes('HORSE')) gameKey = 'horse';
-    else if (modalNameText.includes('BACCARAT')) gameKey = 'baccarat';
-    else if (modalNameText.includes('WHEEL')) gameKey = 'bigwheel';
-    else if (modalNameText.includes('SLOT')) gameKey = 'slots';
-    else if (modalNameText.includes('ROULETTE')) gameKey = 'roulette';
+  function getPoint(gid, uid) {
+    const v = localStorage.getItem(getKey(gid, uid));
+    return v !== null ? parseInt(v) : 5000; // 신규 유저 초기 포인트
   }
 
-  let targetUrl = '';
-  if (gameKey === 'race') targetUrl = '/casino/race';
-  else if (gameKey === 'horse') targetUrl = '/casino/horse';
-  else if (gameKey === 'baccarat') targetUrl = '/casino/baccarat';
-  else if (gameKey === 'bigwheel') targetUrl = '/casino/bigwheel';
-  else if (gameKey === 'slots') targetUrl = '/casino/slots';
-  else if (gameKey === 'roulette') targetUrl = '/casino/roulette';
-  else {
-    toast('⚠️ 게임 식별 실패. 다시 시도해주세요.', true);
-    return;
+  function setPoint(gid, uid, pt) {
+    localStorage.setItem(getKey(gid, uid), Math.max(0, Math.floor(pt)));
   }
 
-  location.href = `${targetUrl}?userId=${uid}&groupId=${gid}`;
-}
+  function addPoint(gid, uid, delta) {
+    const cur = getPoint(gid, uid);
+    const next = Math.max(0, cur + Math.floor(delta));
+    setPoint(gid, uid, next);
+    return next;
+  }
 
-// ── 출석 ──
-async function doAttend() {
-  const btn=document.getElementById('attend-btn');
-  if(btn.classList.contains('done')) return;
-  try {
-    const res=await fetch('/casino/attend',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({userId:parseInt(userId),groupId:parseInt(groupId)})});
-    const data=await res.json();
-    if(data.ok){
-      document.getElementById('attend-emoji').textContent='📅';
-      document.getElementById('attend-title').textContent='출석 완료!';
-      document.getElementById('attend-amount').textContent=`+${fmt(data.reward)} P`;
-      document.getElementById('attend-amount').style.color='#44ee88';
-      document.getElementById('attend-sub').textContent='오늘도 출석했어요! 내일도 잊지 마세요 😊';
-      document.getElementById('attend-popup').classList.add('show');
-      btn.classList.add('done');
-      document.getElementById('attend-badge').textContent='완료';
-      myPt=data.newPoint||myPt+data.reward;
-      document.getElementById('my-point').textContent=fmt(myPt);
+  // ── AI 승률 조작 (관리자 설정 가능) ──
+  function getWinRate(gid) {
+    const key = `casino_winrate_${gid}`;
+    const v = localStorage.getItem(key);
+    return v !== null ? parseFloat(v) : 0.5; // 기본 50%
+  }
+
+  // ── 경주/경마용 가중 랜덤 ──
+  function weightedRandom(weights) {
+    // weights: [{id, weight}, ...]
+    const total = weights.reduce((a, b) => a + b.weight, 0);
+    let r = Math.random() * total;
+    for (const w of weights) {
+      r -= w.weight;
+      if (r <= 0) return w.id;
+    }
+    return weights[weights.length - 1].id;
+  }
+
+  // ── 바카라 카드 덱 ──
+  const SUITS = ['♠', '♥', '♦', '♣'];
+  const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+  function buildDeck() {
+    const deck = [];
+    for (const s of SUITS) for (const r of RANKS)
+      deck.push({ r, s, red: s==='♥'||s==='♦', val: Math.min(RANKS.indexOf(r), 9) });
+    return shuffle(deck);
+  }
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length-1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i+1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function baccaratHand(cards) {
+    return cards.reduce((s, c) => (s + c.val) % 10, 0);
+  }
+
+  function dealBaccarat() {
+    const deck = buildDeck();
+    let pi = 0;
+    const pCards = [deck[pi++], deck[pi++]];
+    const bCards = [deck[pi++], deck[pi++]];
+    let pScore = baccaratHand(pCards);
+    let bScore = baccaratHand(bCards);
+
+    // Natural 체크
+    if (pScore >= 8 || bScore >= 8) {
+      return { pCards, bCards, pScore, bScore };
+    }
+
+    // Player 드로우
+    if (pScore <= 5) pCards.push(deck[pi++]);
+    pScore = baccaratHand(pCards);
+
+    // Banker 드로우 룰
+    if (pCards.length === 2) {
+      if (bScore <= 5) bCards.push(deck[pi++]);
     } else {
-      document.getElementById('attend-emoji').textContent='⏰';
-      document.getElementById('attend-title').textContent='이미 출석했어요';
-      document.getElementById('attend-amount').textContent='';
-      document.getElementById('attend-sub').textContent=data.error||'내일 다시 출석해주세요!';
-      document.getElementById('attend-popup').classList.add('show');
-      btn.classList.add('done');
-      document.getElementById('attend-badge').textContent='완료';
+      const pt = pCards[2].val;
+      if (bScore <= 2 ||
+        (bScore===3 && pt!==8) ||
+        (bScore===4 && pt>=2&&pt<=7) ||
+        (bScore===5 && pt>=4&&pt<=7) ||
+        (bScore===6 && pt>=6&&pt<=7)) {
+        bCards.push(deck[pi++]);
+      }
     }
-  } catch(e){toast('서버 오류',true);}
-}
+    bScore = baccaratHand(bCards);
 
-// ── 리필 ──
-async function doRefill() {
-  const btn=document.getElementById('refill-btn');
-  if(btn.classList.contains('done')) return;
-  try {
-    const res=await fetch('/casino/refill',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({userId:parseInt(userId),groupId:parseInt(groupId)})});
-    const data=await res.json();
-    if(data.ok){
-      document.getElementById('refill-emoji').textContent='💧';
-      document.getElementById('refill-title').textContent='리필 완료!';
-      document.getElementById('refill-amount').textContent=`+${fmt(data.reward)} P`;
-      document.getElementById('refill-amount').style.color='#44ee88';
-      document.getElementById('refill-sub').textContent=`오늘 남은 리필: ${data.remaining}회`;
-      document.getElementById('refill-popup').classList.add('show');
-      myPt=data.newPoint||myPt+data.reward;
-      document.getElementById('my-point').textContent=fmt(myPt);
-      document.getElementById('refill-sub').textContent = `일 5회 가능 (${data.remaining}회 남음)`;
-      if(data.remaining<=0){btn.classList.add('done');document.getElementById('refill-badge').textContent='완료';}
-    } else {
-      document.getElementById('refill-emoji').textContent='💧';
-      document.getElementById('refill-title').textContent='리필 불가';
-      document.getElementById('refill-amount').textContent='';
-      document.getElementById('refill-sub').textContent=data.error||'오늘 리필을 모두 사용했어요!';
-      document.getElementById('refill-popup').classList.add('show');
-      btn.classList.add('done');
-      document.getElementById('refill-badge').textContent='완료';
-    }
-  } catch(e){toast('서버 오류',true);}
-}
-
-// ── 출금 ──
-async function doWithdraw() {
-  const amount=parseInt(document.getElementById('wd-amount').value)||0;
-  const note=document.getElementById('wd-note').value.trim();
-  if(amount<1000){toast('최소 1,000P 이상 신청 가능해요',true);return;}
-  if(amount>myPt){toast('보유 포인트보다 많이 신청할 수 없어요',true);return;}
-  try {
-    const res=await fetch('/casino/withdraw',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({userId:parseInt(userId),groupId:parseInt(groupId),amount,note})});
-    const data=await res.json();
-    if(data.ok) toast(`✅ ${fmt(amount)}P 출금 신청 완료!`);
-    else toast(data.error||'오류',true);
-  } catch(e){toast('서버 오류',true);}
-}
-
-// ── 베팅 내역 ──
-async function openHistory() {
-  document.getElementById('history-modal').classList.add('show');
-  const list=document.getElementById('history-list');
-  list.innerHTML='<div style="text-align:center;color:var(--sub);padding:30px">불러오는 중...</div>';
-  try {
-    const res=await fetch(`/casino/my_bets?groupId=${groupId}&userId=${userId}&limit=30`);
-    const data=await res.json();
-    const gameIcons={race:'🐢',baccarat:'🃏',horse:'🐴',bigwheel:'🎡',slots:'🎰',roulette:'🎡'};
-    const gameNames={race:'경주',baccarat:'바카라',horse:'경마',bigwheel:'빅휠',slots:'슬롯',roulette:'룰렛'};
-    if(!data.length){list.innerHTML='<div style="text-align:center;color:var(--sub);padding:30px">베팅 내역이 없어요</div>';return;}
-    list.innerHTML=data.map(b=>{
-      const isWin=b.result==='win', isPend=b.result==='pending';
-      const payout=isWin?b.payout:(isPend?0:-b.amount);
-      const date=b.createdAt?b.createdAt.slice(0,16).replace('T',' '):'';
-      return `<div class="history-item ${isWin?'win':isPend?'':'lose'}">
-        <div class="history-game-icon">${gameIcons[b.game]||'🎮'}</div>
-        <div class="history-info">
-          <div class="history-game">${gameNames[b.game]||b.game}</div>
-          <div class="history-choice">${b.choice} · ${date}</div>
-        </div>
-        <div class="history-result">
-          <div class="history-payout ${isWin?'win':isPend?'':'lose'}">${isPend?'대기':(isWin?'+':'')+fmt(payout)+'P'}</div>
-          <div class="history-bet-amt">베팅 ${fmt(b.amount)}P</div>
-        </div>
-      </div>`;
-    }).join('');
-  } catch(e){list.innerHTML='<div style="text-align:center;color:var(--sub);padding:30px">로드 실패</div>';}
-}
-function closeHistory(){document.getElementById('history-modal').classList.remove('show');}
-
-// ── 데일리 미션 ──
-async function loadMissions() {
-  try {
-    const res=await fetch(`/casino/missions?groupId=${groupId}&userId=${userId}`);
-    const data=await res.json();
-    if(!data.length) return;
-    document.getElementById('missions-wrap').style.display='block';
-    document.getElementById('mission-list').innerHTML=data.map(m=>{
-      const pct=Math.min(100,(m.progress/m.target)*100);
-      return `<div class="mission-item">
-        <div class="mission-icon">${m.completed?'✅':'🎯'}</div>
-        <div class="mission-info">
-          <div class="mission-desc">${m.desc}</div>
-          <div class="mission-prog">${m.progress}/${m.target}</div>
-          ${!m.completed?`<div class="mission-bar-bg"><div class="mission-bar-fill" style="width:${pct}%"></div></div>`:''}
-        </div>
-        <div class="${m.completed?'':'mission-reward'}">${m.completed?'✅':'+'+m.reward.toLocaleString()+'P'}</div>
-      </div>`;
-    }).join('');
-  } catch(e){}
-}
-
-// ── 유저 정보 ──
-async function loadInfo() {
-  if (!userId || !groupId || userId === 'undefined' || groupId === 'undefined') {
-    document.getElementById('user-name-label').textContent = '파라미터 오류';
-    document.getElementById('my-point').textContent = '—';
-    return;
+    return { pCards, bCards, pScore, bScore };
   }
-  try {
-    const res=await fetch(`/casino/users?groupId=${groupId}`);
-    const users=await res.json();
-    const me=users.find(u=>String(u.userId)===String(userId));
-    if(me){
-      myPt=me.point;
-      document.getElementById('my-point').textContent=fmt(myPt);
-      document.getElementById('user-name-label').textContent=me.name;
-      const rank=users.filter(u=>u.point>me.point).length+1;
-      document.getElementById('my-rank').textContent='#'+rank;
-    }
-    document.getElementById('total-players').textContent=users.length;
-  } catch(e){ console.error('loadInfo users error', e); }
-  try {
-    const res=await fetch(`/casino/user_level?groupId=${groupId}&userId=${userId}`);
-    const data=await res.json();
-    if(data.level) document.getElementById('user-level-label').textContent=`${data.level.emoji} ${data.level.name} · 누적 ${fmt(data.totalBet)}P`;
-  } catch(e){ console.error('loadInfo level error', e); }
-}
 
-async function init() {
-  initTheme();
-  console.log('[casino init] userId='+userId+' groupId='+groupId);
-  if (!userId || !groupId || userId === 'undefined' || groupId === 'undefined') {
-    setTimeout(()=>{
-      const el=document.getElementById('loading');
-      if(el){ el.style.opacity='0'; el.style.transition='opacity 0.4s'; setTimeout(()=>el.style.display='none',400); }
-    },300);
-    document.getElementById('user-name-label').textContent='로딩 오류';
-    document.getElementById('my-point').textContent='0';
-    toast('⚠️ 텔레그램 봇에서 /카지노 를 다시 입력해주세요', true);
-    return;
+  // ── 룰렛 번호→색상 ──
+  const ROUL_RED = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+  function rouletteColor(n) {
+    if (n === 0) return 'green';
+    return ROUL_RED.has(n) ? 'red' : 'black';
   }
-  await loadInfo();
-  await loadMissions();
-  setTimeout(()=>{
-    const el=document.getElementById('loading');
-    el.style.opacity='0';el.style.transition='opacity 0.4s';
-    setTimeout(()=>el.style.display='none',400);
-  },600);
-}
-init();
-</script>
-</body>
-</html>
+
+  // ── 슬롯 심볼 ──
+  const SLOT_SYMS = ['🍋','🍒','🍇','⭐','7️⃣','💎'];
+  const SLOT_W    = [30,25,20,15,7,3];
+  function slotSpin() {
+    const pick = () => {
+      const total = SLOT_W.reduce((a,b)=>a+b,0);
+      let r = Math.random()*total;
+      for (let i=0;i<SLOT_SYMS.length;i++) { r-=SLOT_W[i]; if(r<=0) return SLOT_SYMS[i]; }
+      return SLOT_SYMS[0];
+    };
+    return [pick(), pick(), pick()];
+  }
+
+  // ── URL 파라미터 ──
+  function getParam(key) {
+    const sp = new URLSearchParams(location.search);
+    if (sp.get(key)) return sp.get(key);
+    const hp = new URLSearchParams(location.hash.replace(/^#/,''));
+    if (hp.get(key)) return hp.get(key);
+    const start = sp.get('tgWebAppStartParam')||hp.get('tgWebAppStartParam')||sp.get('start')||hp.get('start')||'';
+    if (start) {
+      const parts = start.split('_');
+      if (key==='userId'  && parts[0]) return parts[0];
+      if (key==='groupId' && parts[1]) return parts[1];
+    }
+    return null;
+  }
+
+  function fmt(n) { return Number(n||0).toLocaleString(); }
+
+  function goHome(uid, gid) {
+    location.href = `/casino?userId=${uid}&groupId=${gid}`;
+  }
+
+  return {
+    getPoint, setPoint, addPoint, getWinRate,
+    weightedRandom, dealBaccarat, baccaratHand,
+    rouletteColor, slotSpin,
+    getParam, fmt, goHome,
+    SLOT_SYMS, SLOT_W
+  };
+})();
