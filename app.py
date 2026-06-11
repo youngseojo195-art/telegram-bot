@@ -2364,6 +2364,119 @@ def baccarat_result():
     except Exception as e: return {'ok':False,'error':str(e)},500
     finally: c.close();db.close()
 
+@app.route('/casino/baccarat/instant', methods=['POST'])
+def baccarat_instant():
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json()
+        group_id=int(data.get('groupId',0)); user_id=int(data.get('userId',0))
+        bet_on=data.get('betOn',''); amount=int(data.get('amount',0))
+        result=data.get('result','')
+        if bet_on not in ['player','banker','tie']:
+            return {'ok':False,'error':'올바른 베팅을 선택해주세요.'},400
+        if is_casino_blacklisted(group_id,user_id):
+            return {'ok':False,'error':'게임 이용이 제한된 계정이에요.'},403
+        settings=get_casino_settings(group_id,'baccarat')
+        if amount<settings.get('min_bet',10): return {'ok':False,'error':f"최소 {settings['min_bet']:,}P 이상"},400
+        if amount>settings.get('max_bet',10000): return {'ok':False,'error':f"최대 {settings['max_bet']:,}P까지"},400
+        c.execute("SELECT point FROM points WHERE user_id=%s AND group_id=%s",(user_id,group_id))
+        pt=c.fetchone()
+        if not pt:
+            c.execute("INSERT INTO points(user_id,group_id,first_name,username,point) VALUES(%s,%s,%s,%s,5000)",(user_id,group_id,'',''))
+            db.commit(); current_pt=5000
+        else: current_pt=pt[0]
+        if current_pt<amount: return {'ok':False,'error':'포인트가 부족해요.'},400
+        c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s",(amount,user_id,group_id))
+        odds_map={'player':1.95,'banker':1.95,'tie':8.0}
+        real_payout=int(amount*odds_map.get(result,2)) if bet_on==result else 0
+        if real_payout>0:
+            c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s",(real_payout,user_id,group_id))
+        won=(bet_on==result)
+        c.execute("INSERT INTO casino_bets(game_id,group_id,user_id,bet_on,amount,payout,won) VALUES('baccarat',%s,%s,%s,%s,%s,%s)",
+                  (group_id,user_id,bet_on,amount,real_payout,won))
+        db.commit()
+        return {'ok':True,'payout':real_payout,'result':result,'won':won},200
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
+@app.route('/casino/race/instant', methods=['POST'])
+def race_instant():
+    """즉시 1인 경주 - 서버가 결과 결정 후 포인트 처리"""
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json()
+        group_id=int(data.get('groupId',0)); user_id=int(data.get('userId',0))
+        bet_on=data.get('betOn',''); amount=int(data.get('amount',0))
+        if bet_on not in ['rabbit','turtle']: return {'ok':False,'error':'토끼 또는 거북이를 선택해주세요.'},400
+        if is_casino_blacklisted(group_id,user_id): return {'ok':False,'error':'게임 이용이 제한된 계정이에요.'},403
+        if amount<10: return {'ok':False,'error':'최소 10P 이상 베팅해주세요.'},400
+        c.execute("SELECT point FROM points WHERE user_id=%s AND group_id=%s",(user_id,group_id))
+        pt=c.fetchone()
+        if not pt:
+            c.execute("INSERT INTO points(user_id,group_id,first_name,username,point) VALUES(%s,%s,%s,%s,5000)",(user_id,group_id,'',''))
+            db.commit(); current_pt=5000
+        else: current_pt=pt[0]
+        if current_pt<amount: return {'ok':False,'error':'포인트가 부족해요.'},400
+        # 서버에서 결과 결정 (50:50)
+        winner = random.choice(['rabbit','turtle'])
+        won = (bet_on == winner)
+        payout = int(amount * 1.9) if won else 0
+        # 포인트 처리
+        c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s",(amount,user_id,group_id))
+        if payout>0: c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s",(payout,user_id,group_id))
+        c.execute("INSERT INTO casino_bets(game_id,group_id,user_id,bet_on,amount,payout,won) VALUES('race',%s,%s,%s,%s,%s,%s)",
+                  (group_id,user_id,bet_on,amount,payout,won))
+        db.commit()
+        return {'ok':True,'winner':winner,'payout':payout,'won':won},200
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
+@app.route('/casino/horse/instant', methods=['POST'])
+def horse_instant():
+    """즉시 1인 경마 - 서버가 결과 결정 후 포인트 처리"""
+    db=get_db();c=db.cursor()
+    try:
+        data=request.get_json()
+        group_id=int(data.get('groupId',0)); user_id=int(data.get('userId',0))
+        bet_on=int(data.get('betOn',0)); amount=int(data.get('amount',0))
+        if is_casino_blacklisted(group_id,user_id): return {'ok':False,'error':'게임 이용이 제한된 계정이에요.'},403
+        if amount<10: return {'ok':False,'error':'최소 10P 이상 베팅해주세요.'},400
+        c.execute("SELECT point FROM points WHERE user_id=%s AND group_id=%s",(user_id,group_id))
+        pt=c.fetchone()
+        if not pt:
+            c.execute("INSERT INTO points(user_id,group_id,first_name,username,point) VALUES(%s,%s,%s,%s,5000)",(user_id,group_id,'',''))
+            db.commit(); current_pt=5000
+        else: current_pt=pt[0]
+        if current_pt<amount: return {'ok':False,'error':'포인트가 부족해요.'},400
+        # 서버에서 결과 결정 (가중 랜덤)
+        DEFAULT_HORSES=[
+            {'id':1,'weight':30,'odds':2.2},{'id':2,'weight':22,'odds':3.0},
+            {'id':3,'weight':16,'odds':4.0},{'id':4,'weight':10,'odds':7.0},{'id':5,'weight':22,'odds':3.0}
+        ]
+        total=sum(h['weight'] for h in DEFAULT_HORSES)
+        r=random.randint(1,total); acc=0; winner_h=DEFAULT_HORSES[-1]
+        for h in DEFAULT_HORSES:
+            acc+=h['weight']
+            if r<=acc: winner_h=h; break
+        winner_id=winner_h['id']
+        won=(bet_on==winner_id)
+        payout=int(amount*winner_h['odds']) if won else 0
+        # 포인트 처리
+        c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s",(amount,user_id,group_id))
+        if payout>0: c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s",(payout,user_id,group_id))
+        c.execute("INSERT INTO casino_bets(game_id,group_id,user_id,bet_on,amount,payout,won) VALUES('horse',%s,%s,%s,%s,%s,%s)",
+                  (group_id,user_id,str(bet_on),amount,payout,won))
+        db.commit()
+        return {'ok':True,'winnerId':winner_id,'payout':payout,'won':won},200
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return {'ok':False,'error':str(e)},500
+    finally: c.close();db.close()
+
 @app.route('/casino/horse')
 def serve_horse(): return send_from_directory(BASE_DIR,'horse.html')
 
