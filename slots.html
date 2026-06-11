@@ -138,21 +138,49 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 <button class="home-btn" onclick="goHome()">🏠 홈</button>
 
 <script>
-const C = window.CasinoCore;
-const userId  = C.getParam('userId');
-const groupId = C.getParam('groupId');
-let myPt = C.getPoint(groupId, userId);
+
+// ── INLINE CORE ──
+function getParam(key) {
+  const sp = new URLSearchParams(location.search);
+  if (sp.get(key)) return sp.get(key);
+  const hp = new URLSearchParams(location.hash.replace(/^#/,''));
+  if (hp.get(key)) return hp.get(key);
+  const start = sp.get('tgWebAppStartParam')||hp.get('tgWebAppStartParam')||sp.get('start')||hp.get('start')||'';
+  if (start) {
+    const parts = start.split('_');
+    if (key==='userId'  && parts[0]) return parts[0];
+    if (key==='groupId' && parts[1]) return parts[1];
+  }
+  return null;
+}
+function _ptKey(g,u){return 'casino_pt_'+g+'_'+u;}
+function getPoint(g,u){const v=localStorage.getItem(_ptKey(g,u));return v!==null?parseInt(v):5000;}
+function setPoint(g,u,pt){localStorage.setItem(_ptKey(g,u),Math.max(0,Math.floor(pt)));}
+function addPoint(g,u,delta){const n=Math.max(0,getPoint(g,u)+Math.floor(delta));setPoint(g,u,n);return n;}
+function fmt(n){return Number(n||0).toLocaleString();}
+function goHome(uid,gid){location.href='/casino?userId='+uid+'&groupId='+gid;}
+function weightedRandom(weights){
+  const total=weights.reduce((a,b)=>a+b.weight,0);
+  let r=Math.random()*total;
+  for(const w of weights){r-=w.weight;if(r<=0)return w.id;}
+  return weights[weights.length-1].id;
+}
+
+const userId  = getParam('userId');
+const groupId = getParam('groupId');
+let myPt = getPoint(groupId, userId);
 let spinning = false, history = [];
 
-const SYMS   = C.SLOT_SYMS;
+const SYMS   = ['🍋','🍒','🍇','⭐','7️⃣','💎'];
+const _SLOT_W = [30,25,20,15,7,3];
 const MULT3  = {'🍋':3,'🍒':4,'🍇':5,'⭐':7,'7️⃣':10,'💎':50};
 
-document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
+document.getElementById('my-point').textContent = fmt(myPt) + ' P';
 
 function weightedPick() {
-  const total = C.SLOT_W.reduce((a,b)=>a+b,0);
+  const total = _SLOT_W.reduce((a,b)=>a+b,0);
   let r = Math.random()*total;
-  for (let i=0;i<SYMS.length;i++) { r -= C.SLOT_W[i]; if(r<=0) return SYMS[i]; }
+  for (let i=0;i<SYMS.length;i++) { r -= _SLOT_W[i]; if(r<=0) return SYMS[i]; }
   return SYMS[0];
 }
 
@@ -209,8 +237,8 @@ async function doSpin() {
   if (amt > myPt) { toast('포인트 부족', true); return; }
 
   spinning = true; refreshBtn();
-  myPt = C.addPoint(groupId, userId, -amt);
-  document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
+  myPt = addPoint(groupId, userId, -amt);
+  document.getElementById('my-point').textContent = fmt(myPt) + ' P';
 
   const result = decideSlotResult();
   const pay = calcPayout(result, amt);
@@ -232,8 +260,8 @@ async function doSpin() {
 
   const payout = pay.payout;
   if (payout > 0) {
-    myPt = C.addPoint(groupId, userId, payout);
-    document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
+    myPt = addPoint(groupId, userId, payout);
+    document.getElementById('my-point').textContent = fmt(myPt) + ' P';
   }
 
   history.unshift({ syms: result.join(''), payout, type: pay.type });
@@ -247,11 +275,11 @@ async function doSpin() {
       pay.type === 'double' ? '✨ TWO MATCH!' : '💸 NO MATCH';
     document.getElementById('ov-sub').textContent = pay.label;
     if (payout > 0) {
-      document.getElementById('ov-payout').textContent = `+${C.fmt(payout)} P 획득!`;
+      document.getElementById('ov-payout').textContent = `+${fmt(payout)} P 획득!`;
       document.getElementById('ov-payout').style.color = '#44ee88';
       vibrate([100,50,200]);
     } else {
-      document.getElementById('ov-payout').textContent = `-${C.fmt(amt)} P`;
+      document.getElementById('ov-payout').textContent = `-${fmt(amt)} P`;
       document.getElementById('ov-payout').style.color = '#ee4444';
       vibrate([200]);
     }
@@ -281,7 +309,7 @@ function refreshBtn() {
   const amt = parseInt(document.getElementById('amt').value)||0;
   if (amt < 20)  { btn.className='spin-btn off'; btn.textContent='최소 20P 이상 입력해주세요'; return; }
   if (amt > myPt){ btn.className='spin-btn off'; btn.textContent='포인트가 부족해요'; return; }
-  btn.className='spin-btn'; btn.textContent=`🎰 SPIN! — ${C.fmt(amt)}P`;
+  btn.className='spin-btn'; btn.textContent=`🎰 SPIN! — ${fmt(amt)}P`;
 }
 
 function closeOverlay() {
@@ -292,7 +320,7 @@ function closeOverlay() {
 
 function toast(msg,err=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(err?' err':'');setTimeout(()=>t.className='toast',2500);}
 function vibrate(p){if(navigator.vibrate)navigator.vibrate(p);}
-function goHome(){C.goHome(userId,groupId);}
+function goHome(){goHome(userId,groupId);}
 </script>
 </body>
 </html>
