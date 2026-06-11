@@ -2902,14 +2902,17 @@ def webhook():
 @app.route('/')
 def index(): return 'Bot is running!', 200
 
+# Gunicorn/Render 환경에서도 반드시 실행
+try:
+    init_db()
+    print("✅ DB 초기화 성공!")
+except Exception as e:
+    print(f"❌ DB init error: {e}")
+
+try:
+    start_scheduler()
+except Exception as e:
+    print(f"❌ 스케줄러 기동 실패: {e}")
+
 if __name__ == '__main__':
-    try:
-        init_db()
-        print("DB 초기화 성공!")
-    except Exception as e:
-        print(f"DB init error: {e}")
-    try:
-        start_scheduler()
-    except Exception as e:
-        print(f"스케줄러 기동 실패: {e}")
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
