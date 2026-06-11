@@ -15,97 +15,44 @@
 }
 html,body{height:100%;width:100%;}
 body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;}
-
 .topbar{background:linear-gradient(180deg,#0e0e1e,#080810);border-bottom:1px solid var(--border);padding:12px 16px 10px;text-align:center;position:sticky;top:0;z-index:50;}
 .casino-label{font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:var(--gold3);margin-bottom:3px;}
 .top-title{font-family:'Cinzel',serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-
 .point-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;justify-content:space-between;}
 .point-val{font-size:16px;font-weight:700;color:var(--gold);}
-.point-label{font-size:11px;color:var(--sub);}
+.main{flex:1;overflow-y:auto;padding:14px 14px 100px;display:flex;flex-direction:column;gap:12px;}
 
-.status-row{padding:10px 14px;display:flex;align-items:center;justify-content:space-between;}
-.status-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;}
-.s-idle{background:#1a1a2a;color:var(--sub);border:1px solid var(--border);}
-.s-betting{background:#1a1500;color:var(--gold);border:1px solid var(--gold3);animation:blink 1.5s infinite;}
-.s-running{background:#0a1a10;color:#44ee88;border:1px solid #22aa55;animation:blink 1s infinite;}
-.s-closed{background:#1a0a0a;color:#ee4444;border:1px solid #aa2222;}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0.6}}
-
-.main{flex:1;overflow-y:auto;padding:0 14px 120px;display:flex;flex-direction:column;gap:12px;}
-
-.table-wrap{
-  background:radial-gradient(ellipse at center, #0a2a14 0%, #061508 100%);
-  border:2px solid #1a4a28;border-radius:16px;padding:16px;
-  position:relative;overflow:hidden;
-}
-.table-wrap::before{
-  content:'';position:absolute;inset:0;
-  border-radius:14px;
-  box-shadow:inset 0 0 40px rgba(0,0,0,0.5);
-  pointer-events:none;
-}
+.table-wrap{background:radial-gradient(ellipse at center,#0a2a14 0%,#061508 100%);border:2px solid #1a4a28;border-radius:16px;padding:16px;position:relative;}
 .table-sides{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;}
 .side-label{font-family:'Cinzel',serif;font-size:12px;letter-spacing:2px;text-align:center;margin-bottom:8px;}
 .side-label.p{color:var(--player);}
 .side-label.b{color:var(--banker);}
-
-.cards-row{display:flex;gap:6px;justify-content:center;min-height:72px;align-items:center;}
-.card{
-  width:46px;height:68px;border-radius:6px;
-  background:linear-gradient(135deg,#fff,#f0f0f0);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-size:18px;font-weight:900;box-shadow:0 4px 12px rgba(0,0,0,0.4);
-  position:relative;transition:all 0.3s;
-}
+.cards-row{display:flex;gap:6px;justify-content:center;min-height:74px;align-items:center;flex-wrap:wrap;}
+.card{width:46px;height:68px;border-radius:6px;background:linear-gradient(135deg,#fff,#f0f0f0);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:18px;font-weight:900;box-shadow:0 4px 12px rgba(0,0,0,0.4);}
 .card.red{color:#cc2222;}
 .card.black{color:#111;}
-.card.hidden{
-  background:linear-gradient(135deg,#1a2a4a,#0a1530);
-  color:transparent;
-  background-image:repeating-linear-gradient(45deg,rgba(255,255,255,0.05) 0px,rgba(255,255,255,0.05) 2px,transparent 2px,transparent 8px);
-}
-.card.deal-anim{animation:dealCard 0.4s ease-out;}
-@keyframes dealCard{0%{transform:translateY(-20px) scale(0.8);opacity:0}100%{transform:translateY(0) scale(1);opacity:1}}
-
-.score-box{
-  width:48px;height:48px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Cinzel',serif;font-size:20px;font-weight:900;
-  border:2px solid;
-}
+.card.hidden{background:linear-gradient(135deg,#1a2a4a,#0a1530);background-image:repeating-linear-gradient(45deg,rgba(255,255,255,0.05) 0px,rgba(255,255,255,0.05) 2px,transparent 2px,transparent 8px);}
+.card.deal-anim{animation:dealCard 0.35s ease-out;}
+@keyframes dealCard{0%{transform:translateY(-16px) scale(0.85);opacity:0}100%{transform:translateY(0) scale(1);opacity:1}}
+.score-box{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:20px;font-weight:900;border:2px solid;}
 .score-box.p{border-color:var(--player);color:var(--player);background:rgba(74,158,255,0.1);}
 .score-box.b{border-color:var(--banker);color:var(--banker);background:rgba(255,77,109,0.1);}
-
 .vs-center{display:flex;flex-direction:column;align-items:center;gap:6px;}
 .vs-text{font-family:'Cinzel',serif;font-size:14px;color:var(--gold3);}
-
-.result-banner{
-  text-align:center;padding:10px;border-radius:10px;
-  font-family:'Cinzel',serif;font-size:16px;font-weight:900;
-  display:none;margin-top:8px;
-}
+.result-banner{text-align:center;padding:10px;border-radius:10px;font-family:'Cinzel',serif;font-size:16px;font-weight:900;display:none;margin-top:8px;}
 .result-banner.show{display:block;}
 .result-banner.player{background:rgba(74,158,255,0.15);border:1px solid var(--player);color:var(--player);}
 .result-banner.banker{background:rgba(255,77,109,0.15);border:1px solid var(--banker);color:var(--banker);}
-.result-banner.tie   {background:rgba(68,204,136,0.15);border:1px solid var(--tie);color:var(--tie);}
+.result-banner.tie{background:rgba(68,204,136,0.15);border:1px solid var(--tie);color:var(--tie);}
 
 .bet-opts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
-.bopt{
-  border-radius:14px;border:2px solid var(--border);
-  background:var(--bg2);padding:12px 6px;
-  text-align:center;cursor:pointer;transition:all 0.18s;
-  display:flex;flex-direction:column;align-items:center;gap:4px;
-}
+.bopt{border-radius:14px;border:2px solid var(--border);background:var(--bg2);padding:12px 6px;text-align:center;cursor:pointer;transition:all 0.18s;display:flex;flex-direction:column;align-items:center;gap:4px;}
 .bopt:active{transform:scale(0.96);}
 .bopt.sel-p{border-color:var(--player);background:#051525;box-shadow:0 0 14px rgba(74,158,255,0.2);}
 .bopt.sel-b{border-color:var(--banker);background:#1a0510;box-shadow:0 0 14px rgba(255,77,109,0.2);}
 .bopt.sel-t{border-color:var(--tie);background:#051a10;box-shadow:0 0 14px rgba(68,204,136,0.2);}
 .bopt-icon{font-size:24px;}
 .bopt-name{font-size:12px;font-weight:800;}
-.bopt-name.p{color:var(--player);}
-.bopt-name.b{color:var(--banker);}
-.bopt-name.t{color:var(--tie);}
 .bopt-odds{font-size:11px;color:var(--gold);}
 
 .card-inner{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;}
@@ -116,24 +63,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .amt-row{display:flex;gap:8px;align-items:center;}
 .amt-inp{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;padding:11px 14px;outline:none;}
 .amt-inp:focus{border-color:var(--gold3);}
-.bet-btn{width:100%;padding:16px;border-radius:14px;border:none;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,var(--gold),var(--gold3));color:#0a0800;box-shadow:0 4px 16px rgba(212,168,67,0.2);margin-top:10px;}
-.bet-btn.off{background:var(--border);color:#333;cursor:default;box-shadow:none;}
+.bet-btn{width:100%;padding:16px;border-radius:14px;border:none;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,var(--gold),var(--gold3));color:#0a0800;margin-top:10px;}
+.bet-btn.off{background:var(--border);color:#333;cursor:default;}
 .bet-btn:not(.off):active{transform:scale(0.98);}
-
-.my-bet-card{background:#0a1520;border:1px solid rgba(74,158,255,0.2);border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;}
-
-.idle-msg{text-align:center;padding:28px 20px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;}
-.idle-icon{font-size:44px;margin-bottom:10px;}
-.idle-title{font-family:'Cinzel',serif;font-size:16px;color:var(--gold);margin-bottom:6px;}
-.idle-sub{font-size:12px;color:var(--sub);line-height:1.7;}
 
 .history-dots{display:flex;flex-wrap:wrap;gap:5px;}
 .hdot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;}
-.hdot.p{background:rgba(74,158,255,0.2);border:1px solid var(--player);color:var(--player);}
-.hdot.b{background:rgba(255,77,109,0.2);border:1px solid var(--banker);color:var(--banker);}
-.hdot.t{background:rgba(68,204,136,0.2);border:1px solid var(--tie);color:var(--tie);}
 
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;}
 .overlay.show{display:flex;}
 .ov-emoji{font-size:64px;animation:pop 0.4s ease-out;}
 @keyframes pop{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
@@ -142,11 +79,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .ov-payout{font-size:28px;font-weight:900;}
 .ov-close{padding:13px 30px;border-radius:12px;border:1px solid var(--gold3);background:transparent;color:var(--gold);font-size:14px;font-weight:600;cursor:pointer;}
 
-.bet-actions{display:flex;gap:8px;margin-top:8px;}
-.cancel-btn{flex:1;padding:11px;border-radius:12px;border:1px solid #aa222244;background:transparent;color:#ee4444;font-size:13px;font-weight:700;cursor:pointer;}
-.cancel-btn:active{background:#1a0505;}
-
-.home-btn{position:fixed;bottom:20px;left:16px;z-index:100;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--sub);font-size:12px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
+.home-btn{position:fixed;bottom:20px;left:16px;z-index:100;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--sub);font-size:12px;cursor:pointer;}
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--gold);color:#0a0800;font-size:13px;font-weight:700;padding:10px 20px;border-radius:20px;z-index:500;opacity:0;transition:opacity 0.2s;white-space:nowrap;pointer-events:none;}
 .toast.show{opacity:1;}
 .toast.err{background:#cc3333;color:#fff;}
@@ -158,12 +91,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   <div class="top-title">🃏 BACCARAT</div>
 </div>
 <div class="point-bar">
-  <span class="point-label">💰 내 포인트</span>
+  <span style="font-size:11px;color:var(--sub)">💰 내 포인트</span>
   <span class="point-val" id="my-point">— P</span>
-</div>
-<div class="status-row">
-  <div class="status-badge s-idle" id="status-badge">⏳ 대기 중</div>
-  <div style="font-size:11px;color:var(--sub)" id="round-label"></div>
 </div>
 
 <div class="main">
@@ -172,8 +101,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div>
         <div class="side-label p">PLAYER</div>
         <div class="cards-row" id="cards-player">
-          <div class="card hidden"></div>
-          <div class="card hidden"></div>
+          <div class="card hidden"></div><div class="card hidden"></div>
         </div>
       </div>
       <div class="vs-center">
@@ -184,12 +112,44 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div>
         <div class="side-label b">BANKER</div>
         <div class="cards-row" id="cards-banker">
-          <div class="card hidden"></div>
-          <div class="card hidden"></div>
+          <div class="card hidden"></div><div class="card hidden"></div>
         </div>
       </div>
     </div>
     <div class="result-banner" id="result-banner"></div>
+  </div>
+
+  <div class="card-inner">
+    <div class="card-title">— PLACE YOUR BET —</div>
+    <div class="bet-opts">
+      <div class="bopt" id="opt-player" onclick="pick('player')">
+        <div class="bopt-icon">🔵</div>
+        <div class="bopt-name" style="color:var(--player)">PLAYER</div>
+        <div class="bopt-odds">x 1.95</div>
+      </div>
+      <div class="bopt" id="opt-banker" onclick="pick('banker')">
+        <div class="bopt-icon">🔴</div>
+        <div class="bopt-name" style="color:var(--banker)">BANKER</div>
+        <div class="bopt-odds">x 1.95</div>
+      </div>
+      <div class="bopt" id="opt-tie" onclick="pick('tie')">
+        <div class="bopt-icon">🟢</div>
+        <div class="bopt-name" style="color:var(--tie)">TIE</div>
+        <div class="bopt-odds">x 8.00</div>
+      </div>
+    </div>
+    <div style="height:10px"></div>
+    <div class="presets">
+      <button class="preset" onclick="setAmt(100)">100</button>
+      <button class="preset" onclick="setAmt(500)">500</button>
+      <button class="preset" onclick="setAmt(1000)">1,000</button>
+      <button class="preset" onclick="setMax()">MAX</button>
+    </div>
+    <div class="amt-row">
+      <input class="amt-inp" type="number" id="amt" placeholder="베팅 금액" min="10" oninput="refreshBtn()"/>
+      <span style="font-size:13px;color:var(--sub)">P</span>
+    </div>
+    <button class="bet-btn off" id="bet-btn" onclick="doDeal()">베팅할 항목을 선택해주세요</button>
   </div>
 
   <div class="card-inner">
@@ -198,300 +158,162 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div style="font-size:11px;color:var(--sub)">기록 없음</div>
     </div>
   </div>
-
-  <div id="my-bet-section" style="display:none">
-    <div class="my-bet-card" id="my-bet-card">
-      <div>
-        <div style="font-size:11px;color:var(--sub)">내 베팅</div>
-        <div style="font-size:14px;font-weight:700" id="my-bet-detail">—</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:11px;color:var(--sub)">예상 당첨</div>
-        <div style="font-size:14px;font-weight:700;color:var(--gold)" id="my-bet-exp">—</div>
-      </div>
-    </div>
-    <div class="bet-actions">
-      <button class="cancel-btn" id="cancel-btn" onclick="cancelBet()">❌ 베팅 취소</button>
-    </div>
-  </div>
-
-  <div id="bet-section" style="display:none">
-    <div class="card-inner">
-      <div class="card-title">— PLACE YOUR BET —</div>
-      <div class="bet-opts">
-        <div class="bopt" id="opt-player" onclick="pick('player')">
-          <div class="bopt-icon">🔵</div>
-          <div class="bopt-name p">PLAYER</div>
-          <div class="bopt-odds" id="odds-p">x 1.95</div>
-        </div>
-        <div class="bopt" id="opt-banker" onclick="pick('banker')">
-          <div class="bopt-icon">🔴</div>
-          <div class="bopt-name b">BANKER</div>
-          <div class="bopt-odds" id="odds-b">x 1.95</div>
-        </div>
-        <div class="bopt" id="opt-tie" onclick="pick('tie')">
-          <div class="bopt-icon">🟢</div>
-          <div class="bopt-name t">TIE</div>
-          <div class="bopt-odds" id="odds-t">x 8.00</div>
-        </div>
-      </div>
-      <div style="height:10px"></div>
-      <div class="presets">
-        <button class="preset" onclick="setAmt(100)">100</button>
-        <button class="preset" onclick="setAmt(500)">500</button>
-        <button class="preset" onclick="setAmt(1000)">1,000</button>
-        <button class="preset" onclick="setMax()">MAX</button>
-      </div>
-      <div class="amt-row">
-        <input class="amt-inp" type="number" id="amt" placeholder="베팅 금액" min="10" oninput="refreshBtn()"/>
-        <span style="font-size:13px;color:var(--sub)">P</span>
-      </div>
-      <button class="bet-btn off" id="bet-btn" onclick="doBet()">베팅할 항목을 선택해주세요</button>
-    </div>
-  </div>
-
-  <div class="idle-msg" id="idle-msg">
-    <div class="idle-icon">🃏</div>
-    <div class="idle-title" id="idle-title">바카라 대기 중</div>
-    <div class="idle-sub" id="idle-sub">관리자가 게임을 시작하면<br>베팅할 수 있어요</div>
-  </div>
 </div>
 
 <div class="overlay" id="overlay">
   <div class="ov-emoji" id="ov-emoji">🏆</div>
-  <div class="ov-title" id="ov-title">결과</div>
+  <div class="ov-title" id="ov-title"></div>
   <div class="ov-sub" id="ov-sub"></div>
   <div class="ov-payout" id="ov-payout"></div>
-  <button class="ov-close" onclick="closeOverlay()">확인</button>
+  <button class="ov-close" onclick="closeOverlay()">다시 베팅</button>
 </div>
 <div class="toast" id="toast"></div>
 <button class="home-btn" onclick="goHome()">🏠 홈</button>
 
 <script>
-function getUrlParam(key) {
-  const sp = new URLSearchParams(location.search);
-  if (sp.get(key)) return sp.get(key);
-  const hp = new URLSearchParams(location.hash.replace(/^#/,''));
-  if (hp.get(key)) return hp.get(key);
-  const start = sp.get('tgWebAppStartParam') || hp.get('tgWebAppStartParam') || sp.get('start') || hp.get('start') || '';
-  if (start) {
-    const parts = start.split('_');
-    if (key==='userId'  && parts[0]) return parts[0];
-    if (key==='groupId' && parts[1]) return parts[1];
-  }
-  return null;
-}
-const userId  = getUrlParam('userId');
-const groupId = getUrlParam('groupId');
-let state=null, picked=null, myPt=0, prevSt=null;
-let history=[];
+const C = window.CasinoCore;
+const userId  = C.getParam('userId');
+const groupId = C.getParam('groupId');
+let myPt = C.getPoint(groupId, userId);
+let picked = null, dealing = false;
+let history = [];
 
-const SUITS = ['♠','♥','♦','♣'];
-function randCard(targetScore) {
-  const s = SUITS[Math.floor(Math.random()*4)];
-  let v = 'A';
-  if(targetScore === 0) {
-    v = ['10','J','Q','K'][Math.floor(Math.random()*4)];
-  } else if(targetScore === 1) {
-    v = 'A';
-  } else {
-    v = String(targetScore);
-  }
-  return {s, v, red: s==='♥'||s==='♦'};
+const ODDS = { player: 1.95, banker: 1.95, tie: 8.0 };
+document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
+
+function pick(opt) {
+  picked = opt;
+  document.getElementById('opt-player').className = 'bopt' + (opt === 'player' ? ' sel-p' : '');
+  document.getElementById('opt-banker').className = 'bopt' + (opt === 'banker' ? ' sel-b' : '');
+  document.getElementById('opt-tie').className    = 'bopt' + (opt === 'tie'    ? ' sel-t' : '');
+  refreshBtn();
+}
+
+function setAmt(v) { document.getElementById('amt').value = v; refreshBtn(); }
+function setMax()  { setAmt(Math.min(myPt, 10000)); }
+
+function refreshBtn() {
+  const btn = document.getElementById('bet-btn');
+  const amt = parseInt(document.getElementById('amt').value) || 0;
+  if (dealing) { btn.className = 'bet-btn off'; btn.textContent = '🃏 카드 딜 중...'; return; }
+  if (!picked)  { btn.className = 'bet-btn off'; btn.textContent = '베팅할 항목을 선택해주세요'; return; }
+  if (amt < 10) { btn.className = 'bet-btn off'; btn.textContent = '최소 10P 이상'; return; }
+  if (amt > myPt){ btn.className = 'bet-btn off'; btn.textContent = '포인트 부족'; return; }
+  const labels = { player: '🔵 PLAYER', banker: '🔴 BANKER', tie: '🟢 TIE' };
+  const odds = ODDS[picked];
+  btn.className = 'bet-btn';
+  btn.textContent = `${labels[picked]} · ${C.fmt(amt)}P → 예상 +${C.fmt(Math.floor(amt * odds))}P`;
 }
 
 function renderCards(side, cards) {
-  const el = document.getElementById('cards-'+side);
-  el.innerHTML = cards.map(c=>`
-    <div class="card ${c.red?'red':'black'} deal-anim">
-      <div style="font-size:13px;line-height:1">${c.v}</div>
+  const el = document.getElementById('cards-' + side);
+  el.innerHTML = cards.map((c, i) => `
+    <div class="card ${c.red ? 'red' : 'black'} deal-anim" style="animation-delay:${i * 0.12}s">
+      <div style="font-size:13px;line-height:1">${c.r}</div>
       <div style="font-size:16px">${c.s}</div>
     </div>`).join('');
 }
 
-function toast(msg,err=false){
-  const t=document.getElementById('toast');t.textContent=msg;
-  t.className='toast show'+(err?' err':'');setTimeout(()=>t.className='toast',2500);
-}
-function fmt(n){return Number(n||0).toLocaleString();}
+async function doDeal() {
+  if (dealing || !picked) return;
+  const amt = parseInt(document.getElementById('amt').value) || 0;
+  if (amt < 10 || amt > myPt) return;
 
-function pick(opt){
-  picked=opt;
-  document.getElementById('opt-player').className='bopt'+(opt==='player'?' sel-p':'');
-  document.getElementById('opt-banker').className='bopt'+(opt==='banker'?' sel-b':'');
-  document.getElementById('opt-tie').className='bopt'+(opt==='tie'?' sel-t':'');
+  dealing = true;
   refreshBtn();
-}
-function setAmt(v){document.getElementById('amt').value=v;refreshBtn();}
-function setMax(){setAmt(Math.min(myPt,state?.settings?.max_bet||10000));}
-function refreshBtn(){
-  const btn=document.getElementById('bet-btn');
-  const amt=parseInt(document.getElementById('amt').value)||0;
-  const minB=state?.settings?.min_bet||10;
-  if(!picked){btn.className='bet-btn off';btn.textContent='베팅할 항목을 선택해주세요';return;}
-  if(amt<minB){btn.className='bet-btn off';btn.textContent=`최소 ${fmt(minB)}P 이상 입력해주세요`;return;}
-  if(amt>myPt){btn.className='bet-btn off';btn.textContent='포인트가 부족해요';return;}
-  const oddsMap={player:1.95,banker:1.95,tie:8.0};
-  const odds=oddsMap[picked]||2;
-  const labels={player:'🔵 PLAYER',banker:'🔴 BANKER',tie:'🟢 TIE'};
-  btn.className='bet-btn';
-  btn.textContent=`${labels[picked]} · ${fmt(amt)}P → 예상 +${fmt(Math.floor(amt*odds))}P`;
-}
+  myPt = C.addPoint(groupId, userId, -amt);
+  document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
 
-function renderHistory(){
-  const el=document.getElementById('history-dots');
-  if(!history.length){el.innerHTML='<div style="font-size:11px;color:var(--sub)">기록 없음</div>';return;}
-  const labels={player:'P',banker:'B',tie:'T'};
-  el.innerHTML=history.slice(-20).map(h=>`<div class="hdot ${h}">${labels[h]||'?'}</div>`).join('');
-}
+  // 카드 딜
+  const { pCards, bCards, pScore, bScore } = C.dealBaccarat();
 
-function render(s){
-  state=s;
-  const statusMap={idle:['s-idle','⏳ 대기 중'],betting:['s-betting','🔴 베팅 진행 중'],running:['s-running','🎴 게임 중'],closed:['s-closed','🏁 종료']};
-  const [cls,lbl]=statusMap[s.status]||statusMap.idle;
-  const badge=document.getElementById('status-badge');
-  badge.className='status-badge '+cls; badge.textContent=lbl;
+  // 결과 판정
+  let result;
+  if (pScore > bScore)      result = 'player';
+  else if (bScore > pScore) result = 'banker';
+  else                      result = 'tie';
 
-  const betSec=document.getElementById('bet-section');
-  const myBetCard=document.getElementById('my-bet-card');
-  const idleMsg=document.getElementById('idle-msg');
-  betSec.style.display='none'; myBetCard.style.display='none'; idleMsg.style.display='none';
-
-  if(s.status==='betting'){
-    if(s.myBet){
-      const labels={player:'🔵 PLAYER',banker:'🔴 BANKER',tie:'🟢 TIE'};
-      const oddsMap={player:1.95,banker:1.95,tie:8.0};
-      document.getElementById('my-bet-detail').textContent=`${labels[s.myBet.betOn]} · ${fmt(s.myBet.amount)} P`;
-      document.getElementById('my-bet-exp').textContent=`+${fmt(Math.floor(s.myBet.amount*(oddsMap[s.myBet.betOn]||2)))} P`;
-      const _mbs=document.getElementById('my-bet-section');if(_mbs)_mbs.style.display='block';
-    } else { betSec.style.display='block'; }
-  } else if(s.status==='idle'||s.status==='closed'){
-    idleMsg.style.display='block';
-    document.getElementById('idle-title').textContent=s.status==='closed'?'게임 종료':'바카라 대기 중';
-    document.getElementById('idle-sub').textContent=s.status==='closed'?'다음 게임을 기다려주세요':'관리자가 게임을 시작하면\n베팅할 수 있어요';
-  }
-  refreshBtn();
-}
-
-function playRound(result){
-  let pScore = 0, bScore = 0;
-  if(result==='player') { pScore=7; bScore=5; }
-  else if(result==='banker') { pScore=4; bScore=8; }
-  else { pScore=6; bScore=6; }
-
-  const pCards=[randCard(4), randCard(pScore-4)];
-  const bCards=[randCard(5), randCard(bScore-5)];
-
+  // 카드 애니메이션 (딜레이 포함)
   renderCards('player', pCards);
   renderCards('banker', bCards);
-  document.getElementById('score-p').textContent=pScore;
-  document.getElementById('score-b').textContent=bScore;
 
-  const banner=document.getElementById('result-banner');
-  const resultLabels={player:'🔵 PLAYER WIN!',banker:'🔴 BANKER WIN!',tie:'🟢 TIE!'};
-  banner.textContent=resultLabels[result]||result;
-  banner.className='result-banner show '+result;
+  await delay(pCards.length * 120 + 400);
 
-  history.push(result); if(history.length>30) history.shift();
+  document.getElementById('score-p').textContent = pScore;
+  document.getElementById('score-b').textContent = bScore;
+
+  // 결과 배너
+  const banner = document.getElementById('result-banner');
+  const resultLabels = { player: '🔵 PLAYER WIN!', banker: '🔴 BANKER WIN!', tie: '🟢 TIE!' };
+  banner.textContent = resultLabels[result];
+  banner.className = 'result-banner show ' + result;
+
+  await delay(600);
+
+  // 승패
+  const won = picked === result;
+  const payout = won ? Math.floor(amt * ODDS[picked]) : 0;
+
+  if (won) {
+    myPt = C.addPoint(groupId, userId, payout);
+    document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
+  }
+
+  history.unshift(result);
+  if (history.length > 20) history.pop();
   renderHistory();
+
+  // 오버레이
+  document.getElementById('ov-emoji').textContent = won ? '🏆' : '💸';
+  document.getElementById('ov-title').textContent = resultLabels[result];
+  if (won) {
+    document.getElementById('ov-sub').textContent = '🎉 베팅 성공!';
+    document.getElementById('ov-payout').textContent = `+${C.fmt(payout)} P 획득!`;
+    document.getElementById('ov-payout').style.color = '#44ee88';
+    vibrate([100,50,200]);
+  } else {
+    document.getElementById('ov-sub').textContent = '아쉬워요. 다음 기회에!';
+    document.getElementById('ov-payout').textContent = `-${C.fmt(amt)} P`;
+    document.getElementById('ov-payout').style.color = '#ee4444';
+    vibrate([200]);
+  }
+  document.getElementById('overlay').classList.add('show');
+  dealing = false;
+  refreshBtn();
 }
 
-async function cancelBet() {
-  if(!state?.myBet) return;
-  const btn=document.getElementById('cancel-btn');
-  btn.disabled=true; btn.textContent='⏳...';
-  try {
-    const res=await fetch('/casino/bet_cancel',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({roundId:state.roundId,groupId:parseInt(groupId),userId:parseInt(userId)})});
-    const data=await res.json();
-    if(data.ok){
-      toast('✅ 베팅 취소 완료! +'+Number(data.refund).toLocaleString()+'P 환불');
-      myPt+=data.refund; document.getElementById('my-point').textContent=Number(myPt).toLocaleString()+' P';
-      await load();
-    } else toast(data.error||'오류',true);
-  } catch(e){ toast('서버 오류',true); }
-  btn.disabled=false; btn.textContent='❌ 베팅 취소';
+function renderHistory() {
+  const el = document.getElementById('history-dots');
+  if (!history.length) { el.innerHTML = '<div style="font-size:11px;color:var(--sub)">기록 없음</div>'; return; }
+  const styles = {
+    player: { bg: 'rgba(74,158,255,0.2)',  border: 'var(--player)', color: 'var(--player)', label: 'P' },
+    banker: { bg: 'rgba(255,77,109,0.2)',  border: 'var(--banker)', color: 'var(--banker)', label: 'B' },
+    tie:    { bg: 'rgba(68,204,136,0.2)',  border: 'var(--tie)',    color: 'var(--tie)',    label: 'T' },
+  };
+  el.innerHTML = history.slice(0, 20).map(h => {
+    const s = styles[h];
+    return `<div class="hdot" style="background:${s.bg};border:1px solid ${s.border};color:${s.color}">${s.label}</div>`;
+  }).join('');
 }
 
-async function doBet(){
-  if(!picked||!state) return;
-  const amt=parseInt(document.getElementById('amt').value)||0;
-  if(amt<(state.settings?.min_bet||10)||amt>myPt) return;
-  const btn=document.getElementById('bet-btn');
-  btn.className='bet-btn off'; btn.textContent='⏳ 처리 중...';
-  try{
-    const res=await fetch('/casino/baccarat/bet',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({roundId:state.roundId,groupId:parseInt(groupId),userId:parseInt(userId),betOn:picked,amount:amt})
-    });
-    const data=await res.json();
-    if(data.ok){
-      toast(`✅ ${picked.toUpperCase()} ${fmt(amt)}P 베팅!`);
-      myPt-=amt; document.getElementById('my-point').textContent=fmt(myPt)+' P';
-      await load();
-    } else { toast(data.error||'오류',true); refreshBtn(); }
-  } catch(e){ toast('서버 오류',true); refreshBtn(); }
+function closeOverlay() {
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('result-banner').className = 'result-banner';
+  document.getElementById('score-p').textContent = '?';
+  document.getElementById('score-b').textContent = '?';
+  document.getElementById('cards-player').innerHTML = '<div class="card hidden"></div><div class="card hidden"></div>';
+  document.getElementById('cards-banker').innerHTML = '<div class="card hidden"></div><div class="card hidden"></div>';
+  picked = null;
+  document.getElementById('opt-player').className = 'bopt';
+  document.getElementById('opt-banker').className = 'bopt';
+  document.getElementById('opt-tie').className    = 'bopt';
+  document.getElementById('amt').value = '';
+  refreshBtn();
 }
 
-function showResult(s){
-  const r=s.result; const myBetOn=s.myBet?.betOn;
-  const won=myBetOn&&myBetOn===r;
-  const oddsMap={player:1.95,banker:1.95,tie:8.0};
-  const payout=won?Math.floor((s.myBet?.amount||0)*(oddsMap[r]||2)):0;
-  const labels={player:'🔵 PLAYER WIN!',banker:'🔴 BANKER WIN!',tie:'🟢 TIE!'};
-
-  playRound(r);
-  setTimeout(()=>{
-    document.getElementById('ov-emoji').textContent=won?'🏆':'💸';
-    document.getElementById('ov-title').textContent=labels[r]||r;
-    if(!myBetOn){
-      document.getElementById('ov-sub').textContent='이번 라운드는 베팅하지 않으셨어요.';
-      document.getElementById('ov-payout').textContent='';
-    } else if(won){
-      document.getElementById('ov-sub').textContent='🎉 베팅 성공!';
-      document.getElementById('ov-payout').textContent=`+${fmt(payout)} P 획득!`;
-      document.getElementById('ov-payout').style.color='#44ee88';
-      myPt+=payout; document.getElementById('my-point').textContent=fmt(myPt)+' P';
-    } else {
-      document.getElementById('ov-sub').textContent='아쉬워요. 다음 기회에!';
-      document.getElementById('ov-payout').textContent=`-${fmt(s.myBet?.amount||0)} P`;
-      document.getElementById('ov-payout').style.color='#ee4444';
-    }
-    document.getElementById('overlay').classList.add('show');
-  }, 1500);
-}
-
-function closeOverlay(){ document.getElementById('overlay').classList.remove('show'); load(); }
-
-async function load(){
-  try{
-    const res=await fetch(`/casino/baccarat/state?groupId=${groupId}&userId=${userId}`);
-    const data=await res.json();
-    if(data.error) return;
-    if(prevSt==='running'&&data.status==='closed'&&data.result) showResult(data);
-    prevSt=data.status;
-    render(data);
-  } catch(e){}
-}
-
-async function loadPt(){
-  try{
-    const res=await fetch(`/casino/users?groupId=${groupId}`);
-    const users=await res.json();
-    const me=users.find(u=>String(u.userId)===String(userId));
-    if(me){ myPt=me.point; document.getElementById('my-point').textContent=fmt(myPt)+' P'; }
-  } catch(e){}
-}
-
-function goHome(){
-  const p=new URLSearchParams(location.search);
-  const uid=p.get('userId')||p.get('start')?.split('_')[0];
-  const gid=p.get('groupId')||p.get('start')?.split('_')[1];
-  location.href='/casino?userId='+uid+'&groupId='+gid;
-}
-
-async function init(){ await loadPt(); await load(); setInterval(load,3000); }
-init();
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+function vibrate(p) { if (navigator.vibrate) navigator.vibrate(p); }
+function goHome() { C.goHome(userId, groupId); }
 </script>
 </body>
 </html>
