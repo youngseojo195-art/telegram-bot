@@ -118,10 +118,37 @@ canvas#wheel{width:280px;height:280px;border-radius:50%;}
 <button class="home-btn" onclick="goHome()">🏠 홈</button>
 
 <script>
-const C = window.CasinoCore;
-const userId  = C.getParam('userId');
-const groupId = C.getParam('groupId');
-let myPt = C.getPoint(groupId, userId);
+
+// ── INLINE CORE ──
+function getParam(key) {
+  const sp = new URLSearchParams(location.search);
+  if (sp.get(key)) return sp.get(key);
+  const hp = new URLSearchParams(location.hash.replace(/^#/,''));
+  if (hp.get(key)) return hp.get(key);
+  const start = sp.get('tgWebAppStartParam')||hp.get('tgWebAppStartParam')||sp.get('start')||hp.get('start')||'';
+  if (start) {
+    const parts = start.split('_');
+    if (key==='userId'  && parts[0]) return parts[0];
+    if (key==='groupId' && parts[1]) return parts[1];
+  }
+  return null;
+}
+function _ptKey(g,u){return 'casino_pt_'+g+'_'+u;}
+function getPoint(g,u){const v=localStorage.getItem(_ptKey(g,u));return v!==null?parseInt(v):5000;}
+function setPoint(g,u,pt){localStorage.setItem(_ptKey(g,u),Math.max(0,Math.floor(pt)));}
+function addPoint(g,u,delta){const n=Math.max(0,getPoint(g,u)+Math.floor(delta));setPoint(g,u,n);return n;}
+function fmt(n){return Number(n||0).toLocaleString();}
+function goHome(uid,gid){location.href='/casino?userId='+uid+'&groupId='+gid;}
+function weightedRandom(weights){
+  const total=weights.reduce((a,b)=>a+b.weight,0);
+  let r=Math.random()*total;
+  for(const w of weights){r-=w.weight;if(r<=0)return w.id;}
+  return weights[weights.length-1].id;
+}
+
+const userId  = getParam('userId');
+const groupId = getParam('groupId');
+let myPt = getPoint(groupId, userId);
 let picked = null, spinning = false;
 let history = [];
 
@@ -134,7 +161,7 @@ const SEGS = [
   {label:'꽝',   multiplier:0,  color:'#1a1a2a', prob:20},
 ];
 
-document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
+document.getElementById('my-point').textContent = fmt(myPt) + ' P';
 
 // ── 캔버스 휠 ──
 const canvas = document.getElementById('wheel');
@@ -217,13 +244,13 @@ function refreshBtn() {
   const seg = SEGS[picked];
   const exp = seg.multiplier > 0 ? Math.floor(amt * seg.multiplier) : 0;
   btn.className = 'spin-btn';
-  btn.textContent = seg.multiplier > 0 ? `🎡 ${seg.label} · ${C.fmt(amt)}P → 예상 ${C.fmt(exp)}P` : `🎡 꽝 도전 · ${C.fmt(amt)}P`;
+  btn.textContent = seg.multiplier > 0 ? `🎡 ${seg.label} · ${fmt(amt)}P → 예상 ${fmt(exp)}P` : `🎡 꽝 도전 · ${fmt(amt)}P`;
 }
 
 // 순수 가중 랜덤: prob 기반으로만 결정, 선택 구간과 무관
 function decideResult() {
   const weights = SEGS.map((seg, i) => ({ id: i, weight: seg.prob }));
-  return C.weightedRandom(weights);
+  return weightedRandom(weights);
 }
 
 function animSpin(targetIdx, onDone) {
@@ -259,8 +286,8 @@ function doSpin() {
   const amt = parseInt(document.getElementById('amt').value) || 0;
   if (amt < 10 || amt > myPt) return;
 
-  myPt = C.addPoint(groupId, userId, -amt);
-  document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
+  myPt = addPoint(groupId, userId, -amt);
+  document.getElementById('my-point').textContent = fmt(myPt) + ' P';
 
   const resultIdx = decideResult();
   const seg = SEGS[resultIdx];
@@ -278,20 +305,20 @@ function doSpin() {
     ).join('');
 
     if (payout > 0) {
-      myPt = C.addPoint(groupId, userId, payout);
-      document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
+      myPt = addPoint(groupId, userId, payout);
+      document.getElementById('my-point').textContent = fmt(myPt) + ' P';
     }
 
     document.getElementById('ov-emoji').textContent  = payout > 0 ? '🎉' : '💸';
     document.getElementById('ov-title').textContent  = seg.multiplier > 0 ? `${seg.label} 당첨!` : '꽝!';
     if (payout > 0) {
       document.getElementById('ov-sub').textContent    = `🎊 ${seg.label} 구간 당첨!`;
-      document.getElementById('ov-payout').textContent = `+${C.fmt(payout)} P 획득!`;
+      document.getElementById('ov-payout').textContent = `+${fmt(payout)} P 획득!`;
       document.getElementById('ov-payout').style.color = '#44ee88';
       vibrate([100,50,200]);
     } else {
       document.getElementById('ov-sub').textContent    = '아쉬워요. 다음에 도전하세요!';
-      document.getElementById('ov-payout').textContent = `-${C.fmt(amt)} P`;
+      document.getElementById('ov-payout').textContent = `-${fmt(amt)} P`;
       document.getElementById('ov-payout').style.color = '#ee4444';
       vibrate([200]);
     }
@@ -305,7 +332,7 @@ function closeOverlay() {
 }
 
 function vibrate(p) { if (navigator.vibrate) navigator.vibrate(p); }
-function goHome() { C.goHome(userId, groupId); }
+function goHome() { goHome(userId, groupId); }
 </script>
 </body>
 </html>
