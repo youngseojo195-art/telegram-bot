@@ -281,49 +281,57 @@ function animSpin(targetIdx, onDone) {
   requestAnimationFrame(tick);
 }
 
-function doSpin() {
+async function doSpin() {
   if (spinning || picked === null) return;
   const amt = parseInt(document.getElementById('amt').value) || 0;
   if (amt < 10 || amt > myPt) return;
 
-  myPt = addPoint(groupId, userId, -amt);
-  document.getElementById('my-point').textContent = fmt(myPt) + ' P';
+  spinning = true; refreshBtn();
 
-  const resultIdx = decideResult();
-  const seg = SEGS[resultIdx];
+  try {
+    // 서버에 스핀 요청 → 서버가 결과 결정
+    const res = await fetch('/casino/bigwheel/spin', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({groupId:parseInt(groupId), userId:parseInt(userId), betOn:picked, amount:amt})
+    });
+    const data = await res.json();
+    if (!data.ok) { toast(data.error||'오류', true); spinning=false; refreshBtn(); return; }
 
-  animSpin(resultIdx, () => {
-    const payout = seg.multiplier > 0 ? Math.floor(amt * seg.multiplier) : 0;
+    const resultIdx = data.resultIdx;  // 서버가 결정한 구간
+    const payout    = data.payout;     // 서버가 계산한 지급액
+    const seg       = SEGS[resultIdx];
 
-    document.getElementById('spin-result').textContent = seg.multiplier > 0 ? `${seg.label} 🎉` : '꽝 💸';
+    // 포인트 서버 기준으로 동기화
+    myPt = myPt - amt + (payout||0);
+    setPoint(groupId, userId, myPt);
+    document.getElementById('my-point').textContent = fmt(myPt) + ' P';
 
-    history.unshift({ label: seg.label, mult: seg.multiplier, color: getSegColor(seg) });
-    if (history.length > 15) history.pop();
-    const hw = document.getElementById('history-wrap');
-    hw.innerHTML = history.map(h =>
-      `<div class="hist-badge" style="background:${h.color}22;border:1px solid ${h.color}66;color:${h.color}">${h.label}</div>`
-    ).join('');
+    animSpin(resultIdx, () => {
+      document.getElementById('spin-result').textContent = seg.multiplier > 0 ? `${seg.label} 🎉` : '꽝 💸';
 
-    if (payout > 0) {
-      myPt = addPoint(groupId, userId, payout);
-      document.getElementById('my-point').textContent = fmt(myPt) + ' P';
-    }
+      history.unshift({ label: seg.label, mult: seg.multiplier, color: getSegColor(seg) });
+      if (history.length > 15) history.pop();
+      const hw = document.getElementById('history-wrap');
+      hw.innerHTML = history.map(h =>
+        `<div class="hist-badge" style="background:${h.color}22;border:1px solid ${h.color}66;color:${h.color}">${h.label}</div>`
+      ).join('');
 
-    document.getElementById('ov-emoji').textContent  = payout > 0 ? '🎉' : '💸';
-    document.getElementById('ov-title').textContent  = seg.multiplier > 0 ? `${seg.label} 당첨!` : '꽝!';
-    if (payout > 0) {
-      document.getElementById('ov-sub').textContent    = `🎊 ${seg.label} 구간 당첨!`;
-      document.getElementById('ov-payout').textContent = `+${fmt(payout)} P 획득!`;
-      document.getElementById('ov-payout').style.color = '#44ee88';
-      vibrate([100,50,200]);
-    } else {
-      document.getElementById('ov-sub').textContent    = '아쉬워요. 다음에 도전하세요!';
-      document.getElementById('ov-payout').textContent = `-${fmt(amt)} P`;
-      document.getElementById('ov-payout').style.color = '#ee4444';
-      vibrate([200]);
-    }
-    document.getElementById('overlay').classList.add('show');
-  });
+      document.getElementById('ov-emoji').textContent  = payout > 0 ? '🎉' : '💸';
+      document.getElementById('ov-title').textContent  = seg.multiplier > 0 ? `${seg.label} 당첨!` : '꽝!';
+      if (payout > 0) {
+        document.getElementById('ov-sub').textContent    = `🎊 ${seg.label} 구간 당첨!`;
+        document.getElementById('ov-payout').textContent = `+${fmt(payout)} P 획득!`;
+        document.getElementById('ov-payout').style.color = '#44ee88';
+        vibrate([100,50,200]);
+      } else {
+        document.getElementById('ov-sub').textContent    = '아쉬워요. 다음에 도전하세요!';
+        document.getElementById('ov-payout').textContent = `-${fmt(amt)} P`;
+        document.getElementById('ov-payout').style.color = '#ee4444';
+        vibrate([200]);
+      }
+      document.getElementById('overlay').classList.add('show');
+    });
+  } catch(e) { toast('서버 오류', true); spinning=false; refreshBtn(); }
 }
 
 function closeOverlay() {
