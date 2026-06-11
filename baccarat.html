@@ -171,15 +171,62 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 <button class="home-btn" onclick="goHome()">🏠 홈</button>
 
 <script>
-const C = window.CasinoCore;
-const userId  = C.getParam('userId');
-const groupId = C.getParam('groupId');
-let myPt = C.getPoint(groupId, userId);
+
+// ── INLINE CORE ──
+function getParam(key) {
+  const sp = new URLSearchParams(location.search);
+  if (sp.get(key)) return sp.get(key);
+  const hp = new URLSearchParams(location.hash.replace(/^#/,''));
+  if (hp.get(key)) return hp.get(key);
+  const start = sp.get('tgWebAppStartParam')||hp.get('tgWebAppStartParam')||sp.get('start')||hp.get('start')||'';
+  if (start) {
+    const parts = start.split('_');
+    if (key==='userId'  && parts[0]) return parts[0];
+    if (key==='groupId' && parts[1]) return parts[1];
+  }
+  return null;
+}
+function _ptKey(g,u){return 'casino_pt_'+g+'_'+u;}
+function getPoint(g,u){const v=localStorage.getItem(_ptKey(g,u));return v!==null?parseInt(v):5000;}
+function setPoint(g,u,pt){localStorage.setItem(_ptKey(g,u),Math.max(0,Math.floor(pt)));}
+function addPoint(g,u,delta){const n=Math.max(0,getPoint(g,u)+Math.floor(delta));setPoint(g,u,n);return n;}
+function fmt(n){return Number(n||0).toLocaleString();}
+function goHome(uid,gid){location.href='/casino?userId='+uid+'&groupId='+gid;}
+function weightedRandom(weights){
+  const total=weights.reduce((a,b)=>a+b.weight,0);
+  let r=Math.random()*total;
+  for(const w of weights){r-=w.weight;if(r<=0)return w.id;}
+  return weights[weights.length-1].id;
+}
+
+// ── 바카라 카드 딜 ──
+const _SUITS = ['♠','♥','♦','♣'];
+const _RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+function _shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function _buildDeck(){const deck=[];for(const s of _SUITS)for(let i=0;i<_RANKS.length;i++)deck.push({r:_RANKS[i],s,red:s==='♥'||s==='♦',val:Math.min(i,9)});return _shuffle(deck);}
+function _bacHand(cards){return cards.reduce((s,c)=>(s+c.val)%10,0);}
+function dealBaccarat(){
+  const deck=_buildDeck();let pi=0;
+  const pCards=[deck[pi++],deck[pi++]];
+  const bCards=[deck[pi++],deck[pi++]];
+  let pScore=_bacHand(pCards),bScore=_bacHand(bCards);
+  if(pScore>=8||bScore>=8)return{pCards,bCards,pScore,bScore};
+  if(pScore<=5)pCards.push(deck[pi++]);
+  pScore=_bacHand(pCards);
+  if(pCards.length===2){if(bScore<=5)bCards.push(deck[pi++]);}
+  else{const pt=pCards[2].val;if(bScore<=2||(bScore===3&&pt!==8)||(bScore===4&&pt>=2&&pt<=7)||(bScore===5&&pt>=4&&pt<=7)||(bScore===6&&pt>=6&&pt<=7))bCards.push(deck[pi++]);}
+  bScore=_bacHand(bCards);
+  return{pCards,bCards,pScore,bScore};
+}
+
+const userId  = getParam('userId');
+const groupId = getParam('groupId');
+let myPt = getPoint(groupId, userId);
 let picked = null, dealing = false;
 let history = [];
 
 const ODDS = { player: 1.95, banker: 1.95, tie: 8.0 };
-document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
+document.getElementById('my-point').textContent = fmt(myPt) + ' P';
 
 function pick(opt) {
   picked = opt;
@@ -202,7 +249,7 @@ function refreshBtn() {
   const labels = { player: '🔵 PLAYER', banker: '🔴 BANKER', tie: '🟢 TIE' };
   const odds = ODDS[picked];
   btn.className = 'bet-btn';
-  btn.textContent = `${labels[picked]} · ${C.fmt(amt)}P → 예상 +${C.fmt(Math.floor(amt * odds))}P`;
+  btn.textContent = `${labels[picked]} · ${fmt(amt)}P → 예상 +${fmt(Math.floor(amt * odds))}P`;
 }
 
 function renderCards(side, cards) {
@@ -221,11 +268,11 @@ async function doDeal() {
 
   dealing = true;
   refreshBtn();
-  myPt = C.addPoint(groupId, userId, -amt);
-  document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
+  myPt = addPoint(groupId, userId, -amt);
+  document.getElementById('my-point').textContent = fmt(myPt) + ' P';
 
   // 카드 딜
-  const { pCards, bCards, pScore, bScore } = C.dealBaccarat();
+  const { pCards, bCards, pScore, bScore } = dealBaccarat();
 
   // 결과 판정
   let result;
@@ -255,8 +302,8 @@ async function doDeal() {
   const payout = won ? Math.floor(amt * ODDS[picked]) : 0;
 
   if (won) {
-    myPt = C.addPoint(groupId, userId, payout);
-    document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
+    myPt = addPoint(groupId, userId, payout);
+    document.getElementById('my-point').textContent = fmt(myPt) + ' P';
   }
 
   history.unshift(result);
@@ -268,12 +315,12 @@ async function doDeal() {
   document.getElementById('ov-title').textContent = resultLabels[result];
   if (won) {
     document.getElementById('ov-sub').textContent = '🎉 베팅 성공!';
-    document.getElementById('ov-payout').textContent = `+${C.fmt(payout)} P 획득!`;
+    document.getElementById('ov-payout').textContent = `+${fmt(payout)} P 획득!`;
     document.getElementById('ov-payout').style.color = '#44ee88';
     vibrate([100,50,200]);
   } else {
     document.getElementById('ov-sub').textContent = '아쉬워요. 다음 기회에!';
-    document.getElementById('ov-payout').textContent = `-${C.fmt(amt)} P`;
+    document.getElementById('ov-payout').textContent = `-${fmt(amt)} P`;
     document.getElementById('ov-payout').style.color = '#ee4444';
     vibrate([200]);
   }
@@ -313,7 +360,7 @@ function closeOverlay() {
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 function vibrate(p) { if (navigator.vibrate) navigator.vibrate(p); }
-function goHome() { C.goHome(userId, groupId); }
+function goHome() { goHome(userId, groupId); }
 </script>
 </body>
 </html>
