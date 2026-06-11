@@ -277,52 +277,66 @@ function animHorses(winnerId, onDone) {
   tick();
 }
 
-function startRace() {
+async function startRace() {
   if (racing || !picked) return;
   const amt = parseInt(document.getElementById('amt').value) || 0;
   if (amt < 10 || amt > myPt) return;
-
-  myPt = addPoint(groupId, userId, -amt);
-  document.getElementById('my-point').textContent = fmt(myPt) + ' P';
-
-  // 순수 가중 랜덤: 각 말의 weight만 반영, 플레이어 선택과 무관
-  const weights = HORSES.map(h => ({ id: h.id, weight: h.weight }));
-  const winnerId = weightedRandom(weights);
 
   document.querySelector('.card-inner').style.opacity = '0.4';
   document.querySelector('.card-inner').style.pointerEvents = 'none';
   refreshBtn();
 
-  animHorses(winnerId, () => {
-    const winH = HORSES.find(h => h.id === winnerId);
-    const betH = HORSES.find(h => h.id === picked);
-    const won = winnerId === picked;
-    const payout = won ? Math.floor(amt * betH.odds) : 0;
-
-    if (won) {
-      myPt = addPoint(groupId, userId, payout);
-      document.getElementById('my-point').textContent = fmt(myPt) + ' P';
+  try {
+    const res = await fetch('/casino/horse/instant', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({groupId:parseInt(groupId), userId:parseInt(userId), betOn:picked, amount:amt})
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      toast(data.error||'오류', true);
+      document.querySelector('.card-inner').style.opacity = '1';
+      document.querySelector('.card-inner').style.pointerEvents = '';
+      refreshBtn(); return;
     }
 
-    history.unshift({ id: winH.id, name: winH.name, emoji: winH.emoji, color: winH.color });
-    if (history.length > 15) history.pop();
-    renderHistory();
+    const winnerId = data.winnerId;  // 서버가 결정한 우승마 id
+    const payout   = data.payout;   // 서버가 계산한 지급액
 
-    document.getElementById('ov-emoji').textContent = won ? '🏆' : '💸';
-    document.getElementById('ov-title').textContent = `${winH.emoji} ${winH.name} 우승!`;
-    if (won) {
-      document.getElementById('ov-sub').textContent = '🎉 베팅 성공!';
-      document.getElementById('ov-payout').textContent = `+${fmt(payout)} P 획득!`;
-      document.getElementById('ov-payout').style.color = '#44ee88';
-      vibrate([100,50,200]);
-    } else {
-      document.getElementById('ov-sub').textContent = `아쉬워요. ${betH.emoji} ${betH.name}은 탈락!`;
-      document.getElementById('ov-payout').textContent = `-${fmt(amt)} P`;
-      document.getElementById('ov-payout').style.color = '#ee4444';
-      vibrate([200]);
-    }
-    document.getElementById('overlay').classList.add('show');
-  });
+    // 포인트 서버 기준 동기화
+    myPt = myPt - amt + (payout||0);
+    setPoint(groupId, userId, myPt);
+    document.getElementById('my-point').textContent = fmt(myPt) + ' P';
+
+    animHorses(winnerId, () => {
+      const winH = HORSES.find(h => h.id === winnerId);
+      const betH = HORSES.find(h => h.id === picked);
+      const won  = winnerId === picked;
+
+      history.unshift({ id: winH.id, name: winH.name, emoji: winH.emoji, color: winH.color });
+      if (history.length > 15) history.pop();
+      renderHistory();
+
+      document.getElementById('ov-emoji').textContent = won ? '🏆' : '💸';
+      document.getElementById('ov-title').textContent = `${winH.emoji} ${winH.name} 우승!`;
+      if (won) {
+        document.getElementById('ov-sub').textContent = '🎉 베팅 성공!';
+        document.getElementById('ov-payout').textContent = `+${fmt(payout)} P 획득!`;
+        document.getElementById('ov-payout').style.color = '#44ee88';
+        vibrate([100,50,200]);
+      } else {
+        document.getElementById('ov-sub').textContent = `아쉬워요. ${betH.emoji} ${betH.name}은 탈락!`;
+        document.getElementById('ov-payout').textContent = `-${fmt(amt)} P`;
+        document.getElementById('ov-payout').style.color = '#ee4444';
+        vibrate([200]);
+      }
+      document.getElementById('overlay').classList.add('show');
+    });
+  } catch(e) {
+    toast('서버 오류', true);
+    document.querySelector('.card-inner').style.opacity = '1';
+    document.querySelector('.card-inner').style.pointerEvents = '';
+    refreshBtn();
+  }
 }
 
 function renderHistory() {
