@@ -352,52 +352,59 @@ async function doSpin(){
   if(amt<10||amt>myPt) return;
   spinning=true; refreshBtn();
 
-  myPt=addPoint(groupId,userId,-amt);
-  document.getElementById('my-point').textContent=fmt(myPt)+' P';
+  try{
+    // 서버에 베팅 전송 → 서버가 결과 결정
+    const res=await fetch('/casino/roulette/spin',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({groupId:parseInt(groupId),userId:parseInt(userId),amount:amt,betType,betValue})
+    });
+    const data=await res.json();
+    if(!data.ok){toast(data.error||'오류',true);spinning=false;refreshBtn();return;}
 
-  const resultNum=decideResult();
-  const won=checkWin(resultNum);
-  const color=NUM_COLORS[resultNum];
-  const odds=getOdds();
-  const payout=won?Math.floor(amt*odds):0;
+    // 서버 결과 기준으로 표시
+    const resultNum = data.result;
+    const won       = data.won;
+    const payout    = data.payout;
+    const color     = NUM_COLORS[resultNum];
 
-  await animWheel(resultNum,4000);
-
-  const colBg ={red:'#8b0000',black:'#0a0a2a',green:'#0d5c0d'}[color]||'#1a1a2a';
-  const colTc ={red:'#ff6666',black:'#aaaaee',green:'#66cc66'}[color]||'#fff';
-  document.getElementById('ball-result').innerHTML=`<span style="background:${colBg};color:${colTc};padding:4px 14px;border-radius:20px;border:1px solid ${colTc}44">${resultNum} ${color.toUpperCase()}</span>`;
-
-  history.unshift({num:resultNum,color,won});
-  if(history.length>15)history.pop();
-  const hw=document.getElementById('history-balls');
-  hw.innerHTML=history.map(h=>{
-    const bg={red:'#2a0808',black:'#0a0a1a',green:'#0a1a0a'}[h.color]||'#1a1a2a';
-    const tc={red:'#ff6666',black:'#aaaaee',green:'#66cc66'}[h.color]||'#fff';
-    return `<div class="hball" style="background:${bg};border:1px solid ${tc}44;color:${tc}">${h.num}</div>`;
-  }).join('');
-
-  if(payout>0){
-    myPt=addPoint(groupId,userId,payout);
+    // 포인트 차감은 서버가 처리했으므로 로컬도 동기화
+    myPt = myPt - amt + (payout||0);
+    setPoint(groupId, userId, myPt);
     document.getElementById('my-point').textContent=fmt(myPt)+' P';
-  }
 
-  setTimeout(()=>{
-    const ovBall=document.getElementById('ov-ball');
-    ovBall.style.background=colBg;ovBall.style.color=colTc;ovBall.style.border=`2px solid ${colTc}`;
-    ovBall.textContent=resultNum;
-    document.getElementById('ov-title').textContent=won?'🎉 WIN!':'💸 MISS';
-    document.getElementById('ov-sub').textContent=`${resultNum} ${color.toUpperCase()}${won?' — 베팅 성공!':' — 아쉬워요'}`;
-    if(payout>0){
-      document.getElementById('ov-payout').textContent=`+${fmt(payout)} P 획득!`;
-      document.getElementById('ov-payout').style.color='#44ee88';
-      vibrate([100,50,200]);
-    }else{
-      document.getElementById('ov-payout').textContent=`-${fmt(amt)} P`;
-      document.getElementById('ov-payout').style.color='#ee4444';
-      vibrate([200]);
-    }
-    document.getElementById('overlay').classList.add('show');
-  },500);
+    await animWheel(resultNum,4000);
+
+    const colBg={red:'#8b0000',black:'#0a0a2a',green:'#0d5c0d'}[color]||'#1a1a2a';
+    const colTc={red:'#ff6666',black:'#aaaaee',green:'#66cc66'}[color]||'#fff';
+    document.getElementById('ball-result').innerHTML=`<span style="background:${colBg};color:${colTc};padding:4px 14px;border-radius:20px;border:1px solid ${colTc}44">${resultNum} ${color.toUpperCase()}</span>`;
+
+    history.unshift({num:resultNum,color,won});
+    if(history.length>15)history.pop();
+    const hw=document.getElementById('history-balls');
+    hw.innerHTML=history.map(h=>{
+      const bg={red:'#2a0808',black:'#0a0a1a',green:'#0a1a0a'}[h.color]||'#1a1a2a';
+      const tc={red:'#ff6666',black:'#aaaaee',green:'#66cc66'}[h.color]||'#fff';
+      return `<div class="hball" style="background:${bg};border:1px solid ${tc}44;color:${tc}">${h.num}</div>`;
+    }).join('');
+
+    setTimeout(()=>{
+      const ovBall=document.getElementById('ov-ball');
+      ovBall.style.background=colBg;ovBall.style.color=colTc;ovBall.style.border=`2px solid ${colTc}`;
+      ovBall.textContent=resultNum;
+      document.getElementById('ov-title').textContent=won?'🎉 WIN!':'💸 MISS';
+      document.getElementById('ov-sub').textContent=`${resultNum} ${color.toUpperCase()}${won?' — 베팅 성공!':' — 아쉬워요'}`;
+      if(payout>0){
+        document.getElementById('ov-payout').textContent=`+${fmt(payout)} P 획득!`;
+        document.getElementById('ov-payout').style.color='#44ee88';
+        vibrate([100,50,200]);
+      }else{
+        document.getElementById('ov-payout').textContent=`-${fmt(amt)} P`;
+        document.getElementById('ov-payout').style.color='#ee4444';
+        vibrate([200]);
+      }
+      document.getElementById('overlay').classList.add('show');
+    },500);
+  }catch(e){toast('서버 오류',true);}
   spinning=false;refreshBtn();
 }
 
