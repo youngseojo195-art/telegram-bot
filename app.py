@@ -869,22 +869,11 @@ def handle_all(message):
         username = message.from_user.username or ''; now_kst = datetime.now(KST); today = now_kst.date()
 
         # ── 그룹에서 커맨드 권한 체크 ──
+        # 관리자가 아니면 그룹에서 모든 커맨드 차단
         if message.chat.type in ['group', 'supergroup'] and text.strip().startswith('/') and user_id not in ADMIN_IDS:
-            cmd = text.strip().split()[0].split('@')[0]  # /카지노@botname → /카지노
-
-            # 카지노 전용 커맨드: 카지노가 닫혀있으면 차단
-            if any(cmd == c or cmd.startswith(c) for c in CASINO_ONLY_COMMANDS):
-                if not is_casino_open(group_id):
-                    try: bot.delete_message(group_id, message.message_id)
-                    except: pass
-                    try:
-                        sent = bot.send_message(group_id,
-                            f"🔒 {first_name}님, 현재 카지노가 닫혀있어요.\n관리자가 오픈하면 이용할 수 있어요!")
-                        time.sleep(3)
-                        bot.delete_message(group_id, sent.message_id)
-                    except: pass
-                    return
-            # ALWAYS_ALLOWED, 관리자 전용 커맨드는 카지노 상태와 무관하게 통과
+            try: bot.delete_message(group_id, message.message_id)
+            except: pass
+            return
 
         # ── 커맨드 처리 ──
         if '/test' in text:
