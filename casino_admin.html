@@ -118,7 +118,7 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
 .log-amt.plus{color:var(--green);}
 .log-amt.minus{color:var(--red);}
 
-/* 채팅 마일스톤 */
+/* 마일스톤 */
 .ms-user-item{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:6px;}
 .ms-user-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
 .ms-user-name{font-size:13px;font-weight:700;}
@@ -175,6 +175,7 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   </div>
 </div>
 
+<!-- ══════════ 대시보드 ══════════ -->
 <div class="screen show" id="screen-dash">
   <div class="card">
     <div class="card-title">🎰 카지노 운영 상태</div>
@@ -192,7 +193,6 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
       상태 불러오는 중...
     </div>
   </div>
-
   <div class="card">
     <div class="card-title">TODAY</div>
     <div class="dash-grid">
@@ -218,14 +218,15 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   <button class="gold-btn" onclick="loadDash()">🔄 새로고침</button>
 </div>
 
+<!-- ══════════ 경주 ══════════ -->
 <div class="screen" id="screen-race">
   <div class="card">
     <div class="card-title">RACE CONTROL</div>
     <div class="ctrl-status">상태: <span id="race-status-lbl">불러오는 중...</span></div>
     <div class="ctrl-btns">
       <button class="ctrl-btn ctrl-open"   onclick="raceOpen()">🏁 베팅 오픈</button>
-      <button class="ctrl-btn ctrl-start"  onclick="raceStart()">🚀 베팅 마감 & 경주 시작</button>
-      <button class="ctrl-btn ctrl-result" onclick="raceResult()">🏆 결과 처리 & 정산</button>
+      <button class="ctrl-btn ctrl-start"  onclick="raceStart()">🚀 베팅 마감 &amp; 경주 시작</button>
+      <button class="ctrl-btn ctrl-result" onclick="raceResult()">🏆 결과 처리 &amp; 정산</button>
     </div>
   </div>
   <div class="card">
@@ -242,6 +243,24 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
       <span class="setting-label">⏱ 라운드 시간</span>
       <input type="range" id="race-mins" min="1" max="10" value="3" oninput="document.getElementById('race-mins-val').textContent=this.value+'분';saveAutoConfig()">
       <span class="setting-val" id="race-mins-val">3분</span>
+    </div>
+  </div>
+  <!-- ★ FIX: race-min-bet / race-max-bet / race-enabled 추가 -->
+  <div class="card">
+    <div class="card-title">📏 베팅 한도</div>
+    <div class="setting-row">
+      <span class="setting-label">최소 베팅</span>
+      <input class="inp inp-sm" type="number" id="race-min-bet" value="10" style="width:90px">
+      <span style="font-size:11px;color:var(--sub)">P</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label">최대 베팅</span>
+      <input class="inp inp-sm" type="number" id="race-max-bet" value="10000" style="width:90px">
+      <span style="font-size:11px;color:var(--sub)">P</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label">게임 활성화</span>
+      <label class="switch"><input type="checkbox" id="race-enabled" checked><span class="sw-slider"></span></label>
     </div>
   </div>
   <div class="card">
@@ -268,13 +287,14 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   </div>
 </div>
 
+<!-- ══════════ 바카라 ══════════ -->
 <div class="screen" id="screen-baccarat">
   <div class="card">
     <div class="card-title">BACCARAT CONTROL</div>
     <div class="ctrl-status">상태: <span id="baccarat-status-lbl">불러오는 중...</span></div>
     <div class="ctrl-btns">
       <button class="ctrl-btn ctrl-open"   onclick="baccaratOpen()">🃏 베팅 오픈</button>
-      <button class="ctrl-btn ctrl-result" onclick="baccaratResult()">🏆 결과 처리 & 정산</button>
+      <button class="ctrl-btn ctrl-result" onclick="baccaratResult()">🏆 결과 처리 &amp; 정산</button>
     </div>
   </div>
   <div class="card">
@@ -289,7 +309,7 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
       <input type="range" id="bac-banker" min="1" max="60" value="46" oninput="document.getElementById('bac-banker-val').textContent=this.value+'%'">
       <span class="setting-val" id="bac-banker-val">46%</span>
     </div>
-    <div>
+    <div style="margin-top:10px">
       <div style="font-size:11px;color:var(--sub);margin-bottom:6px">🎯 강제 결과</div>
       <div class="force-btns">
         <button class="force-btn active-none"   id="bac-f-none"   onclick="setBacForce('none')">🎲 랜덤</button>
@@ -302,13 +322,14 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   </div>
 </div>
 
+<!-- ══════════ 경마 ══════════ -->
 <div class="screen" id="screen-horse">
   <div class="card">
     <div class="card-title">HORSE RACE CONTROL</div>
     <div class="ctrl-status">상태: <span id="horse-status-lbl">불러오는 중...</span></div>
     <div class="ctrl-btns">
       <button class="ctrl-btn ctrl-open"   onclick="horseOpen()">🐴 베팅 오픈</button>
-      <button class="ctrl-btn ctrl-result" onclick="horseResult()">🏆 결과 처리 & 정산</button>
+      <button class="ctrl-btn ctrl-result" onclick="horseResult()">🏆 결과 처리 &amp; 정산</button>
     </div>
   </div>
   <div class="card">
@@ -336,18 +357,20 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   </div>
 </div>
 
+<!-- ══════════ 설정 ══════════ -->
 <div class="screen" id="screen-settings">
   <div class="card">
     <div class="card-title">⚙️ 카지노 한도 설정</div>
     <div class="setting-row">
       <span class="setting-label">📊 일일 베팅 한도</span>
-      <input class="inp inp-sm" type="number" id="daily-limit" value="500000">
+      <input class="inp inp-sm" type="number" id="daily-limit" value="500000" style="width:120px">
       <span style="font-size:11px;color:var(--sub)">P</span>
     </div>
-    <div style="font-size:11px;color:var(--sub);margin-top:6px">* 글로벌 상수는 app.py 수정이 필요할 수 있습니다.</div>
+    <div style="font-size:11px;color:var(--sub);margin-top:8px">* 글로벌 상수는 app.py 수정이 필요할 수 있습니다.</div>
   </div>
 </div>
 
+<!-- ══════════ 포인트 ══════════ -->
 <div class="screen" id="screen-points">
   <div class="card">
     <div class="card-title">💰 개인 포인트 지급/차감</div>
@@ -370,7 +393,6 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
       <button class="gold-btn" onclick="grantPoint()">💰 포인트 지급/차감</button>
     </div>
   </div>
-
   <div class="card">
     <div class="card-title">🎁 전체 일괄 지급</div>
     <div style="display:flex;flex-direction:column;gap:8px">
@@ -387,6 +409,7 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   </div>
 </div>
 
+<!-- ══════════ 유저 ══════════ -->
 <div class="screen" id="screen-users">
   <div class="card">
     <div class="card-title">👥 유저 목록</div>
@@ -406,6 +429,7 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   </div>
 </div>
 
+<!-- ══════════ 채팅 ══════════ -->
 <div class="screen" id="screen-chat">
   <div class="card">
     <div class="card-title">⚙️ 마일스톤 설정</div>
@@ -422,7 +446,6 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
       <button class="gold-btn" onclick="saveMilestoneSettings()">💾 마일스톤 설정 저장</button>
     </div>
   </div>
-
   <div class="card">
     <div class="card-title">📊 오늘 채팅 현황</div>
     <div id="ms-status-list">
@@ -432,6 +455,7 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   </div>
 </div>
 
+<!-- ══════════ 출금 ══════════ -->
 <div class="screen" id="screen-withdraw">
   <div class="card">
     <div class="card-title">💸 출금 신청 목록</div>
@@ -442,6 +466,7 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
   </div>
 </div>
 
+<!-- ══════════ 로그 ══════════ -->
 <div class="screen" id="screen-logs">
   <div class="card">
     <div class="card-title">📋 포인트 지급 내역</div>
@@ -454,14 +479,13 @@ input[type=range]{flex:1;accent-color:var(--gold);height:4px;}
 <div class="toast" id="toast"></div>
 
 <script>
-// URL 파라미터 파싱
-const params  = new URLSearchParams(location.search);
+// ── URL 파라미터 파싱 ──
+const params     = new URLSearchParams(location.search);
 const hashParams = new URLSearchParams(location.hash.replace('#',''));
 
 function getParam(key) {
   return params.get(key) || hashParams.get(key) || '';
 }
-
 const startVal = getParam('start');
 let _adminId = getParam('adminId');
 let _groupId = getParam('groupId');
@@ -470,47 +494,46 @@ if ((!_adminId || !_groupId) && startVal) {
   if (!_adminId) _adminId = parts[0] || '';
   if (!_groupId) _groupId = parts[1] || '';
 }
-
 const adminId = parseInt(_adminId) || 0;
 const groupId = parseInt(_groupId) || 0;
 
-console.log('[admin] adminId='+adminId+' groupId='+groupId);
-
 let raceState     = null;
-let baccaratState= null;
-let horseState   = null;
-let allUsers     = [];
-let forceResult  = 'none';
-let bacForce     = 'none';
+let baccaratState = null;
+let horseState    = null;
+let allUsers      = [];
+let forceResult   = 'none';
+let bacForce      = 'none';
 
 function showToast(msg, err=false) {
   const t = document.getElementById('toast');
-  t.textContent = msg; t.className = 'toast show' + (err?' err':'');
-  setTimeout(()=>t.className='toast', 2500);
+  t.textContent = msg;
+  t.className = 'toast show' + (err ? ' err' : '');
+  setTimeout(() => t.className = 'toast', 2500);
 }
-function fmt(n){return Number(n||0).toLocaleString();}
+function fmt(n) { return Number(n||0).toLocaleString(); }
 
+// ── 탭 전환 ──
 const ALL_TABS = ['dash','race','baccarat','horse','settings','points','users','chat','withdraw','logs'];
 function switchTab(tab) {
   ALL_TABS.forEach(t => {
-    document.getElementById('tab-'+t).className = 'tab-btn'+(t===tab?' active':'');
+    document.getElementById('tab-'+t).className    = 'tab-btn' + (t===tab ? ' active' : '');
     document.getElementById('screen-'+t).classList.toggle('show', t===tab);
   });
-  if(tab==='dash')     loadDash();
-  if(tab==='race')     loadRaceState();
-  if(tab==='baccarat') loadBaccaratState();
-  if(tab==='horse')    loadHorseState();
-  if(tab==='users')    { loadUsers(); loadBlacklist(); }
-  if(tab==='chat')     { loadMilestoneSettings(); loadMilestoneStatus(); }
-  if(tab==='withdraw') loadWithdrawList();
-  if(tab==='logs')     loadLogs();
-  if(tab==='points')   loadUsersForSelect();
-  if(tab==='settings') loadRaceSettingsForm();
+  // ★ FIX: settings 탭에서 loadRaceSettingsForm 제거, race 탭에서만 호출
+  if (tab==='dash')     loadDash();
+  if (tab==='race')     { loadRaceState(); loadRaceSettingsForm(); }
+  if (tab==='baccarat') loadBaccaratState();
+  if (tab==='horse')    loadHorseState();
+  if (tab==='users')    { loadUsers(); loadBlacklist(); }
+  if (tab==='chat')     { loadMilestoneSettings(); loadMilestoneStatus(); }
+  if (tab==='withdraw') loadWithdrawList();
+  if (tab==='logs')     loadLogs();
+  if (tab==='points')   loadUsersForSelect();
 }
 
-// ════════════
+// ════════════════════
 // 대시보드
-// ════════════
+// ════════════════════
 async function loadDash() {
   try {
     const res = await fetch(`/casino/dashboard?groupId=${groupId}`);
@@ -520,23 +543,23 @@ async function loadDash() {
     document.getElementById('d-rounds').textContent       = d.rounds;
     document.getElementById('d-dau').textContent          = d.dau+'명';
     document.getElementById('d-week-bet').textContent     = fmt(d.weekBet)+'P';
-    const todayProfit = d.todayProfit||0;
-    const weekProfit  = d.weekProfit||0;
+    const todayProfit = d.todayProfit || 0;
+    const weekProfit  = d.weekProfit  || 0;
     const tp = document.getElementById('d-today-profit');
-    tp.textContent = (todayProfit>=0?'+':'')+fmt(todayProfit)+'P';
-    tp.className   = 'dash-val '+(todayProfit>=0?'profit':'loss');
+    tp.textContent = (todayProfit >= 0 ? '+' : '') + fmt(todayProfit) + 'P';
+    tp.className   = 'dash-val ' + (todayProfit >= 0 ? 'profit' : 'loss');
     const wp = document.getElementById('d-week-profit');
-    wp.textContent = (weekProfit>=0?'+':'')+fmt(weekProfit)+'P';
-    wp.className   = 'dash-val '+(weekProfit>=0?'profit':'loss');
+    wp.textContent = (weekProfit >= 0 ? '+' : '') + fmt(weekProfit) + 'P';
+    wp.className   = 'dash-val ' + (weekProfit >= 0 ? 'profit' : 'loss');
 
-    const ur = await fetch(`/casino/users?groupId=${groupId}`);
+    const ur    = await fetch(`/casino/users?groupId=${groupId}`);
     const users = await ur.json();
-    document.getElementById('d-total-users').textContent = users.length+'명';
+    document.getElementById('d-total-users').textContent = users.length + '명';
 
-    const sr = await fetch(`/casino/stats?groupId=${groupId}&days=7`);
+    const sr    = await fetch(`/casino/stats?groupId=${groupId}&days=7`);
     const stats = await sr.json();
     const names = {race:'🐢 경주',baccarat:'🃏 바카라',horse:'🐴 경마',bigwheel:'🎡 빅휠',slots:'🎰 슬롯',roulette:'🎡 룰렛'};
-    document.getElementById('game-stats-list').innerHTML = stats.map(g=>`
+    document.getElementById('game-stats-list').innerHTML = stats.map(g => `
       <div class="game-stat-item">
         <div class="game-stat-head">
           <span class="game-stat-name">${names[g.gameId]||g.gameId}</span>
@@ -544,104 +567,207 @@ async function loadDash() {
         </div>
         <div style="font-size:11px;color:var(--sub)">${g.rounds}라운드 · ${g.players}명 · 총 베팅 ${fmt(g.totalBet)}P</div>
       </div>`).join('') || '<div style="color:var(--sub);font-size:12px">데이터 없음</div>';
-  } catch(e) { showToast('로드 실패', true); }
+  } catch(e) { showToast('대시보드 로드 실패', true); }
 }
 
-// ════════════
+// ════════════════════
+// 카지노 오픈 상태
+// ════════════════════
+async function loadCasinoOpenStatus() {
+  try {
+    const res  = await fetch(`/casino/open_status?groupId=${groupId}`);
+    const data = await res.json();
+    const isOpen = data.isOpen;
+    document.getElementById('casino-open-toggle').checked = isOpen;
+    const txt = document.getElementById('casino-status-text');
+    const bar = document.getElementById('casino-open-status-bar');
+    if (isOpen) {
+      txt.textContent = '🟢 현재: 오픈';
+      txt.style.color = 'var(--green)';
+      bar.textContent = '✅ 일반 유저도 /카지노, /슬롯 등 커맨드 사용 가능';
+      bar.style.background = '#0a1a10';
+      bar.style.color = 'var(--green)';
+    } else {
+      txt.textContent = '🔒 현재: 마감';
+      txt.style.color = 'var(--sub)';
+      bar.textContent = '🔒 관리자만 커맨드 사용 가능';
+      bar.style.background = 'var(--bg3)';
+      bar.style.color = 'var(--sub)';
+    }
+  } catch(e) {
+    // API 실패 시 UI를 기본값(마감)으로 유지, 오류 표시 없음
+    document.getElementById('casino-open-status-bar').textContent = '서버 연결 확인 필요';
+  }
+}
+
+async function toggleCasinoOpen(isOpen) {
+  try {
+    const res  = await fetch('/casino/open_toggle', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({adminId, groupId, isOpen})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(isOpen ? '✅ 카지노 오픈! 그룹에 알림 전송됨' : '🔒 카지노 마감됨');
+      loadCasinoOpenStatus();
+    } else {
+      showToast(data.error || '오류', true);
+      document.getElementById('casino-open-toggle').checked = !isOpen;
+    }
+  } catch(e) {
+    showToast('서버 오류', true);
+    document.getElementById('casino-open-toggle').checked = !isOpen;
+  }
+}
+
+// ════════════════════
 // 경주
-// ════════════
+// ════════════════════
 async function loadRaceState() {
   try {
     const res = await fetch(`/casino/race/state?groupId=${groupId}&userId=${adminId}`);
     raceState = await res.json();
-    const labels = {idle:'⏳ 대기',betting:'🔴 베팅 중',running:'🏃 경주 중',closed:'🏁 종료'};
-    document.getElementById('race-status-lbl').textContent = labels[raceState.status]||'알 수 없음';
-    const rPool = raceState.bets?.rabbit?.total||0;
-    const tPool = raceState.bets?.turtle?.total||0;
+    const labels = {idle:'⏳ 대기', betting:'🔴 베팅 중', running:'🏃 경주 중', closed:'🏁 종료'};
+    document.getElementById('race-status-lbl').textContent = labels[raceState.status] || '알 수 없음';
+    const rPool = raceState.bets?.rabbit?.total || 0;
+    const tPool = raceState.bets?.turtle?.total || 0;
     document.getElementById('race-bets-info').innerHTML =
       `🐇 토끼: ${fmt(rPool)}P (${raceState.bets?.rabbit?.count||0}명) · x${(raceState.odds?.rabbit||2).toFixed(2)}<br>
        🐢 거북이: ${fmt(tPool)}P (${raceState.bets?.turtle?.count||0}명) · x${(raceState.odds?.turtle||2).toFixed(2)}<br>
        💰 총 베팅: ${fmt(rPool+tPool)}P`;
   } catch(e) {}
 }
+
 async function raceOpen() {
-  if(!confirm('베팅 오픈?')) return;
-  const res = await fetch('/casino/race/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId})});
-  const d = await res.json();
-  d.ok ? showToast('✅ 베팅 오픈!') : showToast(d.error||'오류',true);
-  loadRaceState();
-}
-async function raceStart() {
-  if(!raceState?.roundId){showToast('진행 중인 경주 없음',true);return;}
-  if(!confirm('베팅 마감?')) return;
-  const res = await fetch('/casino/race/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId,roundId:raceState.roundId})});
-  const d = await res.json();
-  d.ok ? showToast('✅ 경주 시작!') : showToast(d.error||'오류',true);
-  loadRaceState();
-}
-async function raceResult() {
-  if(!raceState?.roundId){showToast('진행 중인 경주 없음',true);return;}
-  if(!confirm('결과 처리 & 정산?')) return;
-  const res = await fetch('/casino/race/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId,roundId:raceState.roundId})});
-  const d = await res.json();
-  d.ok ? showToast(`✅ ${d.winner==='rabbit'?'🐇 토끼':'🐢 거북이'} 우승! 정산완료`) : showToast(d.error||'오류',true);
+  if (!confirm('베팅 오픈?')) return;
+  const res = await fetch('/casino/race/open', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({adminId, groupId})});
+  const d   = await res.json();
+  d.ok ? showToast('✅ 베팅 오픈!') : showToast(d.error||'오류', true);
   loadRaceState();
 }
 
-// ════════════
+async function raceStart() {
+  if (!raceState?.roundId) { showToast('진행 중인 경주 없음', true); return; }
+  if (!confirm('베팅 마감?')) return;
+  const res = await fetch('/casino/race/start', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({adminId, groupId, roundId:raceState.roundId})});
+  const d   = await res.json();
+  d.ok ? showToast('✅ 경주 시작!') : showToast(d.error||'오류', true);
+  loadRaceState();
+}
+
+async function raceResult() {
+  if (!raceState?.roundId) { showToast('진행 중인 경주 없음', true); return; }
+  if (!confirm('결과 처리 & 정산?')) return;
+  const res = await fetch('/casino/race/result', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({adminId, groupId, roundId:raceState.roundId})});
+  const d   = await res.json();
+  d.ok ? showToast(`✅ ${d.winner==='rabbit'?'🐇 토끼':'🐢 거북이'} 우승! 정산완료`) : showToast(d.error||'오류', true);
+  loadRaceState();
+}
+
+function setForce(v) {
+  forceResult = v;
+  ['none','rabbit','turtle'].forEach(k => {
+    document.getElementById('force-'+k).className = 'force-btn' + (k===v ? ' active-'+k : '');
+  });
+}
+
+async function loadRaceSettingsForm() {
+  try {
+    const res = await fetch(`/casino/settings?groupId=${groupId}&gameId=race`);
+    const s   = await res.json();
+    // ★ FIX: ?. optional chaining으로 null 안전하게
+    const minBetEl  = document.getElementById('race-min-bet');
+    const maxBetEl  = document.getElementById('race-max-bet');
+    const enabledEl = document.getElementById('race-enabled');
+    const winRateEl = document.getElementById('race-win-rate');
+    const winValEl  = document.getElementById('race-win-val');
+    const houseEl   = document.getElementById('race-house');
+    const houseValEl= document.getElementById('race-house-val');
+
+    if (winRateEl) { winRateEl.value = s.rabbit_win_rate || 60; winValEl.textContent = (s.rabbit_win_rate||60)+'%'; }
+    if (houseEl)   { houseEl.value   = s.house_edge || 5;       houseValEl.textContent = (s.house_edge||5)+'%'; }
+    if (minBetEl)  minBetEl.value  = s.min_bet  || 10;
+    if (maxBetEl)  maxBetEl.value  = s.max_bet  || 10000;
+    if (enabledEl) enabledEl.checked = s.enabled !== false;
+    setForce(s.force_result || 'none');
+  } catch(e) {}
+}
+
+async function saveRaceSettings() {
+  // ★ FIX: optional chaining + 기본값으로 null 에러 방지
+  const settings = {
+    rabbit_win_rate: parseInt(document.getElementById('race-win-rate')?.value  || 60),
+    house_edge:      parseInt(document.getElementById('race-house')?.value     || 5),
+    min_bet:         parseInt(document.getElementById('race-min-bet')?.value   || 10),
+    max_bet:         parseInt(document.getElementById('race-max-bet')?.value   || 10000),
+    enabled:         document.getElementById('race-enabled')?.checked          ?? true,
+    force_result:    forceResult === 'none' ? null : forceResult,
+    auto_round:      true,
+    round_minutes:   parseInt(document.getElementById('race-mins')?.value || 3)
+  };
+  const res = await fetch('/casino/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({adminId, groupId, gameId:'race', settings})});
+  const d   = await res.json();
+  d.ok ? showToast('✅ 경주 설정 저장!') : showToast(d.error||'오류', true);
+}
+
+// ════════════════════
 // 바카라
-// ════════════
+// ════════════════════
 async function loadBaccaratState() {
   try {
     const res = await fetch(`/casino/baccarat/state?groupId=${groupId}&userId=${adminId}`);
     baccaratState = await res.json();
-    const labels = {idle:'⏳ 대기',betting:'🔴 베팅 중',closed:'🏁 종료'};
-    document.getElementById('baccarat-status-lbl').textContent = labels[baccaratState.status]||'알 수 없음';
+    const labels = {idle:'⏳ 대기', betting:'🔴 베팅 중', closed:'🏁 종료'};
+    document.getElementById('baccarat-status-lbl').textContent = labels[baccaratState.status] || '알 수 없음';
   } catch(e) {}
 }
+
 async function baccaratOpen() {
-  if(!confirm('바카라 베팅 오픈?')) return;
-  const res = await fetch('/casino/baccarat/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId})});
-  const d = await res.json();
-  d.ok ? showToast('✅ 베팅 오픈!') : showToast(d.error||'오류',true);
+  if (!confirm('바카라 베팅 오픈?')) return;
+  const res = await fetch('/casino/baccarat/open', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({adminId, groupId})});
+  const d   = await res.json();
+  d.ok ? showToast('✅ 베팅 오픈!') : showToast(d.error||'오류', true);
   loadBaccaratState();
 }
+
 async function baccaratResult() {
-  if(!baccaratState?.roundId){showToast('진행 중인 게임 없음',true);return;}
-  if(!confirm('바카라 결과 처리?')) return;
-  const res = await fetch('/casino/baccarat/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId,roundId:baccaratState.roundId})});
-  const d = await res.json();
-  d.ok ? showToast(`✅ ${d.result} 결과 처리!`) : showToast(d.error||'오류',true);
+  if (!baccaratState?.roundId) { showToast('진행 중인 게임 없음', true); return; }
+  if (!confirm('바카라 결과 처리?')) return;
+  const res = await fetch('/casino/baccarat/result', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({adminId, groupId, roundId:baccaratState.roundId})});
+  const d   = await res.json();
+  d.ok ? showToast(`✅ ${d.result} 결과 처리!`) : showToast(d.error||'오류', true);
   loadBaccaratState();
 }
+
 function setBacForce(v) {
   bacForce = v;
-  ['none','player','banker','tie'].forEach(k=>{
-    document.getElementById('bac-f-'+k).className = 'force-btn' + (k===v?' active-'+k:'');
+  ['none','player','banker','tie'].forEach(k => {
+    document.getElementById('bac-f-'+k).className = 'force-btn' + (k===v ? ' active-'+k : '');
   });
 }
+
 async function saveBaccaratSettings() {
   const settings = {
     player_win_rate: parseInt(document.getElementById('bac-player').value),
     banker_win_rate: parseInt(document.getElementById('bac-banker').value),
-    force_result: bacForce==='none'?null:bacForce
+    force_result:    bacForce === 'none' ? null : bacForce
   };
-  const res = await fetch('/casino/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId,gameId:'baccarat',settings})});
-  const d = await res.json();
-  d.ok ? showToast('✅ 바카라 설정 저장!') : showToast(d.error||'오류',true);
+  const res = await fetch('/casino/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({adminId, groupId, gameId:'baccarat', settings})});
+  const d   = await res.json();
+  d.ok ? showToast('✅ 바카라 설정 저장!') : showToast(d.error||'오류', true);
 }
 
-// ════════════
+// ════════════════════
 // 경마
-// ════════════
+// ════════════════════
 async function loadHorseState() {
   try {
     const res = await fetch(`/casino/horse/state?groupId=${groupId}&userId=${adminId}`);
     horseState = await res.json();
-    const labels = {idle:'⏳ 대기',betting:'🔴 베팅 중',running:'🏇 경주 중',closed:'🏁 종료'};
-    document.getElementById('horse-status-lbl').textContent = labels[horseState.status]||'알 수 없음';
-    const horses = horseState.settings?.horses||[];
-    document.getElementById('horse-settings-wrap').innerHTML = horses.map(h=>`
+    const labels = {idle:'⏳ 대기', betting:'🔴 베팅 중', running:'🏇 경주 중', closed:'🏁 종료'};
+    document.getElementById('horse-status-lbl').textContent = labels[horseState.status] || '알 수 없음';
+    const horses = horseState.settings?.horses || [];
+    document.getElementById('horse-settings-wrap').innerHTML = horses.map(h => `
       <div class="setting-row">
         <span class="setting-label">${h.emoji} ${h.name} 승률</span>
         <input type="range" id="hw-${h.id}" min="1" max="80" value="${h.win_rate}"
@@ -653,94 +779,60 @@ async function loadHorseState() {
         <input class="inp inp-sm" type="number" id="ho-${h.id}" value="${h.base_odds}" step="0.1" style="width:70px">
         <span style="font-size:11px;color:var(--sub)">배</span>
       </div>`).join('');
-    if(horseState.settings?.force_result) {
+    if (horseState.settings?.force_result) {
       document.getElementById('horse-force').value = horseState.settings.force_result;
     }
   } catch(e) {}
 }
+
 async function horseOpen() {
-  if(!confirm('경마 베팅 오픈?')) return;
-  const res = await fetch('/casino/horse/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId})});
-  const d = await res.json();
-  d.ok ? showToast('✅ 베팅 오픈!') : showToast(d.error||'오류',true);
+  if (!confirm('경마 베팅 오픈?')) return;
+  const res = await fetch('/casino/horse/open', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({adminId, groupId})});
+  const d   = await res.json();
+  d.ok ? showToast('✅ 베팅 오픈!') : showToast(d.error||'오류', true);
   loadHorseState();
 }
+
 async function horseResult() {
-  if(!horseState?.roundId){showToast('진행 중인 경마 없음',true);return;}
-  if(!confirm('경마 결과 처리?')) return;
-  const res = await fetch('/casino/horse/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId,roundId:horseState.roundId})});
-  const d = await res.json();
-  d.ok ? showToast(`✅ ${d.winner?.name||d.result} 우승! 정산완료`) : showToast(d.error||'오류',true);
+  if (!horseState?.roundId) { showToast('진행 중인 경마 없음', true); return; }
+  if (!confirm('경마 결과 처리?')) return;
+  const res = await fetch('/casino/horse/result', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({adminId, groupId, roundId:horseState.roundId})});
+  const d   = await res.json();
+  d.ok ? showToast(`✅ ${d.winner?.name||d.result} 우승! 정산완료`) : showToast(d.error||'오류', true);
   loadHorseState();
 }
+
 async function saveHorseSettings() {
-  const horses = (horseState?.settings?.horses||[]).map(h=>({
+  const horses  = (horseState?.settings?.horses || []).map(h => ({
     ...h,
-    win_rate:   parseInt(document.getElementById('hw-'+h.id)?.value||h.win_rate),
-    base_odds:  parseFloat(document.getElementById('ho-'+h.id)?.value||h.base_odds),
+    win_rate:  parseInt(document.getElementById('hw-'+h.id)?.value  || h.win_rate),
+    base_odds: parseFloat(document.getElementById('ho-'+h.id)?.value || h.base_odds),
   }));
   const forceVal = document.getElementById('horse-force').value;
-  const settings = { horses, force_result: forceVal==='none'?null:forceVal };
-  const res = await fetch('/casino/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId,gameId:'horse',settings})});
-  const d = await res.json();
-  d.ok ? showToast('✅ 경마 설정 저장!') : showToast(d.error||'오류',true);
+  const settings = { horses, force_result: forceVal === 'none' ? null : forceVal };
+  const res = await fetch('/casino/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({adminId, groupId, gameId:'horse', settings})});
+  const d   = await res.json();
+  d.ok ? showToast('✅ 경마 설정 저장!') : showToast(d.error||'오류', true);
 }
 
-// ════════════
-// 자동 라운드 제어
-// ════════════
+// ════════════════════
+// 자동 라운드
+// ════════════════════
 async function saveAutoConfig() {
-  const raceAuto   = document.getElementById('race-auto').checked;
-  const horseAuto  = document.getElementById('horse-auto').checked;
-  const roundMins  = parseInt(document.getElementById('race-mins').value||3);
-  const res = await fetch('/casino/auto_config',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({adminId,groupId,raceAuto,horseAuto,roundMinutes:roundMins})});
-  const d = await res.json();
-  if(d.ok) showToast('✅ 자동 설정 저장!');
-}
-
-// ════════════
-// 경주 설정 로드
-// ════════════
-function setForce(v) {
-  forceResult = v;
-  ['none','rabbit','turtle'].forEach(k=>{
-    document.getElementById('force-'+k).className = 'force-btn' + (k===v?' active-'+k:'');
-  });
-}
-async function loadRaceSettingsForm() {
+  const raceAuto  = document.getElementById('race-auto')?.checked  ?? true;
+  const horseAuto = document.getElementById('horse-auto')?.checked ?? true;
+  const roundMins = parseInt(document.getElementById('race-mins')?.value || 3);
   try {
-    const res = await fetch(`/casino/settings?groupId=${groupId}&gameId=race`);
-    const s   = await res.json();
-    document.getElementById('race-win-rate').value = s.rabbit_win_rate||60;
-    document.getElementById('race-win-val').textContent = (s.rabbit_win_rate||60)+'%';
-    document.getElementById('race-house').value = s.house_edge||5;
-    document.getElementById('race-house-val').textContent = (s.house_edge||5)+'%';
-    document.getElementById('race-min-bet').value = s.min_bet||10;
-    document.getElementById('race-max-bet').value = s.max_bet||10000;
-    document.getElementById('race-enabled').checked = s.enabled!==false;
-    setForce(s.force_result||'none');
+    const res = await fetch('/casino/auto_config', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({adminId, groupId, raceAuto, horseAuto, roundMinutes:roundMins})});
+    const d = await res.json();
+    if (d.ok) showToast('✅ 자동 설정 저장!');
   } catch(e) {}
 }
-async function saveRaceSettings() {
-  const settings = {
-    rabbit_win_rate: parseInt(document.getElementById('race-win-rate').value),
-    house_edge:      parseInt(document.getElementById('race-house').value),
-    min_bet:         parseInt(document.getElementById('race-min-bet').value),
-    max_bet:         parseInt(document.getElementById('race-max-bet').value),
-    enabled:         document.getElementById('race-enabled').checked,
-    force_result:    forceResult==='none'?null:forceResult,
-    auto_round:      true,
-    round_minutes:   parseInt(document.getElementById('race-mins')?.value||3)
-  };
-  const res = await fetch('/casino/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminId,groupId,gameId:'race',settings})});
-  const d = await res.json();
-  d.ok ? showToast('✅ 경주 설정 저장!') : showToast(d.error||'오류',true);
-}
 
-// ════════════
+// ════════════════════
 // 포인트 관리
-// ════════════
+// ════════════════════
 async function loadUsersForSelect() {
   try {
     const res = await fetch(`/casino/users?groupId=${groupId}`);
@@ -752,7 +844,7 @@ async function loadUsersForSelect() {
 function renderPtSelect(users) {
   const sel = document.getElementById('pt-user-select');
   sel.innerHTML = '<option value="">유저를 검색하거나 선택하세요</option>' +
-    users.map(u=>`<option value="${u.userId}">${u.name} (${fmt(u.point)}P)</option>`).join('');
+    users.map(u => `<option value="${u.userId}">${u.name} (${fmt(u.point)}P)</option>`).join('');
 }
 
 function filterPtUsers() {
@@ -762,47 +854,42 @@ function filterPtUsers() {
     u.name.toLowerCase().includes(q) || String(u.userId).includes(q)
   );
   renderPtSelect(filtered);
-  if (filtered.length === 1) {
-    document.getElementById('pt-user-select').value = filtered[0].userId;
-  }
+  if (filtered.length === 1) document.getElementById('pt-user-select').value = filtered[0].userId;
 }
 
 async function grantPoint() {
   const targetId = parseInt(document.getElementById('pt-user-select').value);
-  const amount = parseInt(document.getElementById('pt-amount').value);
-  const reason = document.getElementById('pt-reason').value.trim()||'관리자 지급';
-  if(!targetId){showToast('유저를 선택해주세요',true);return;}
-  if(!amount){showToast('금액을 입력해주세요',true);return;}
-  
-  // ★ 백엔드 파라미터 규격(target_id -> userId) 싱크 매칭
-  const res = await fetch('/casino/point_grant',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({adminId, groupId, userId: targetId, amount, reason})
+  const amount   = parseInt(document.getElementById('pt-amount').value);
+  const reason   = document.getElementById('pt-reason').value.trim() || '관리자 지급';
+  if (!targetId) { showToast('유저를 선택해주세요', true); return; }
+  if (!amount)   { showToast('금액을 입력해주세요', true); return; }
+  const res = await fetch('/casino/point_grant', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({adminId, groupId, userId:targetId, amount, reason})
   });
   const d = await res.json();
-  if(d.ok){
+  if (d.ok) {
     showToast(`✅ ${d.userName}님 ${fmt(Math.abs(amount))}P ${amount>0?'지급':'차감'}`);
     loadUsersForSelect();
     document.getElementById('pt-amount').value = '';
     document.getElementById('pt-reason').value = '';
-  } else showToast(d.error||'오류',true);
+  } else showToast(d.error||'오류', true);
 }
 
 async function grantAllPoints() {
   const amount = parseInt(document.getElementById('pt-all-amount').value);
-  const reason = document.getElementById('pt-all-reason').value.trim()||'이벤트 지급';
-  if(!amount||amount<=0){showToast('양수 금액 입력',true);return;}
-  if(!confirm(`전체 유저에게 ${fmt(amount)}P 지급?`)) return;
-  const res = await fetch('/casino/point_grant_all',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({adminId,groupId,amount,reason})});
+  const reason = document.getElementById('pt-all-reason').value.trim() || '이벤트 지급';
+  if (!amount || amount <= 0) { showToast('양수 금액 입력', true); return; }
+  if (!confirm(`전체 유저에게 ${fmt(amount)}P 지급?`)) return;
+  const res = await fetch('/casino/point_grant_all', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({adminId, groupId, amount, reason})});
   const d = await res.json();
-  d.ok ? showToast(`✅ ${d.count}명에게 ${fmt(amount)}P 지급`) : showToast(d.error||'오류',true);
+  d.ok ? showToast(`✅ ${d.count}명에게 ${fmt(amount)}P 지급`) : showToast(d.error||'오류', true);
 }
 
-// ════════════
-// 유저 리스트 및 제어
-// ════════════
+// ════════════════════
+// 유저 관리
+// ════════════════════
 async function loadUsers() {
   try {
     const res = await fetch(`/casino/users?groupId=${groupId}`);
@@ -813,7 +900,7 @@ async function loadUsers() {
 
 function renderUsers(users) {
   const list = document.getElementById('user-list');
-  list.innerHTML = users.slice(0,50).map((u,i)=>`
+  list.innerHTML = users.slice(0,50).map((u,i) => `
     <div class="user-item ${u.blacklisted?'banned':''}">
       <span class="user-rank">${i+1}</span>
       <div style="flex:1">
@@ -829,27 +916,27 @@ function renderUsers(users) {
 
 function filterUsers() {
   const q = document.getElementById('user-search').value.trim().toLowerCase();
-  if(!q){renderUsers(allUsers);return;}
-  renderUsers(allUsers.filter(u=>u.name.toLowerCase().includes(q)||String(u.userId).includes(q)));
+  if (!q) { renderUsers(allUsers); return; }
+  renderUsers(allUsers.filter(u => u.name.toLowerCase().includes(q) || String(u.userId).includes(q)));
 }
 
 async function toggleBlacklist(userId, name, isBanned) {
-  const action = isBanned?'remove':'add';
-  const reason = isBanned?'':(prompt(`${name}님 차단 사유:`)||'관리자 차단');
-  if(!isBanned&&reason===null) return;
-  const res = await fetch('/casino/blacklist',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({adminId,groupId,userId,reason,action})});
+  const action = isBanned ? 'remove' : 'add';
+  const reason = isBanned ? '' : (prompt(`${name}님 차단 사유:`) || '관리자 차단');
+  if (!isBanned && reason === null) return;
+  const res = await fetch('/casino/blacklist', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({adminId, groupId, userId, reason, action})});
   const d = await res.json();
-  if(d.ok){showToast(isBanned?'✅ 차단 해제':'✅ 차단 완료');loadUsers();loadBlacklist();}
-  else showToast(d.error||'오류',true);
+  if (d.ok) { showToast(isBanned ? '✅ 차단 해제' : '✅ 차단 완료'); loadUsers(); loadBlacklist(); }
+  else showToast(d.error||'오류', true);
 }
 
 async function loadBlacklist() {
   try {
-    const res = await fetch(`/casino/blacklist?groupId=${groupId}`);
-    const data= await res.json();
-    document.getElementById('blacklist-wrap').innerHTML = data.length?
-      data.map(u=>`
+    const res  = await fetch(`/casino/blacklist?groupId=${groupId}`);
+    const data = await res.json();
+    document.getElementById('blacklist-wrap').innerHTML = data.length ?
+      data.map(u => `
         <div class="user-item banned" style="margin-bottom:6px">
           <div style="flex:1">
             <div class="user-name">${u.name}</div>
@@ -857,39 +944,39 @@ async function loadBlacklist() {
           </div>
           <button class="outline-btn green" style="padding:5px 8px;font-size:10px"
             onclick="toggleBlacklist(${u.userId},'${u.name}',true)">해제</button>
-        </div>`).join(''):
+        </div>`).join('') :
       '<div style="color:var(--sub);text-align:center;padding:16px;font-size:12px">블랙리스트 없음</div>';
   } catch(e) {}
 }
 
-// ════════════
-// 마일스톤 현황
-// ════════════
+// ════════════════════
+// 마일스톤
+// ════════════════════
 async function loadMilestoneSettings() {
   try {
     const res = await fetch(`/casino/chat_milestone_settings?groupId=${groupId}`);
     const d   = await res.json();
-    const ms  = d.milestones||{};
+    const ms  = d.milestones || {};
     document.getElementById('ms-100').value  = ms[100]  || ms['100']  || 500;
     document.getElementById('ms-300').value  = ms[300]  || ms['300']  || 1000;
     document.getElementById('ms-500').value  = ms[500]  || ms['500']  || 2000;
     document.getElementById('ms-1000').value = ms[1000] || ms['1000'] || 5000;
-    document.getElementById('ms-enabled').checked = d.enabled!==false;
+    document.getElementById('ms-enabled').checked = d.enabled !== false;
   } catch(e) {}
 }
 
 async function saveMilestoneSettings() {
   const milestones = {
-    100:  parseInt(document.getElementById('ms-100').value)||500,
-    300:  parseInt(document.getElementById('ms-300').value)||1000,
-    500:  parseInt(document.getElementById('ms-500').value)||2000,
-    1000: parseInt(document.getElementById('ms-1000').value)||5000,
+    100:  parseInt(document.getElementById('ms-100').value)  || 500,
+    300:  parseInt(document.getElementById('ms-300').value)  || 1000,
+    500:  parseInt(document.getElementById('ms-500').value)  || 2000,
+    1000: parseInt(document.getElementById('ms-1000').value) || 5000,
   };
   const enabled = document.getElementById('ms-enabled').checked;
-  const res = await fetch('/casino/chat_milestone_settings',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({adminId,groupId,milestones,enabled})});
+  const res = await fetch('/casino/chat_milestone_settings', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({adminId, groupId, milestones, enabled})});
   const d = await res.json();
-  d.ok ? showToast('✅ 마일스톤 설정 저장!') : showToast(d.error||'오류',true);
+  d.ok ? showToast('✅ 마일스톤 설정 저장!') : showToast(d.error||'오류', true);
 }
 
 async function loadMilestoneStatus() {
@@ -897,14 +984,14 @@ async function loadMilestoneStatus() {
     const res  = await fetch(`/casino/chat_milestone_status?groupId=${groupId}`);
     const data = await res.json();
     const wrap = document.getElementById('ms-status-list');
-    if(!data.length){wrap.innerHTML='<div style="color:var(--sub);text-align:center;padding:12px;font-size:12px">데이터 없음</div>';return;}
-    const msList = [100,300,500,1000];
-    wrap.innerHTML = data.slice(0,20).map(u=>{
-      const badges = msList.map(m=>{
-        const ms = u.milestones?.[String(m)]||u.milestones?.[m];
-        if(!ms) return '';
-        if(ms.rewarded) return `<span class="ms-badge rewarded">${m}회✓</span>`;
-        if(ms.achieved) return `<span class="ms-badge grantable" onclick="grantMilestone(${u.userId},${m})">${m}회 지급</span>`;
+    if (!data.length) { wrap.innerHTML = '<div style="color:var(--sub);text-align:center;padding:12px;font-size:12px">데이터 없음</div>'; return; }
+    const msList = [100, 300, 500, 1000];
+    wrap.innerHTML = data.slice(0,20).map(u => {
+      const badges = msList.map(m => {
+        const ms = u.milestones?.[String(m)] || u.milestones?.[m];
+        if (!ms) return '';
+        if (ms.rewarded) return `<span class="ms-badge rewarded">${m}회✓</span>`;
+        if (ms.achieved) return `<span class="ms-badge grantable" onclick="grantMilestone(${u.userId},${m})">${m}회 지급</span>`;
         return `<span class="ms-badge" style="background:var(--bg4);color:var(--sub);border:1px solid var(--border)">${m}회(${u.todayCount||0})</span>`;
       }).join('');
       return `<div class="ms-user-item">
@@ -919,29 +1006,29 @@ async function loadMilestoneStatus() {
 }
 
 async function grantMilestone(userId, milestone) {
-  const res = await fetch('/casino/chat_milestone_grant',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({adminId,groupId,userId,milestone})});
+  const res = await fetch('/casino/chat_milestone_grant', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({adminId, groupId, userId, milestone})});
   const d = await res.json();
-  if(d.ok){showToast(`✅ ${d.userName}님 ${fmt(d.reward)}P 지급`);loadMilestoneStatus();}
-  else showToast(d.error||'오류',true);
+  if (d.ok) { showToast(`✅ ${d.userName}님 ${fmt(d.reward)}P 지급`); loadMilestoneStatus(); }
+  else showToast(d.error||'오류', true);
 }
 
-// ════════════
-// 정산 및 로그
-// ════════════
+// ════════════════════
+// 출금
+// ════════════════════
 async function loadWithdrawList() {
   try {
     const res  = await fetch(`/casino/withdraw_list?groupId=${groupId}`);
     const data = await res.json();
     const wrap = document.getElementById('withdraw-list');
-    if(!data.length){wrap.innerHTML='<div style="color:var(--sub);text-align:center;padding:16px;font-size:12px">신청 없음</div>';return;}
-    wrap.innerHTML = data.map(w=>{
+    if (!data.length) { wrap.innerHTML = '<div style="color:var(--sub);text-align:center;padding:16px;font-size:12px">신청 없음</div>'; return; }
+    wrap.innerHTML = data.map(w => {
       const statusBadge = `<span class="badge-status badge-${w.status}">${w.status==='pending'?'대기':w.status==='approved'?'승인':'거절'}</span>`;
-      const btns = w.status==='pending'?`
-        <div class="withdraw-btns">
+      const btns = w.status === 'pending' ?
+        `<div class="withdraw-btns">
           <button class="withdraw-approve" onclick="processWithdraw(${w.id},'approve')">✅ 승인</button>
           <button class="withdraw-reject"  onclick="processWithdraw(${w.id},'reject')">❌ 거절</button>
-        </div>`:
+        </div>` :
         `<div style="font-size:11px;color:var(--sub);margin-top:4px">처리 완료</div>`;
       return `<div class="withdraw-item">
         <div class="withdraw-head">
@@ -949,7 +1036,7 @@ async function loadWithdrawList() {
           <span class="withdraw-amt">${fmt(w.amount)}P</span>
         </div>
         <div style="margin-bottom:4px">${statusBadge}</div>
-        ${w.note?`<div class="withdraw-note">📝 ${w.note}</div>`:''}
+        ${w.note ? `<div class="withdraw-note">📝 ${w.note}</div>` : ''}
         <div style="font-size:10px;color:var(--sub);margin-bottom:6px">${w.createdAt?.slice(0,16).replace('T',' ')||''}</div>
         ${btns}
       </div>`;
@@ -958,75 +1045,41 @@ async function loadWithdrawList() {
 }
 
 async function processWithdraw(reqId, action) {
-  if(!confirm(action==='approve'?'출금 승인?':'출금 거절?')) return;
-  const res = await fetch('/casino/withdraw_process',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({adminId,requestId:reqId,action})});
+  if (!confirm(action==='approve' ? '출금 승인?' : '출금 거절?')) return;
+  const res = await fetch('/casino/withdraw_process', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({adminId, requestId:reqId, action})});
   const d = await res.json();
-  d.ok ? showToast(`✅ ${action==='approve'?'승인':'거절'} 완료`) : showToast(d.error||'오류',true);
+  d.ok ? showToast(`✅ ${action==='approve'?'승인':'거절'} 완료`) : showToast(d.error||'오류', true);
   loadWithdrawList();
 }
 
+// ════════════════════
+// 로그
+// ════════════════════
 async function loadLogs() {
   try {
     const res  = await fetch(`/casino/point_logs?groupId=${groupId}&limit=50`);
     const data = await res.json();
-    document.getElementById('log-list').innerHTML = data.map(l=>`
+    document.getElementById('log-list').innerHTML = data.map(l => `
       <div class="log-item">
         <div style="flex:1">
           <div class="log-name">${l.userName||'?'}</div>
           <div class="log-reason">${l.reason||''}</div>
         </div>
         <div class="log-amt ${l.amount>=0?'plus':'minus'}">${l.amount>=0?'+':''}${fmt(l.amount)}P</div>
-      </div>`).join('')||'<div style="color:var(--sub);text-align:center;padding:16px;font-size:12px">내역 없음</div>';
+      </div>`).join('') || '<div style="color:var(--sub);text-align:center;padding:16px;font-size:12px">내역 없음</div>';
   } catch(e) {}
 }
 
-async function loadCasinoOpenStatus() {
-  try {
-    const res  = await fetch(`/casino/open_status?groupId=${groupId}`);
-    const data = await res.json();
-    const isOpen = data.isOpen;
-    document.getElementById('casino-open-toggle').checked = isOpen;
-    const txt  = document.getElementById('casino-status-text');
-    const bar  = document.getElementById('casino-open-status-bar');
-    if (isOpen) {
-      txt.textContent = '🟢 현재: 오픈';
-      txt.style.color = 'var(--green)';
-      bar.textContent = '✅ 일반 유저도 /카지노, /슬롯 등 커맨드 사용 가능';
-      bar.style.background = '#0a1a10';
-      bar.style.color = 'var(--green)';
-    } else {
-      txt.textContent = '🔒 현재: 마감';
-      txt.style.color = 'var(--sub)';
-      bar.textContent = '🔒 관리자만 커맨드 사용 가능';
-      bar.style.background = 'var(--bg3)';
-      bar.style.color = 'var(--sub)';
-    }
-  } catch(e) {}
-}
-
-async function toggleCasinoOpen(isOpen) {
-  const res = await fetch('/casino/open_toggle', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({adminId, groupId, isOpen})
-  });
-  const data = await res.json();
-  if (data.ok) {
-    showToast(isOpen ? '✅ 카지노 오픈! 그룹에 알림 전송됨' : '🔒 카지노 마감됨');
-    loadCasinoOpenStatus();
-  } else {
-    showToast(data.error||'오류', true);
-    document.getElementById('casino-open-toggle').checked = !isOpen;
-  }
-}
-
+// ════════════════════
+// 초기화
+// ════════════════════
 async function init() {
-  console.log('[init] adminId='+adminId+' groupId='+groupId);
-  if(!adminId || !groupId){
-    document.body.innerHTML='<div style="padding:40px;text-align:center;color:#ee4444;font-size:14px">'
-      +'⚠️ 관리자만 접근 가능해요<br><br>'
-      +'<small style="color:#888">adminId='+adminId+' groupId='+groupId+'</small>'
-      +'</div>';
+  if (!adminId || !groupId) {
+    document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#ee4444;font-size:14px">'
+      + '⚠️ 관리자만 접근 가능해요<br><br>'
+      + '<small style="color:#888">adminId=' + adminId + ' groupId=' + groupId + '</small>'
+      + '</div>';
     return;
   }
   loadDash();
