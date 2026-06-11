@@ -237,55 +237,62 @@ async function doSpin() {
   if (amt > myPt) { toast('포인트 부족', true); return; }
 
   spinning = true; refreshBtn();
-  myPt = addPoint(groupId, userId, -amt);
-  document.getElementById('my-point').textContent = fmt(myPt) + ' P';
 
-  const result = decideSlotResult();
-  const pay = calcPayout(result, amt);
+  try {
+    // 서버에 스핀 요청 → 서버가 결과 결정
+    const res = await fetch('/casino/slots/spin', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({groupId:parseInt(groupId), userId:parseInt(userId), amount:amt})
+    });
+    const data = await res.json();
+    if (!data.ok) { toast(data.error||'오류', true); spinning=false; refreshBtn(); return; }
 
-  await Promise.all([
-    spinReel(0, 1200, result[0]),
-    new Promise(r => setTimeout(() => spinReel(1,1600,result[1]).then(r), 200)),
-    new Promise(r => setTimeout(() => spinReel(2,2000,result[2]).then(r), 400)),
-  ]);
+    const result = data.result;   // 서버가 결정한 심볼
+    const payout = data.payout;   // 서버가 계산한 지급액
+    const pay    = calcPayout(result, amt); // 표시용 (label, type)
 
-  const rdEl = document.getElementById('result-display');
-  rdEl.textContent = pay.type !== 'miss' ? `🎉 ${pay.label}` : `💸 ${pay.label}`;
-  rdEl.style.color = pay.payout > 0 ? '#f0c96a' : '#6a6a8a';
-
-  if (pay.type === 'triple' && result[0] === '💎') {
-    document.getElementById('machine-body').classList.add('jackpot-flash');
-    setTimeout(() => document.getElementById('machine-body').classList.remove('jackpot-flash'), 2000);
-  }
-
-  const payout = pay.payout;
-  if (payout > 0) {
-    myPt = addPoint(groupId, userId, payout);
+    // 포인트 서버 기준으로 동기화
+    myPt = myPt - amt + (payout||0);
+    setPoint(groupId, userId, myPt);
     document.getElementById('my-point').textContent = fmt(myPt) + ' P';
-  }
 
-  history.unshift({ syms: result.join(''), payout, type: pay.type });
-  if (history.length > 12) history.pop();
-  renderHistory();
+    await Promise.all([
+      spinReel(0, 1200, result[0]),
+      new Promise(r => setTimeout(() => spinReel(1,1600,result[1]).then(r), 200)),
+      new Promise(r => setTimeout(() => spinReel(2,2000,result[2]).then(r), 400)),
+    ]);
 
-  setTimeout(() => {
-    document.getElementById('ov-symbols').textContent = result.join(' ');
-    document.getElementById('ov-title').textContent =
-      pay.type === 'triple' ? (result[0]==='💎'?'💎 JACKPOT!':'🎉 THREE OF A KIND!') :
-      pay.type === 'double' ? '✨ TWO MATCH!' : '💸 NO MATCH';
-    document.getElementById('ov-sub').textContent = pay.label;
-    if (payout > 0) {
-      document.getElementById('ov-payout').textContent = `+${fmt(payout)} P 획득!`;
-      document.getElementById('ov-payout').style.color = '#44ee88';
-      vibrate([100,50,200]);
-    } else {
-      document.getElementById('ov-payout').textContent = `-${fmt(amt)} P`;
-      document.getElementById('ov-payout').style.color = '#ee4444';
-      vibrate([200]);
+    const rdEl = document.getElementById('result-display');
+    rdEl.textContent = pay.type !== 'miss' ? `🎉 ${pay.label}` : `💸 ${pay.label}`;
+    rdEl.style.color = payout > 0 ? '#f0c96a' : '#6a6a8a';
+
+    if (pay.type === 'triple' && result[0] === '💎') {
+      document.getElementById('machine-body').classList.add('jackpot-flash');
+      setTimeout(() => document.getElementById('machine-body').classList.remove('jackpot-flash'), 2000);
     }
-    document.getElementById('overlay').classList.add('show');
-  }, 600);
 
+    history.unshift({ syms: result.join(''), payout, type: pay.type });
+    if (history.length > 12) history.pop();
+    renderHistory();
+
+    setTimeout(() => {
+      document.getElementById('ov-symbols').textContent = result.join(' ');
+      document.getElementById('ov-title').textContent =
+        pay.type === 'triple' ? (result[0]==='💎'?'💎 JACKPOT!':'🎉 THREE OF A KIND!') :
+        pay.type === 'double' ? '✨ TWO MATCH!' : '💸 NO MATCH';
+      document.getElementById('ov-sub').textContent = pay.label;
+      if (payout > 0) {
+        document.getElementById('ov-payout').textContent = `+${fmt(payout)} P 획득!`;
+        document.getElementById('ov-payout').style.color = '#44ee88';
+        vibrate([100,50,200]);
+      } else {
+        document.getElementById('ov-payout').textContent = `-${fmt(amt)} P`;
+        document.getElementById('ov-payout').style.color = '#ee4444';
+        vibrate([200]);
+      }
+      document.getElementById('overlay').classList.add('show');
+    }, 600);
+  } catch(e) { toast('서버 오류', true); }
   spinning = false; refreshBtn();
 }
 
