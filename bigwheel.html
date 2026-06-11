@@ -19,19 +19,21 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .top-title{font-family:'Cinzel',serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
 .point-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;justify-content:space-between;}
 .point-val{font-size:16px;font-weight:700;color:var(--gold);}
-.main{flex:1;overflow-y:auto;padding:0 14px 120px;display:flex;flex-direction:column;gap:12px;padding-top:12px;}
+.main{flex:1;overflow-y:auto;padding:14px 14px 100px;display:flex;flex-direction:column;gap:12px;}
+
 .wheel-section{display:flex;flex-direction:column;align-items:center;gap:10px;}
 .wheel-outer{position:relative;width:280px;height:280px;filter:drop-shadow(0 8px 30px rgba(212,168,67,0.3));}
 .pointer-wrap{position:absolute;top:-14px;left:50%;transform:translateX(-50%);z-index:10;}
 .pointer{width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:30px solid var(--gold2);filter:drop-shadow(0 0 8px rgba(212,168,67,0.8));}
 canvas#wheel{width:280px;height:280px;border-radius:50%;}
 .spin-result{font-family:'Cinzel',serif;font-size:22px;font-weight:900;text-align:center;min-height:36px;background:linear-gradient(135deg,var(--gold2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+
 .bet-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
 .seg-opt{border-radius:12px;border:2px solid var(--border);background:var(--bg2);padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.18s;}
 .seg-opt:active{transform:scale(0.96);}
-.seg-opt.selected{border-width:2px;}
 .seg-mult{font-size:18px;font-weight:900;}
 .seg-prob{font-size:10px;color:var(--sub);margin-top:2px;}
+
 .card-inner{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;}
 .card-title{font-family:'Cinzel',serif;font-size:11px;color:var(--gold);letter-spacing:1px;margin-bottom:12px;}
 .presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
@@ -39,23 +41,23 @@ canvas#wheel{width:280px;height:280px;border-radius:50%;}
 .preset:active{background:var(--bg4);}
 .amt-row{display:flex;gap:8px;align-items:center;}
 .amt-inp{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;padding:11px 14px;outline:none;}
-.amt-inp:focus{border-color:var(--gold3);}
-.spin-btn{width:100%;padding:18px;border-radius:14px;border:none;font-size:16px;font-weight:900;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));color:#0a0800;box-shadow:0 6px 24px rgba(212,168,67,0.35);letter-spacing:1px;margin-top:10px;}
-.spin-btn.off{background:var(--border);color:#333;cursor:default;box-shadow:none;letter-spacing:0;}
+.spin-btn{width:100%;padding:18px;border-radius:14px;border:none;font-size:16px;font-weight:900;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));color:#0a0800;letter-spacing:1px;margin-top:10px;}
+.spin-btn.off{background:var(--border);color:#333;cursor:default;letter-spacing:0;}
 .spin-btn:not(.off):active{transform:scale(0.98);}
+
 .history-wrap{display:flex;flex-wrap:wrap;gap:5px;}
 .hist-badge{padding:4px 8px;border-radius:8px;font-size:11px;font-weight:700;}
+
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;}
 .overlay.show{display:flex;}
 .ov-emoji{font-size:72px;animation:pop 0.4s ease-out;}
 @keyframes pop{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
-.ov-title{font-family:'Cinzel',serif;font-size:26px;font-weight:900;}
+.ov-title{font-family:'Cinzel',serif;font-size:26px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
 .ov-sub{font-size:13px;color:var(--sub);line-height:1.7;}
 .ov-payout{font-size:30px;font-weight:900;}
 .ov-close{padding:13px 30px;border-radius:12px;border:1px solid var(--gold3);background:transparent;color:var(--gold);font-size:14px;font-weight:600;cursor:pointer;}
-body.light{--bg:#f4f0e8;--bg2:#fff;--bg3:#f0ece0;--bg4:#e8e4d8;--border:#d4c8a8;--text:#2a2010;--sub:#887755;}
-.theme-btn{position:fixed;bottom:20px;right:16px;z-index:100;width:42px;height:42px;border-radius:50%;border:1px solid var(--border);background:var(--bg2);font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
-.home-btn{position:fixed;bottom:20px;left:16px;z-index:100;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--sub);font-size:12px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
+
+.home-btn{position:fixed;bottom:20px;left:16px;z-index:100;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--sub);font-size:12px;cursor:pointer;}
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--gold);color:#0a0800;font-size:13px;font-weight:700;padding:10px 20px;border-radius:20px;z-index:500;opacity:0;transition:opacity 0.2s;white-space:nowrap;pointer-events:none;}
 .toast.show{opacity:1;}
 .toast.err{background:#cc3333;color:#fff;}
@@ -107,262 +109,203 @@ body.light{--bg:#f4f0e8;--bg2:#fff;--bg3:#f0ece0;--bg4:#e8e4d8;--border:#d4c8a8;
 
 <div class="overlay" id="overlay">
   <div class="ov-emoji" id="ov-emoji">🎡</div>
-  <div class="ov-title" id="ov-title" style="background:linear-gradient(135deg,#f0c96a,#d4a843);-webkit-background-clip:text;-webkit-text-fill-color:transparent"></div>
+  <div class="ov-title" id="ov-title"></div>
   <div class="ov-sub" id="ov-sub"></div>
   <div class="ov-payout" id="ov-payout"></div>
-  <button class="ov-close" onclick="closeOverlay()">확인</button>
+  <button class="ov-close" onclick="closeOverlay()">다시 베팅</button>
 </div>
 <div class="toast" id="toast"></div>
 <button class="home-btn" onclick="goHome()">🏠 홈</button>
-<button class="theme-btn" id="theme-btn" onclick="toggleTheme()">🌙</button>
 
 <script>
-const p=new URLSearchParams(location.search);
-const userId=p.get('userId')||p.get('start')?.split('_')[0];
-const groupId=p.get('groupId')||p.get('start')?.split('_')[1];
-let myPt=0, picked=null, spinning=false;
-let history=[];
+const C = window.CasinoCore;
+const userId  = C.getParam('userId');
+const groupId = C.getParam('groupId');
+let myPt = C.getPoint(groupId, userId);
+let picked = null, spinning = false;
+let history = [];
 
-const DEFAULT_SEGS=[
-  {label:'2배',multiplier:2,color:'#1a3a6a',prob:30},
-  {label:'3배',multiplier:3,color:'#1a4a2a',prob:20},
-  {label:'5배',multiplier:5,color:'#4a3000',prob:15},
-  {label:'10배',multiplier:10,color:'#4a1010',prob:10},
-  {label:'20배',multiplier:20,color:'#3a1050',prob:5},
-  {label:'꽝',multiplier:0,color:'#1a1a2a',prob:20},
+const SEGS = [
+  {label:'2배',  multiplier:2,  color:'#1a3a6a', prob:30},
+  {label:'3배',  multiplier:3,  color:'#1a4a2a', prob:20},
+  {label:'5배',  multiplier:5,  color:'#4a3000', prob:15},
+  {label:'10배', multiplier:10, color:'#4a1010', prob:10},
+  {label:'20배', multiplier:20, color:'#3a1050', prob:5},
+  {label:'꽝',   multiplier:0,  color:'#1a1a2a', prob:20},
 ];
 
-let segments=DEFAULT_SEGS;
-let wheelAngle=0;
+document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
 
-const canvas=document.getElementById('wheel');
-const ctx=canvas.getContext('2d');
-const W=280,CX=W/2,CY=W/2,R=130;
+// ── 캔버스 휠 ──
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const W=280, CX=140, CY=140, R=130;
+let wheelAngle = 0;
 
-function drawWheel(angle){
+function drawWheel(angle) {
   ctx.clearRect(0,0,W,W);
-  const n=segments.length;
-  const arc=Math.PI*2/n;
-  segments.forEach((seg,i)=>{
-    const s=angle+arc*i, e=s+arc;
-    ctx.beginPath(); ctx.moveTo(CX,CY);
-    ctx.arc(CX,CY,R,s,e); ctx.closePath();
-    ctx.fillStyle=seg.color; ctx.fill();
-    ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=1.5; ctx.stroke();
+  const n = SEGS.length;
+  const arc = Math.PI*2/n;
+  SEGS.forEach((seg, i) => {
+    const s = angle + arc*i, e = s+arc;
+    ctx.beginPath(); ctx.moveTo(CX,CY); ctx.arc(CX,CY,R,s,e); ctx.closePath();
+    ctx.fillStyle = seg.color; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.save(); ctx.translate(CX,CY); ctx.rotate(s+arc/2);
-    ctx.textAlign='right'; ctx.fillStyle='#fff';
-    ctx.font=`bold ${seg.multiplier>=10?'13':'15'}px 'Noto Sans KR',sans-serif`;
-    ctx.shadowColor='rgba(0,0,0,0.8)'; ctx.shadowBlur=4;
+    ctx.textAlign = 'right'; ctx.fillStyle = '#fff';
+    ctx.font = `bold ${seg.multiplier>=10?'13':'15'}px 'Noto Sans KR',sans-serif`;
+    ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 4;
     ctx.fillText(seg.label, R-8, 5);
     ctx.restore();
   });
   ctx.beginPath(); ctx.arc(CX,CY,20,0,Math.PI*2);
-  ctx.fillStyle='#0a0810'; ctx.fill();
-  ctx.strokeStyle='#d4a843'; ctx.lineWidth=3; ctx.stroke();
-  ctx.fillStyle='#d4a843'; ctx.font='bold 14px sans-serif';
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('★',CX,CY);
-  ctx.textBaseline='alphabetic';
-  ctx.beginPath(); ctx.arc(CX,CY,R+2,0,Math.PI*2);
-  ctx.strokeStyle='rgba(212,168,67,0.4)'; ctx.lineWidth=4; ctx.stroke();
+  ctx.fillStyle = '#0a0810'; ctx.fill();
+  ctx.strokeStyle = '#d4a843'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = '#d4a843'; ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('★', CX, CY);
+  ctx.textBaseline = 'alphabetic';
 }
-drawWheel(wheelAngle);
+drawWheel(0);
 
-function buildSegGrid(){
-  const el=document.getElementById('seg-grid');
-  el.innerHTML=segments.map((seg,i)=>`
+// ── 세그먼트 그리드 ──
+function getSegColor(seg) {
+  if (seg.multiplier === 0) return '#6a6a8a';
+  if (seg.multiplier >= 20) return '#cc88ff';
+  if (seg.multiplier >= 10) return '#ff6666';
+  if (seg.multiplier >= 5)  return '#ffaa33';
+  if (seg.multiplier >= 3)  return '#44cc88';
+  return '#4a9eff';
+}
+function getSegBorder(seg) {
+  if (seg.multiplier === 0) return '#333355';
+  if (seg.multiplier >= 20) return '#882288';
+  if (seg.multiplier >= 10) return '#aa2222';
+  if (seg.multiplier >= 5)  return '#cc8800';
+  if (seg.multiplier >= 3)  return '#22aa55';
+  return '#2255aa';
+}
+
+function buildSegGrid() {
+  const el = document.getElementById('seg-grid');
+  el.innerHTML = SEGS.map((seg, i) => `
     <div class="seg-opt" id="seg-${i}" onclick="pickSeg(${i})" style="border-color:${getSegBorder(seg)}">
-      <div class="seg-mult" style="color:${getSegText(seg)}">${seg.label}</div>
+      <div class="seg-mult" style="color:${getSegColor(seg)}">${seg.label}</div>
       <div class="seg-prob">${seg.prob}%</div>
     </div>`).join('');
 }
-function getSegBorder(seg){
-  if(seg.multiplier===0) return '#333355';
-  if(seg.multiplier>=20) return '#882288';
-  if(seg.multiplier>=10) return '#aa2222';
-  if(seg.multiplier>=5)  return '#cc8800';
-  if(seg.multiplier>=3)  return '#22aa55';
-  return '#2255aa';
-}
-function getSegText(seg){
-  if(seg.multiplier===0) return '#6a6a8a';
-  if(seg.multiplier>=20) return '#cc88ff';
-  if(seg.multiplier>=10) return '#ff6666';
-  if(seg.multiplier>=5)  return '#ffaa33';
-  if(seg.multiplier>=3)  return '#44cc88';
-  return '#4a9eff';
-}
+buildSegGrid();
 
-function pickSeg(i){
-  picked=i;
-  document.querySelectorAll('.seg-opt').forEach(el=>el.style.background='var(--bg2)');
-  const opt=document.getElementById('seg-'+i);
-  if(opt) opt.style.background=segments[i].color+'88';
+function pickSeg(i) {
+  picked = i;
+  document.querySelectorAll('.seg-opt').forEach((el, j) => {
+    el.style.background = j === i ? SEGS[j].color + '88' : 'var(--bg2)';
+  });
   refreshBtn();
 }
-function setAmt(v){document.getElementById('amt').value=v;refreshBtn();}
-function setMax(){setAmt(Math.min(myPt,10000));}
-function refreshBtn(){
-  const btn=document.getElementById('spin-btn');
-  const amt=parseInt(document.getElementById('amt').value)||0;
-  if(picked===null){btn.className='spin-btn off';btn.textContent='배당 구간을 선택해주세요';return;}
-  if(amt<10){btn.className='spin-btn off';btn.textContent='최소 10P 이상 입력해주세요';return;}
-  if(amt>myPt){btn.className='spin-btn off';btn.textContent='포인트가 부족해요';return;}
-  if(spinning){btn.className='spin-btn off';btn.textContent='🎡 회전 중...';return;}
-  const seg=segments[picked];
-  const exp=seg.multiplier>0?Math.floor(amt*seg.multiplier):0;
-  btn.className='spin-btn';
-  btn.textContent=seg.multiplier>0?`🎡 ${seg.label} · ${fmt(amt)}P → 예상 ${fmt(exp)}P`:`🎡 꽝 도전 · ${fmt(amt)}P`;
+
+function setAmt(v) { document.getElementById('amt').value = v; refreshBtn(); }
+function setMax()  { setAmt(Math.min(myPt, 10000)); }
+
+function refreshBtn() {
+  const btn = document.getElementById('spin-btn');
+  if (spinning) { btn.className = 'spin-btn off'; btn.textContent = '🎡 회전 중...'; return; }
+  const amt = parseInt(document.getElementById('amt').value) || 0;
+  if (picked === null) { btn.className = 'spin-btn off'; btn.textContent = '배당 구간을 선택해주세요'; return; }
+  if (amt < 10)  { btn.className = 'spin-btn off'; btn.textContent = '최소 10P 이상'; return; }
+  if (amt > myPt){ btn.className = 'spin-btn off'; btn.textContent = '포인트 부족'; return; }
+  const seg = SEGS[picked];
+  const exp = seg.multiplier > 0 ? Math.floor(amt * seg.multiplier) : 0;
+  btn.className = 'spin-btn';
+  btn.textContent = seg.multiplier > 0 ? `🎡 ${seg.label} · ${C.fmt(amt)}P → 예상 ${C.fmt(exp)}P` : `🎡 꽝 도전 · ${C.fmt(amt)}P`;
 }
 
-function toast(msg,err=false){
-  const t=document.getElementById('toast');t.textContent=msg;
-  t.className='toast show'+(err?' err':'');setTimeout(()=>t.className='toast',2500);
+// 순수 가중 랜덤: prob 기반으로만 결정, 선택 구간과 무관
+function decideResult() {
+  const weights = SEGS.map((seg, i) => ({ id: i, weight: seg.prob }));
+  return C.weightedRandom(weights);
 }
-function fmt(n){return Number(n||0).toLocaleString();}
 
-function animSpin(targetIdx, onDone){
-  spinning=true;
-  refreshBtn();
-  const n=segments.length;
-  const arc=Math.PI*2/n;
-  const targetAngle=-Math.PI/2 - arc*targetIdx - arc/2;
-  const spins=5+Math.random()*3;
-  const endAngle=targetAngle+spins*Math.PI*2;
+function animSpin(targetIdx, onDone) {
+  spinning = true; refreshBtn();
+  const n = SEGS.length;
+  const arc = Math.PI*2/n;
+  const targetAngle = -Math.PI/2 - arc*targetIdx - arc/2;
+  const spins = 5 + Math.random()*3;
+  const endAngle = targetAngle + spins*Math.PI*2;
+  let startTime = null;
+  const duration = 4000 + Math.random()*1000;
 
-  let startTime=null;
-  const duration=4000+Math.random()*1000;
-
-  function tick(ts){
-    if(!startTime) startTime=ts;
-    const elapsed=ts-startTime;
-    const progress=Math.min(elapsed/duration,1);
-    const eased=1-Math.pow(1-progress,3);
-    wheelAngle=eased*endAngle;
+  function tick(ts) {
+    if (!startTime) startTime = ts;
+    const elapsed = ts - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    wheelAngle = eased * endAngle;
     drawWheel(wheelAngle);
-
-    if(progress<1){ requestAnimationFrame(tick); }
+    if (progress < 1) { requestAnimationFrame(tick); }
     else {
-      wheelAngle=endAngle%(Math.PI*2);
+      wheelAngle = endAngle % (Math.PI*2);
       drawWheel(wheelAngle);
-      spinning=false;
-      refreshBtn();
-      if(onDone) onDone();
+      spinning = false; refreshBtn();
+      if (onDone) onDone();
     }
   }
   requestAnimationFrame(tick);
 }
 
-async function doSpin(){
-  if(picked===null||spinning) return;
-  const amt=parseInt(document.getElementById('amt').value)||0;
-  if(amt<10||amt>myPt) return;
+function doSpin() {
+  if (spinning || picked === null) return;
+  const amt = parseInt(document.getElementById('amt').value) || 0;
+  if (amt < 10 || amt > myPt) return;
 
-  try{
-    const res=await fetch('/casino/bigwheel/spin',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({groupId:parseInt(groupId),userId:parseInt(userId),betOn:picked,amount:amt})
-    });
-    const data=await res.json();
-    if(!data.ok){ toast(data.error||'오류',true); return; }
+  myPt = C.addPoint(groupId, userId, -amt);
+  document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
 
-    myPt-=amt;
-    document.getElementById('my-point').textContent=fmt(myPt)+' P';
+  const resultIdx = decideResult();
+  const seg = SEGS[resultIdx];
 
-    const resultIdx=data.resultIdx;
-    animSpin(resultIdx,()=>{
-      const seg=segments[resultIdx];
-      const payout=data.payout||0;
+  animSpin(resultIdx, () => {
+    const payout = seg.multiplier > 0 ? Math.floor(amt * seg.multiplier) : 0;
 
-      document.getElementById('spin-result').textContent=seg.multiplier>0?`${seg.label} 🎉`:'꽝 💸';
+    document.getElementById('spin-result').textContent = seg.multiplier > 0 ? `${seg.label} 🎉` : '꽝 💸';
 
-      history.unshift({label:seg.label,mult:seg.multiplier,color:getSegText(seg)});
-      if(history.length>15) history.pop();
-      const hw=document.getElementById('history-wrap');
-      hw.innerHTML=history.map(h=>`<div class="hist-badge" style="background:${h.color}22;border:1px solid ${h.color}66;color:${h.color}">${h.label}</div>`).join('');
+    history.unshift({ label: seg.label, mult: seg.multiplier, color: getSegColor(seg) });
+    if (history.length > 15) history.pop();
+    const hw = document.getElementById('history-wrap');
+    hw.innerHTML = history.map(h =>
+      `<div class="hist-badge" style="background:${h.color}22;border:1px solid ${h.color}66;color:${h.color}">${h.label}</div>`
+    ).join('');
 
-      document.getElementById('ov-emoji').textContent=payout>0?'🎉':'💸';
-      document.getElementById('ov-title').textContent=seg.multiplier>0?`${seg.label} 당첨!`:'꽝!';
-      if(payout>0){
-        document.getElementById('ov-sub').textContent=`🎊 ${seg.label} 구간 당첨!`;
-        document.getElementById('ov-payout').textContent=`+${fmt(payout)} P 획득!`;
-        vibrate([100,50,200]);playSound('win');
-        document.getElementById('ov-payout').style.color='#44ee88';
-        myPt+=payout;
-        document.getElementById('my-point').textContent=fmt(myPt)+' P';
-      } else {
-        document.getElementById('ov-sub').textContent='아쉬워요. 다음에 도전하세요!';
-        document.getElementById('ov-payout').textContent=`-${fmt(amt)} P`;
-        vibrate([200]);playSound('lose');
-        document.getElementById('ov-payout').style.color='#ee4444';
-      }
-      document.getElementById('overlay').classList.add('show');
-    });
-  } catch(e){ toast('서버 오류',true); }
-}
-
-function closeOverlay(){ document.getElementById('overlay').classList.remove('show'); }
-function vibrate(pattern){if(navigator.vibrate)navigator.vibrate(pattern);}
-function playSound(type){
-  try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    const osc=ctx.createOscillator();const gain=ctx.createGain();
-    osc.connect(gain);gain.connect(ctx.destination);
-    if(type==='win'){
-      osc.frequency.setValueAtTime(523,ctx.currentTime);
-      osc.frequency.setValueAtTime(659,ctx.currentTime+0.1);
-      osc.frequency.setValueAtTime(784,ctx.currentTime+0.2);
-      gain.gain.setValueAtTime(0.3,ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.5);
-      osc.start(ctx.currentTime);osc.stop(ctx.currentTime+0.5);
-    }else if(type==='lose'){
-      osc.frequency.setValueAtTime(300,ctx.currentTime);
-      osc.frequency.setValueAtTime(200,ctx.currentTime+0.15);
-      gain.gain.setValueAtTime(0.2,ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);
-      osc.start(ctx.currentTime);osc.stop(ctx.currentTime+0.4);
+    if (payout > 0) {
+      myPt = C.addPoint(groupId, userId, payout);
+      document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
     }
-  }catch(e){}
-}
-function toggleTheme(){
-  const isLight=document.body.classList.toggle('light');
-  document.getElementById('theme-btn').textContent=isLight?'☀️':'🌙';
-  localStorage.setItem('casino_theme',isLight?'light':'dark');
-}
-function initTheme(){
-  if(localStorage.getItem('casino_theme')==='light'){
-    document.body.classList.add('light');
-    const b=document.getElementById('theme-btn');if(b)b.textContent='☀️';
-  }
-}
-function goHome(){
-  const p=new URLSearchParams(location.search);
-  const uid=p.get('userId')||p.get('start')?.split('_')[0];
-  const gid=p.get('groupId')||p.get('start')?.split('_')[1];
-  location.href='/casino?userId='+uid+'&groupId='+gid;
+
+    document.getElementById('ov-emoji').textContent  = payout > 0 ? '🎉' : '💸';
+    document.getElementById('ov-title').textContent  = seg.multiplier > 0 ? `${seg.label} 당첨!` : '꽝!';
+    if (payout > 0) {
+      document.getElementById('ov-sub').textContent    = `🎊 ${seg.label} 구간 당첨!`;
+      document.getElementById('ov-payout').textContent = `+${C.fmt(payout)} P 획득!`;
+      document.getElementById('ov-payout').style.color = '#44ee88';
+      vibrate([100,50,200]);
+    } else {
+      document.getElementById('ov-sub').textContent    = '아쉬워요. 다음에 도전하세요!';
+      document.getElementById('ov-payout').textContent = `-${C.fmt(amt)} P`;
+      document.getElementById('ov-payout').style.color = '#ee4444';
+      vibrate([200]);
+    }
+    document.getElementById('overlay').classList.add('show');
+  });
 }
 
-async function loadPt(){
-  try{
-    const res=await fetch(`/casino/users?groupId=${groupId}`);
-    const users=await res.json();
-    const me=users.find(u=>String(u.userId)===String(userId));
-    if(me){ myPt=me.point; document.getElementById('my-point').textContent=fmt(myPt)+' P'; }
-  } catch(e){}
+function closeOverlay() {
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('spin-result').textContent = 'SPIN THE WHEEL';
 }
 
-async function init(){
-  await initTheme();
-  loadPt();
-  try{
-    const res=await fetch(`/casino/settings?groupId=${groupId}&gameId=bigwheel`);
-    const s=await res.json();
-    if(s.segments&&s.segments.length) segments=s.segments;
-  } catch(e){}
-  buildSegGrid();
-  drawWheel(wheelAngle);
-}
-init();
+function vibrate(p) { if (navigator.vibrate) navigator.vibrate(p); }
+function goHome() { C.goHome(userId, groupId); }
 </script>
 </body>
 </html>
