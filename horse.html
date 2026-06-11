@@ -125,10 +125,37 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 <button class="home-btn" onclick="goHome()">🏠 홈</button>
 
 <script>
-const C = window.CasinoCore;
-const userId  = C.getParam('userId');
-const groupId = C.getParam('groupId');
-let myPt = C.getPoint(groupId, userId);
+
+// ── INLINE CORE ──
+function getParam(key) {
+  const sp = new URLSearchParams(location.search);
+  if (sp.get(key)) return sp.get(key);
+  const hp = new URLSearchParams(location.hash.replace(/^#/,''));
+  if (hp.get(key)) return hp.get(key);
+  const start = sp.get('tgWebAppStartParam')||hp.get('tgWebAppStartParam')||sp.get('start')||hp.get('start')||'';
+  if (start) {
+    const parts = start.split('_');
+    if (key==='userId'  && parts[0]) return parts[0];
+    if (key==='groupId' && parts[1]) return parts[1];
+  }
+  return null;
+}
+function _ptKey(g,u){return 'casino_pt_'+g+'_'+u;}
+function getPoint(g,u){const v=localStorage.getItem(_ptKey(g,u));return v!==null?parseInt(v):5000;}
+function setPoint(g,u,pt){localStorage.setItem(_ptKey(g,u),Math.max(0,Math.floor(pt)));}
+function addPoint(g,u,delta){const n=Math.max(0,getPoint(g,u)+Math.floor(delta));setPoint(g,u,n);return n;}
+function fmt(n){return Number(n||0).toLocaleString();}
+function goHome(uid,gid){location.href='/casino?userId='+uid+'&groupId='+gid;}
+function weightedRandom(weights){
+  const total=weights.reduce((a,b)=>a+b.weight,0);
+  let r=Math.random()*total;
+  for(const w of weights){r-=w.weight;if(r<=0)return w.id;}
+  return weights[weights.length-1].id;
+}
+
+const userId  = getParam('userId');
+const groupId = getParam('groupId');
+let myPt = getPoint(groupId, userId);
 let picked = null, racing = false, raceAnim = null;
 let history = [];
 
@@ -142,7 +169,7 @@ const HORSES = [
 const H_COLORS = HORSES.map(h => h.color);
 let horsePos = {};
 
-document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
+document.getElementById('my-point').textContent = fmt(myPt) + ' P';
 
 function buildLanes() {
   const el = document.getElementById('horse-lanes');
@@ -214,7 +241,7 @@ function refreshBtn() {
   if (amt > myPt) { btn.className = 'bet-btn off'; btn.textContent = '포인트 부족'; return; }
   const h = HORSES.find(hh => hh.id === picked);
   btn.className = 'bet-btn';
-  btn.textContent = `${h.emoji} ${h.name} · ${C.fmt(amt)}P → 예상 +${C.fmt(Math.floor(amt * h.odds))}P`;
+  btn.textContent = `${h.emoji} ${h.name} · ${fmt(amt)}P → 예상 +${fmt(Math.floor(amt * h.odds))}P`;
 }
 
 function animHorses(winnerId, onDone) {
@@ -255,12 +282,12 @@ function startRace() {
   const amt = parseInt(document.getElementById('amt').value) || 0;
   if (amt < 10 || amt > myPt) return;
 
-  myPt = C.addPoint(groupId, userId, -amt);
-  document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
+  myPt = addPoint(groupId, userId, -amt);
+  document.getElementById('my-point').textContent = fmt(myPt) + ' P';
 
   // 순수 가중 랜덤: 각 말의 weight만 반영, 플레이어 선택과 무관
   const weights = HORSES.map(h => ({ id: h.id, weight: h.weight }));
-  const winnerId = C.weightedRandom(weights);
+  const winnerId = weightedRandom(weights);
 
   document.querySelector('.card-inner').style.opacity = '0.4';
   document.querySelector('.card-inner').style.pointerEvents = 'none';
@@ -273,8 +300,8 @@ function startRace() {
     const payout = won ? Math.floor(amt * betH.odds) : 0;
 
     if (won) {
-      myPt = C.addPoint(groupId, userId, payout);
-      document.getElementById('my-point').textContent = C.fmt(myPt) + ' P';
+      myPt = addPoint(groupId, userId, payout);
+      document.getElementById('my-point').textContent = fmt(myPt) + ' P';
     }
 
     history.unshift({ id: winH.id, name: winH.name, emoji: winH.emoji, color: winH.color });
@@ -285,12 +312,12 @@ function startRace() {
     document.getElementById('ov-title').textContent = `${winH.emoji} ${winH.name} 우승!`;
     if (won) {
       document.getElementById('ov-sub').textContent = '🎉 베팅 성공!';
-      document.getElementById('ov-payout').textContent = `+${C.fmt(payout)} P 획득!`;
+      document.getElementById('ov-payout').textContent = `+${fmt(payout)} P 획득!`;
       document.getElementById('ov-payout').style.color = '#44ee88';
       vibrate([100,50,200]);
     } else {
       document.getElementById('ov-sub').textContent = `아쉬워요. ${betH.emoji} ${betH.name}은 탈락!`;
-      document.getElementById('ov-payout').textContent = `-${C.fmt(amt)} P`;
+      document.getElementById('ov-payout').textContent = `-${fmt(amt)} P`;
       document.getElementById('ov-payout').style.color = '#ee4444';
       vibrate([200]);
     }
@@ -318,7 +345,7 @@ function closeOverlay() {
 }
 
 function vibrate(p) { if (navigator.vibrate) navigator.vibrate(p); }
-function goHome() { C.goHome(userId, groupId); }
+function goHome() { goHome(userId, groupId); }
 
 buildLanes();
 buildOpts();
