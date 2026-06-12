@@ -463,7 +463,7 @@ CASINO_ONLY_COMMANDS = [
 
 ALWAYS_ALLOWED_COMMANDS = [
     '/출석', '/리필',          # 항상 허용 (웹앱 안내)
-    '/야구', '/승', '/수정', '/리스트',
+    '/승', '/수정', '/리스트',
     '/채팅', '/채팅랭킹',
     '/내전', '/이벤트', '/투표', '/게임',
     '/제휴', '/노래',
@@ -869,13 +869,6 @@ def handle_all(message):
         group_id = message.chat.id; first_name = message.from_user.first_name or '사용자'
         username = message.from_user.username or ''; now_kst = datetime.now(KST); today = now_kst.date()
 
-        # ── 그룹에서 커맨드 권한 체크 ──
-        # 관리자가 아니면 그룹에서 모든 커맨드 차단
-        if message.chat.type in ['group', 'supergroup'] and text.strip().startswith('/') and user_id not in ADMIN_IDS:
-            try: bot.delete_message(group_id, message.message_id)
-            except: pass
-            return
-
         # ── 커맨드 처리 ──
         if '/test' in text:
             bot.reply_to(message, f"봇 작동 중! ✅\n내 user_id: {user_id}")
@@ -1080,16 +1073,6 @@ def handle_all(message):
                 total_count = c.fetchone()[0]
             finally: c.close(); db.close()
             bot.reply_to(message, f"╔══ 📊 채팅 통계 ══╗\n   👤 {first_name}님\n\n   ☀️ 오늘       {today_count}개\n   이번 주   {week_count}개\n   🗓 이번 달   {month_count}개\n   💬 전체      {total_count}개\n\n   🎀 오늘도 열심히 채팅했어요!\n╚══════════════════╝")
-
-        elif text.strip().startswith('/야구'):
-            if message.chat.type == 'private': return
-            send_baseball_gif(group_id)
-            kbo_url = f"{WEBAPP_BASE_URL}/kbo?start={user_id}_{group_id}"
-            markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("⚾ KBO 승 예측 참여하기", url=kbo_url))
-            bot.reply_to(message, "⚾", reply_markup=markup)
-            send_dm_link(user_id, group_id, "⚾ <b>KBO 승 예측</b>",
-                f"📅 참여 요일: 화 / 수 / 목 / 금\n⏰ 참여 시간: {VOTE_START} ~ {VOTE_END}\n📌 10개 팀 중 5개 선택", markup)
 
         elif text.strip().startswith('/승'):
             if message.chat.type == 'private': return
@@ -2902,6 +2885,14 @@ def webhook():
 
 @app.route('/')
 def index(): return 'Bot is running!', 200
+
+@app.route('/admin/init_db')
+def trigger_init_db():
+    try:
+        init_db()
+        return '✅ DB 초기화 완료!', 200
+    except Exception as e:
+        return f'❌ 실패: {e}', 500
 
 # Gunicorn/Render 환경에서도 반드시 실행
 try:
