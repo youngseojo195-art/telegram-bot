@@ -28,7 +28,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .horse-lane::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 30px,rgba(255,255,255,0.015) 30px,rgba(255,255,255,0.015) 31px);}
 .lane-num{position:absolute;left:6px;top:50%;transform:translateY(-50%);width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;z-index:2;}
 .finish-line{position:absolute;right:0;top:0;bottom:0;width:12px;background:repeating-linear-gradient(180deg,#fff 0px,#fff 6px,#000 6px,#000 12px);opacity:0.4;}
-.horse-racer{position:absolute;top:50%;transform:translateY(-50%);left:28px;font-size:20px;z-index:3;transition:left 0.08s linear;}
+.horse-racer{position:absolute;top:50%;left:0;font-size:20px;z-index:3;transform:translateY(-50%) translateX(0px);will-change:transform;}
 .horse-racer.winner-pulse{animation:wp 0.4s ease-in-out infinite;}
 @keyframes wp{0%,100%{transform:translateY(-50%) scale(1)}50%{transform:translateY(-50%) scale(1.15)}}
 .horse-name-tag{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;opacity:0.6;z-index:2;}
@@ -187,10 +187,9 @@ function setHorsePos(id, pct) {
   const el = document.getElementById('racer-' + id);
   if (!el) return;
   const lane = document.getElementById('lane-' + id);
-  if (!lane) return;
-  const laneW = lane.offsetWidth;
-  const max = laneW - 36;
-  el.style.left = Math.min(max, Math.max(28, pct / 100 * max)) + 'px';
+  const laneW = (lane?.offsetWidth || 300) - 48;
+  const px = Math.min(laneW, Math.max(0, pct / 100 * laneW));
+  el.style.transform = `translateY(-50%) translateX(${px}px)`;
 }
 
 function resetHorses() {
@@ -202,9 +201,10 @@ function buildOpts() {
   const el = document.getElementById('horse-opts');
   el.innerHTML = HORSES.map(h => `
     <div class="horse-opt" id="hopt-${h.id}" onclick="pick(${h.id})" style="border-color:${h.color}44">
+      <div style="width:24px;height:24px;border-radius:50%;background:${h.color}33;border:1.5px solid ${h.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:${h.color};flex-shrink:0">${h.id}</div>
       <div class="horse-emoji">${h.emoji}</div>
       <div class="horse-info">
-        <div class="horse-opt-name" style="color:${h.color}">${h.name}</div>
+        <div class="horse-opt-name" style="color:${h.color}">${h.id}번 ${h.name}</div>
         <div class="horse-opt-odds">배당 x${h.odds.toFixed(1)}</div>
         <div class="horse-opt-prob">승률 약 ${Math.round(h.weight / HORSES.reduce((a,b)=>a+b.weight,0) * 100)}%</div>
       </div>
@@ -245,36 +245,67 @@ function refreshBtn() {
 }
 
 function animHorses(winnerId, onDone) {
+  if (raceAnim) cancelAnimationFrame(raceAnim);
   racing = true;
-  HORSES.forEach(h => { horsePos[h.id] = 0; });
-  let step = 0;
-  const total = 130;
-  const winH = HORSES.find(h => h.id === winnerId);
+  HORSES.forEach(h => { horsePos[h.id] = 0; setHorsePos(h.id, 0); });
 
-  function tick() {
-    if (step >= total) {
-      racing = false;
-      HORSES.forEach(h => {
-        const isWin = h.id === winnerId;
-        setHorsePos(h.id, isWin ? 96 : 58 + Math.random() * 22);
-        if (isWin) document.getElementById('racer-' + h.id)?.classList.add('winner-pulse');
-      });
-      if (onDone) setTimeout(onDone, 700);
-      return;
+  const startTime = performance.now();
+  const duration  = 4500 + Math.random() * 800;
+
+  // 미리 고정된 랜덤값 (매 프레임 Math.random 금지)
+  const spurts   = {};
+  const loseTgts = {};
+  HORSES.forEach(h => {
+    spurts[h.id]   = 0.25 + Math.random() * 0.35;
+    loseTgts[h.id] = 55 + Math.random() * 18;
+  });
+
+  function calcPos(t, isWinner, spurtAt, loseMax) {
+    const tgt = isWinner ? 96 : loseMax;
+    let base = 1 - Math.pow(1 - t, 2.4);
+    if (t > spurtAt && t < spurtAt + 0.18) {
+      const st = (t - spurtAt) / 0.18;
+      base += Math.sin(st * Math.PI) * 0.09;
     }
-    const prog = step / total;
-    const ease = 1 - Math.pow(1 - prog, 2);
+    return Math.min(1, Math.max(0, base)) * tgt;
+  }
+
+  // 각 말의 진행 속도 비율 (패자는 0.80~0.88 사이)
+  const speedMult = {};
+  HORSES.forEach(h => {
+    speedMult[h.id] = h.id === winnerId ? 1.0 : 0.80 + Math.random() * 0.08;
+  });
+
+  function tick(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+
     HORSES.forEach(h => {
       const isWin = h.id === winnerId;
-      const j = (Math.random() - 0.5) * 3;
-      const target = isWin ? ease * 93 : ease * (52 + Math.random() * 18);
-      horsePos[h.id] = Math.max(0, Math.min(93, horsePos[h.id] + (target - horsePos[h.id]) * 0.09 + j));
-      setHorsePos(h.id, horsePos[h.id]);
+      const ht = Math.min(t * speedMult[h.id], 1);
+      horsePos[h.id] = calcPos(ht, isWin, spurts[h.id], loseTgts[h.id]);
+
+      // 바운스 (각 말마다 위상 다르게)
+      const bounce = Math.sin(now * 0.022 + h.id * 1.2) * 3;
+      const lane = document.getElementById('lane-' + h.id);
+      const laneW = (lane?.offsetWidth || 300) - 48;
+      const px = Math.min(laneW, Math.max(0, horsePos[h.id] / 100 * laneW));
+      const el = document.getElementById('racer-' + h.id);
+      if (el) el.style.transform = `translateY(calc(-50% + ${bounce}px)) translateX(${px}px)`;
     });
-    step++;
-    raceAnim = requestAnimationFrame(tick);
+
+    if (t < 1) {
+      raceAnim = requestAnimationFrame(tick);
+    } else {
+      racing = false;
+      HORSES.forEach(h => {
+        setHorsePos(h.id, horsePos[h.id]);
+        if (h.id === winnerId) document.getElementById('racer-' + h.id)?.classList.add('winner-pulse');
+      });
+      if (onDone) setTimeout(onDone, 700);
+    }
   }
-  tick();
+  requestAnimationFrame(tick);
 }
 
 async function startRace() {
