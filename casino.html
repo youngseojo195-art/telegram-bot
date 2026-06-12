@@ -54,9 +54,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .card-race    {background:linear-gradient(160deg,#060e18,#0a1828);border-color:#1a3a5a44;}
 .card-horse   {background:linear-gradient(160deg,#060e06,#0a1808);border-color:#1a3a1a44;}
 .card-baccarat{background:linear-gradient(160deg,#140806,#200e08);border-color:#3a1a0a44;}
-.card-bigwheel{background:linear-gradient(160deg,#100618,#180828);border-color:#2a1a3a44;}
 .card-slots   {background:linear-gradient(160deg,#0e0618,#160828);border-color:#2a1a4a44;}
-.card-roulette{background:linear-gradient(160deg,#14060a,#200810);border-color:#3a1a1a44;}
+.card-dice    {background:linear-gradient(160deg,#1a1206,#281c08);border-color:#4a3a1a44;}
 .missions-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px;}
 .missions-title{font-family:'Cinzel',serif;font-size:10px;color:var(--gold3);letter-spacing:2px;margin-bottom:10px;}
 .mission-item{display:flex;align-items:center;gap:10px;background:var(--bg3);border-radius:10px;padding:8px 12px;margin-bottom:6px;}
@@ -207,21 +206,17 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div class="game-name" style="color:#ffaa66">BACCARAT</div>
       <div class="game-short">P vs B<br>타이 8배</div>
     </div>
-    <div class="game-card card-bigwheel" onclick="openModal('bigwheel')">
-      <div class="game-icon">🎡</div>
-      <div class="game-name" style="color:#cc88ff">BIG<br>WHEEL</div>
-      <div class="game-short">행운의 휠<br>최대 20배</div>
-    </div>
     <div class="game-card card-slots" onclick="openModal('slots')">
       <div class="game-badge badge-hot">HOT</div>
       <div class="game-icon">🎰</div>
       <div class="game-name" style="color:#cc88ff">SLOT<br>MACHINE</div>
       <div class="game-short">3릴 슬롯<br>잭팟 50배</div>
     </div>
-    <div class="game-card card-roulette" onclick="openModal('roulette')">
-      <div class="game-icon">🎡</div>
-      <div class="game-name" style="color:#ff8888">ROULETTE</div>
-      <div class="game-short">유럽식 룰렛<br>숫자 35배</div>
+    <div class="game-card card-dice" onclick="openModal('dice')">
+      <div class="game-badge badge-new">NEW</div>
+      <div class="game-icon">🎲</div>
+      <div class="game-name" style="color:#ffd166">DICE<br>BATTLE</div>
+      <div class="game-short">봇과 주사위 대결<br>승리 2배</div>
     </div>
   </div>
 
@@ -372,17 +367,6 @@ const GAMES = {
     ],
     tags:[{t:'카드게임', c:'#ff8844'},{t:'타이x8', c:'#ffaa33'}],
   },
-  bigwheel: {
-    icon:'🎡', name:'BIG WHEEL', color:'#cc88ff',
-    desc:'행운의 룰렛 휠을 돌려보세요!\n혼자서 즉시 플레이 — 최대 20배 배당에 도전!',
-    info:[
-      {label:'게임 방식', val:'1인 즉시', cls:'green'},
-      {label:'최대 배당', val:'x 20', cls:'gold'},
-      {label:'최소 베팅', val:'10 P', cls:''},
-      {label:'최대 베팅', val:'10,000 P', cls:''},
-    ],
-    tags:[{t:'즉시플레이', c:'#cc88ff'},{t:'최대x20', c:'#aa66ee'}],
-  },
   slots: {
     icon:'🎰', name:'SLOT MACHINE', color:'#cc88ff',
     desc:'3개의 릴을 돌려 같은 심볼을 맞추세요!\n💎 잭팟이 나오면 무려 50배 배당!',
@@ -395,17 +379,17 @@ const GAMES = {
     ],
     tags:[{t:'즉시플레이', c:'#cc88ff'},{t:'JACKPOT x50', c:'#f0c96a'}],
   },
-  roulette: {
-    icon:'🎡', name:'ROULETTE', color:'#ff8888',
-    desc:'유럽식 룰렛! 숫자, 색상, 홀짝 중 선택하세요.\n숫자를 정확히 맞추면 35배 배당!',
+  dice: {
+    icon:'🎲', name:'DICE BATTLE', color:'#ffd166',
+    desc:'주사위를 굴려 봇과 대결하세요!\n더 높은 숫자가 나오면 승리, 무승부면 베팅 금액 환불!',
     info:[
       {label:'게임 방식', val:'1인 즉시', cls:'green'},
-      {label:'숫자 적중', val:'x 35', cls:'gold'},
-      {label:'RED/BLACK', val:'x 2', cls:''},
-      {label:'GREEN (0)', val:'x 14', cls:'gold'},
-      {label:'홀수/짝수', val:'x 2', cls:''},
+      {label:'승리 배당', val:'x 1.95', cls:'gold'},
+      {label:'무승부', val:'베팅 환불', cls:''},
+      {label:'최소 베팅', val:'10 P', cls:''},
+      {label:'최대 베팅', val:'10,000 P', cls:''},
     ],
-    tags:[{t:'즉시플레이', c:'#ff6666'},{t:'숫자x35', c:'#ee4444'}],
+    tags:[{t:'즉시플레이', c:'#ffd166'},{t:'PvB', c:'#ffaa33'}],
   },
 };
 
@@ -446,17 +430,15 @@ function enterGame() {
     if (modalNameText.includes('RACE')) gameKey = 'race';
     else if (modalNameText.includes('HORSE')) gameKey = 'horse';
     else if (modalNameText.includes('BACCARAT')) gameKey = 'baccarat';
-    else if (modalNameText.includes('WHEEL')) gameKey = 'bigwheel';
     else if (modalNameText.includes('SLOT')) gameKey = 'slots';
-    else if (modalNameText.includes('ROULETTE')) gameKey = 'roulette';
+    else if (modalNameText.includes('DICE')) gameKey = 'dice';
   }
   const urls = {
     race:     '/casino/race',
     horse:    '/casino/horse',
     baccarat: '/casino/baccarat',
-    bigwheel: '/casino/bigwheel',
     slots:    '/casino/slots',
-    roulette: '/casino/roulette',
+    dice:     '/casino/dice',
   };
   const targetUrl = urls[gameKey];
   if (!targetUrl) { toast('⚠️ 게임 식별 실패. 다시 시도해주세요.', true); return; }
@@ -543,8 +525,8 @@ async function openHistory() {
   try {
     const res=await fetch(`/casino/my_bets?groupId=${groupId}&userId=${userId}&limit=30`);
     const data=await res.json();
-    const gameIcons={race:'🐢',baccarat:'🃏',horse:'🐴',bigwheel:'🎡',slots:'🎰',roulette:'🎡'};
-    const gameNames={race:'경주',baccarat:'바카라',horse:'경마',bigwheel:'빅휠',slots:'슬롯',roulette:'룰렛'};
+    const gameIcons={race:'🐢',baccarat:'🃏',horse:'🐴',slots:'🎰',dice:'🎲'};
+    const gameNames={race:'경주',baccarat:'바카라',horse:'경마',slots:'슬롯',dice:'다이스'};
     if(!data.length){list.innerHTML='<div style="text-align:center;color:var(--sub);padding:30px">베팅 내역이 없어요</div>';return;}
     list.innerHTML=data.map(b=>{
       const isWin=b.result==='win', isPend=b.result==='pending';
