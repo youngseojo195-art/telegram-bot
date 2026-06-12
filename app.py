@@ -1015,9 +1015,9 @@ def handle_all(message):
             bot.reply_to(message, f"╔══ 💰 포인트 ══╗\n   👤 {first_name}님\n\n   💰 잔여: {get_point(user_id, group_id)}포인트\n╚══════════════════╝")
 
         elif text.strip() in ['/게임', '/게임@dopamin_ranking_bot']:
-            bot.reply_to(message, "🎮 게임 목록\n\n🎰 /슬롯 - 슬롯머신\n🎡 /룰렛 - 룰렛\n⚠️ 최소 배팅: 20포인트")
+            bot.reply_to(message, "🎮 게임 목록\n\n🎰 /슬롯 - 슬롯머신\n🎲 /다이스 - 다이스 배틀\n⚠️ 최소 배팅: 10포인트")
 
-        # ── ★ FIX: /슬롯 /룰렛 /카지노 — 중복 제거, url= 방식 통일 ──
+        # ── ★ FIX: /슬롯 /다이스 /카지노 — 중복 제거, url= 방식 통일 ──
         elif '/슬롯' in text:
             if message.chat.type == 'private': return
             slots_url = f"{WEBAPP_BASE_URL}/casino/slots?userId={user_id}&groupId={group_id}"
@@ -1026,13 +1026,13 @@ def handle_all(message):
             bot.reply_to(message, "🎰", reply_markup=markup)
             send_dm_link(user_id, group_id, "🎰 <b>슬롯머신</b>", "최대 50배 잭팟 도전!", markup)
 
-        elif '/룰렛' in text:
+        elif '/다이스' in text:
             if message.chat.type == 'private': return
-            roulette_url = f"{WEBAPP_BASE_URL}/casino/roulette?userId={user_id}&groupId={group_id}"
+            dice_url = f"{WEBAPP_BASE_URL}/casino/dice?userId={user_id}&groupId={group_id}"
             markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("🎡 룰렛 플레이", url=roulette_url))
-            bot.reply_to(message, "🎡", reply_markup=markup)
-            send_dm_link(user_id, group_id, "🎡 <b>룰렛</b>", "숫자 정확히 맞추면 35배!", markup)
+            markup.add(types.InlineKeyboardButton("🎲 다이스 배틀 플레이", url=dice_url))
+            bot.reply_to(message, "🎲", reply_markup=markup)
+            send_dm_link(user_id, group_id, "🎲 <b>다이스 배틀</b>", "봇과 주사위 대결! 승리시 1.95배!", markup)
 
         # ── ★ FIX: /카지노 중복 제거 — 하나로 통합 ──
         elif text.strip().startswith('/카지노') and not text.strip().startswith('/카지노관리'):
@@ -1041,7 +1041,7 @@ def handle_all(message):
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("🎰 카지노 입장", url=casino_url))
             bot.reply_to(message, "🎰", reply_markup=markup)
-            send_dm_link(user_id, group_id, "🎰 <b>도파민 카지노</b>", "🐢 경주 · 🃏 바카라 · 🐴 경마\n🎡 빅휠 · 🎰 슬롯 · 🎡 룰렛", markup)
+            send_dm_link(user_id, group_id, "🎰 <b>도파민 카지노</b>", "🐢 경주 · 🃏 바카라 · 🐴 경마\n🎰 슬롯 · 🎲 다이스 배틀", markup)
 
         elif '/채팅랭킹' in text:
             if message.chat.type == 'private': return
@@ -1780,16 +1780,9 @@ DEFAULT_CASINO_SETTINGS = {
         "min_bet": 10, "max_bet": 10000, "house_edge": 5,
         "enabled": True, "force_result": None
     },
-    "bigwheel": {
-        "segments": [
-            {"label":"2배","multiplier":2,"color":"#2266cc","prob":30},
-            {"label":"3배","multiplier":3,"color":"#22aa66","prob":20},
-            {"label":"5배","multiplier":5,"color":"#cc8800","prob":15},
-            {"label":"10배","multiplier":10,"color":"#aa2222","prob":10},
-            {"label":"20배","multiplier":20,"color":"#882288","prob":5},
-            {"label":"꽝","multiplier":0,"color":"#222233","prob":20},
-        ],
-        "min_bet": 10, "max_bet": 10000, "house_edge": 5, "enabled": True
+    "dice": {
+        "win_odds": 1.95, "min_bet": 10, "max_bet": 10000,
+        "house_edge": 5, "enabled": True
     }
 }
 
@@ -2208,42 +2201,51 @@ def slots_spin():
         return {'ok': False, 'error': str(e)}, 500
     finally: c.close(); db.close()
 
-@app.route('/casino/roulette')
-def serve_roulette(): return send_from_directory(BASE_DIR,'roulette.html')
+@app.route('/casino/dice')
+def serve_dice(): return send_from_directory(BASE_DIR,'dice.html')
 
-@app.route('/casino/roulette/spin', methods=['POST'])
-def roulette_spin():
+@app.route('/casino/dice/instant', methods=['POST'])
+def dice_instant():
+    """다이스 배틀 - 봇과 1:1 주사위 대결, 즉시 결과 처리"""
     db = get_db(); c = db.cursor()
     try:
         data = request.get_json(); group_id = int(data.get('groupId', 0)); user_id = int(data.get('userId', 0))
-        amount = int(data.get('amount', 0)); bet_type = data.get('betType', ''); bet_value = data.get('betValue')
+        amount = int(data.get('amount', 0))
         if is_casino_blacklisted(group_id, user_id): return {'ok': False, 'error': '게임 이용이 제한된 계정이에요.'}, 403
         if amount < 10: return {'ok': False, 'error': '최소 10P 이상 베팅해주세요.'}, 400
+        if amount > 10000: return {'ok': False, 'error': '최대 10,000P까지 베팅 가능해요.'}, 400
         c.execute("SELECT point FROM points WHERE user_id=%s AND group_id=%s", (user_id, group_id))
         pt = c.fetchone()
-        if not pt or pt[0] < amount: return {'ok': False, 'error': '포인트가 부족해요.'}, 400
-        NUM_COLORS = {0:'green',1:'red',2:'black',3:'red',4:'black',5:'red',6:'black',7:'red',8:'black',9:'red',10:'black',11:'black',12:'red',13:'black',14:'red',15:'black',16:'red',17:'black',18:'red',19:'red',20:'black',21:'red',22:'black',23:'red',24:'black',25:'red',26:'black',27:'red',28:'black',29:'black',30:'red',31:'black',32:'red',33:'black',34:'red',35:'black',36:'red'}
-        srv_result = random.randint(0, 36); color = NUM_COLORS.get(srv_result, 'black')
-        srv_won = False
-        if bet_type == 'color': srv_won = (bet_value == color)
-        elif bet_type == 'simple':
-            if bet_value == 'odd':  srv_won = srv_result>0 and srv_result%2==1
-            elif bet_value == 'even': srv_won = srv_result>0 and srv_result%2==0
-            elif bet_value == 'low':  srv_won = 1<=srv_result<=18
-            elif bet_value == 'high': srv_won = 19<=srv_result<=36
-        elif bet_type == 'number': srv_won = (int(bet_value)==srv_result)
-        if bet_type == 'number': odds = 35
-        elif bet_type == 'color' and bet_value == 'green': odds = 14
-        else: odds = 2
-        srv_payout = amount * odds if srv_won else 0
-        house_cut = int(srv_payout * 0.05) if srv_payout > 0 else 0
-        net_payout = max(0, srv_payout - house_cut)
+        if not pt:
+            c.execute("INSERT INTO points(user_id,group_id,first_name,username,point) VALUES(%s,%s,%s,%s,5000)",(user_id,group_id,'',''))
+            db.commit(); current_pt=5000
+        else: current_pt=pt[0]
+        if current_pt < amount: return {'ok': False, 'error': '포인트가 부족해요.'}, 400
+
+        player_roll = random.randint(1,6)
+        bot_roll    = random.randint(1,6)
+        if player_roll > bot_roll: result='win'
+        elif player_roll < bot_roll: result='lose'
+        else: result='draw'
+
+        if result=='win':
+            srv_payout = int(amount * 1.95)
+            house_cut  = int(srv_payout * 0.05)
+            payout = max(0, srv_payout - house_cut)
+        elif result=='draw':
+            payout = amount  # 베팅 환불
+        else:
+            payout = 0
+
         c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s", (amount, user_id, group_id))
-        if net_payout > 0: c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s", (net_payout, user_id, group_id))
-        c.execute("INSERT INTO casino_games (game_id,group_id,status,result,settings,ended_at) VALUES ('roulette',%s,'closed',%s,%s,NOW())",
-                  (group_id, str(srv_result), json.dumps({'amount':amount,'betType':bet_type,'betValue':str(bet_value),'payout':net_payout})))
+        if payout > 0: c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s", (payout, user_id, group_id))
+        won = (result=='win')
+        c.execute("INSERT INTO casino_bets(game_id,group_id,user_id,bet_on,amount,payout,won) VALUES('dice',%s,%s,%s,%s,%s,%s)",
+                  (group_id,user_id,f"{player_roll}v{bot_roll}",amount,payout,won))
         db.commit()
-        return {'ok': True, 'result': srv_result, 'won': srv_won, 'payout': net_payout}, 200
+        add_daily_bet(user_id, group_id, amount); update_mission(user_id, group_id, 'play3')
+        if won: update_mission(user_id, group_id, 'win1')
+        return {'ok': True, 'playerRoll': player_roll, 'botRoll': bot_roll, 'result': result, 'payout': payout}, 200
     except Exception as e:
         import traceback; print(traceback.format_exc())
         return {'ok': False, 'error': str(e)}, 500
@@ -2563,45 +2565,6 @@ def horse_result():
         bot.send_message(group_id,f"🐴 <b>경마 결과!</b>\n──────────────────\n🥇 <b>{winner_h.get('emoji','')} {winner_h['name']} 우승!</b>\n📊 배당: x{odds}\n💰 총 베팅: {total_pool:,}P\n🎁 총 지급: {total_payout:,}P",parse_mode='HTML')
         return {'ok':True,'result':winner_id,'winner':winner_h},200
     except Exception as e: return {'ok':False,'error':str(e)},500
-    finally: c.close();db.close()
-
-@app.route('/casino/bigwheel')
-def serve_bigwheel(): return send_from_directory(BASE_DIR,'bigwheel.html')
-
-@app.route('/casino/bigwheel/spin',methods=['POST'])
-def bigwheel_spin():
-    db=get_db();c=db.cursor()
-    try:
-        data=request.get_json(); group_id=int(data.get('groupId',0)); user_id=int(data.get('userId',0))
-        bet_on=int(data.get('betOn',0)); amount=int(data.get('amount',0))
-        if is_casino_blacklisted(group_id,user_id): return {'ok':False,'error':'게임 이용이 제한된 계정이에요.'},403
-        settings=get_casino_settings(group_id,'bigwheel')
-        segs=settings.get('segments',[
-            {'label':'2배','multiplier':2,'color':'#1a3a6a','prob':30},{'label':'3배','multiplier':3,'color':'#1a4a2a','prob':20},
-            {'label':'5배','multiplier':5,'color':'#4a3000','prob':15},{'label':'10배','multiplier':10,'color':'#4a1010','prob':10},
-            {'label':'20배','multiplier':20,'color':'#3a1050','prob':5},{'label':'꽝','multiplier':0,'color':'#1a1a2a','prob':20},
-        ])
-        if amount<settings.get('min_bet',10): return {'ok':False,'error':f"최소 {settings['min_bet']:,}P 이상"},400
-        if amount>settings.get('max_bet',10000): return {'ok':False,'error':f"최대 {settings['max_bet']:,}P까지"},400
-        c.execute("SELECT point FROM points WHERE user_id=%s AND group_id=%s",(user_id,group_id))
-        pt=c.fetchone()
-        if not pt or pt[0]<amount: return {'ok':False,'error':'포인트가 부족해요.'},400
-        total_prob=sum(s.get('prob',10) for s in segs); r=random.randint(1,total_prob); acc=0; result_idx=len(segs)-1
-        for i,s in enumerate(segs):
-            acc+=s.get('prob',10)
-            if r<=acc: result_idx=i; break
-        result_seg=segs[result_idx]
-        payout=int(amount*result_seg['multiplier']) if result_seg['multiplier']>0 else 0
-        house_cut=int(amount*(settings.get('house_edge',5)/100))
-        net_payout=max(0,payout-house_cut) if payout>0 else 0
-        c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s",(amount,user_id,group_id))
-        if net_payout>0: c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s",(net_payout,user_id,group_id))
-        c.execute("INSERT INTO casino_games (game_id,group_id,status,result,settings,ended_at) VALUES ('bigwheel',%s,'closed',%s,%s,NOW()) RETURNING id",(group_id,result_seg['label'],json.dumps(settings)))
-        c.fetchone(); db.commit()
-        return {'ok':True,'resultIdx':result_idx,'result':result_seg,'payout':net_payout},200
-    except Exception as e:
-        import traceback; print(traceback.format_exc())
-        return {'ok':False,'error':str(e)},500
     finally: c.close();db.close()
 
 @app.route('/casino/open_status', methods=['GET'])
