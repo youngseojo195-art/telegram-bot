@@ -315,7 +315,7 @@ async function doDeal() {
     const resultLabels = { player: '🔵 PLAYER WIN!', banker: '🔴 BANKER WIN!', tie: '🟢 TIE!' };
     banner.textContent = resultLabels[result];
     banner.className = 'result-banner show ' + result;
-    await delay(600);
+    await delay(2200);  // 결과 확인 시간 충분히
 
     history.unshift(result);
     if (history.length > 20) history.pop();
