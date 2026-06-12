@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>도파민 카지노 — 다이스 배틀</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+KR:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --gold:#d4a843;--gold2:#f0c96a;--gold3:#8b6914;
+  --bg:#080810;--bg2:#0e0e1c;--bg3:#161628;--bg4:#1e1e35;
+  --border:#2a2a45;--text:#e8e0cc;--sub:#6a6a8a;
+  --player:#4a9eff;--bot:#ff6b6b;
+}
+html,body{height:100%;width:100%;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;}
+.topbar{background:linear-gradient(180deg,#1a1206,#080810);border-bottom:1px solid var(--border);padding:12px 16px 10px;text-align:center;position:sticky;top:0;z-index:50;}
+.casino-label{font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:var(--gold3);margin-bottom:3px;}
+.top-title{font-family:'Cinzel',serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,#ffd166,var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.point-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;justify-content:space-between;}
+.point-val{font-size:16px;font-weight:700;color:var(--gold);}
+.main{flex:1;overflow-y:auto;padding:14px 14px 100px;display:flex;flex-direction:column;gap:14px;}
+
+.arena{background:linear-gradient(180deg,#241a08,#120e05);border:2px solid #4a3a1a;border-radius:20px;padding:24px 16px;box-shadow:0 8px 32px rgba(255,209,102,0.12),inset 0 0 40px rgba(0,0,0,0.4);}
+.arena-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:4px;color:#ffd166;text-align:center;margin-bottom:18px;}
+.vs-row{display:flex;align-items:center;justify-content:space-around;gap:10px;}
+.dice-col{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;}
+.dice-label{font-size:11px;font-weight:700;letter-spacing:1px;}
+.dice-box{width:84px;height:84px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:46px;background:#050510;border:2px solid var(--border);box-shadow:inset 0 4px 16px rgba(0,0,0,0.6);transition:transform 0.1s;}
+.dice-box.player{border-color:var(--player);box-shadow:inset 0 4px 16px rgba(0,0,0,0.6),0 0 16px rgba(74,158,255,0.0);}
+.dice-box.bot{border-color:var(--bot);box-shadow:inset 0 4px 16px rgba(0,0,0,0.6),0 0 16px rgba(255,107,107,0.0);}
+.dice-box.rolling{animation:diceShake 0.1s linear infinite;}
+@keyframes diceShake{0%,100%{transform:rotate(0deg) scale(1)}25%{transform:rotate(-8deg) scale(1.04)}75%{transform:rotate(8deg) scale(1.04)}}
+.dice-box.win-glow{box-shadow:inset 0 4px 16px rgba(0,0,0,0.6),0 0 24px rgba(255,215,0,0.7)!important;border-color:var(--gold)!important;}
+.vs-text{font-family:'Cinzel',serif;font-size:20px;font-weight:900;color:var(--sub);}
+.result-display{margin-top:18px;text-align:center;min-height:32px;font-family:'Cinzel',serif;font-size:14px;font-weight:700;letter-spacing:1px;}
+
+.paytable{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+.paytable-title{font-family:'Cinzel',serif;font-size:10px;color:var(--gold3);letter-spacing:2px;margin-bottom:10px;}
+.pay-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);}
+.pay-row:last-child{border-bottom:none;}
+.pay-desc{font-size:12px;color:var(--text);}
+.pay-mult{font-size:13px;font-weight:700;color:var(--gold);}
+
+.bet-section{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;}
+.bet-title{font-family:'Cinzel',serif;font-size:11px;color:var(--gold);letter-spacing:1px;margin-bottom:12px;}
+.presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
+.preset{padding:9px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;text-align:center;}
+.preset:active{background:var(--bg4);}
+.amt-row{display:flex;gap:8px;align-items:center;}
+.amt-inp{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;padding:11px 14px;outline:none;}
+.roll-btn{width:100%;padding:18px;border-radius:14px;border:none;font-size:17px;font-weight:900;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,#ffaa33,#cc7700,#ffaa33);color:#1a0a00;letter-spacing:2px;box-shadow:0 6px 24px rgba(255,170,51,0.35);margin-top:10px;}
+.roll-btn.off{background:var(--border);color:#333;cursor:default;letter-spacing:0;box-shadow:none;}
+.roll-btn:not(.off):active{transform:scale(0.98);}
+
+.history-row{display:flex;flex-wrap:wrap;gap:5px;}
+.hist-item{padding:4px 8px;border-radius:8px;font-size:11px;font-weight:700;}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.96);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;}
+.overlay.show{display:flex;}
+.ov-dice{font-size:48px;letter-spacing:14px;animation:pop 0.4s ease-out;}
+@keyframes pop{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+.ov-title{font-family:'Cinzel',serif;font-size:22px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.ov-payout{font-size:30px;font-weight:900;}
+.ov-close{padding:13px 30px;border-radius:12px;border:1px solid var(--gold3);background:transparent;color:var(--gold);font-size:14px;font-weight:600;cursor:pointer;}
+
+.home-btn{position:fixed;bottom:20px;left:16px;z-index:100;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--sub);font-size:12px;cursor:pointer;}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--gold);color:#0a0800;font-size:13px;font-weight:700;padding:10px 20px;border-radius:20px;z-index:500;opacity:0;transition:opacity 0.2s;white-space:nowrap;pointer-events:none;}
+.toast.show{opacity:1;}
+.toast.err{background:#cc3333;color:#fff;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="casino-label">DOPAMINE CASINO</div>
+  <div class="top-title">🎲 DICE BATTLE</div>
+</div>
+<div class="point-bar">
+  <span style="font-size:11px;color:var(--sub)">💰 내 포인트</span>
+  <span class="point-val" id="my-point">— P</span>
+</div>
+
+<div class="main">
+  <div class="arena">
+    <div class="arena-title">✦ ROLL VS BOT ✦</div>
+    <div class="vs-row">
+      <div class="dice-col">
+        <div class="dice-label" style="color:var(--player)">YOU</div>
+        <div class="dice-box player" id="dice-player">🎲</div>
+      </div>
+      <div class="vs-text">VS</div>
+      <div class="dice-col">
+        <div class="dice-label" style="color:var(--bot)">BOT</div>
+        <div class="dice-box bot" id="dice-bot">🎲</div>
+      </div>
+    </div>
+    <div class="result-display" id="result-display">— BET & ROLL —</div>
+  </div>
+
+  <div class="paytable">
+    <div class="paytable-title">PAYTABLE</div>
+    <div class="pay-row"><span class="pay-desc">내가 더 높은 숫자</span><span class="pay-mult">x 1.95</span></div>
+    <div class="pay-row"><span class="pay-desc">무승부 (같은 숫자)</span><span class="pay-mult">베팅 환불</span></div>
+    <div class="pay-row"><span class="pay-desc">봇이 더 높은 숫자</span><span class="pay-mult">x 0 (패배)</span></div>
+  </div>
+
+  <div class="bet-section">
+    <div class="bet-title">place your bet</div>
+    <div class="presets">
+      <button class="preset" onclick="setAmt(100)">100</button>
+      <button class="preset" onclick="setAmt(500)">500</button>
+      <button class="preset" onclick="setAmt(1000)">1,000</button>
+      <button class="preset" onclick="setMax()">MAX</button>
+    </div>
+    <div class="amt-row">
+      <input class="amt-inp" type="number" id="amt" placeholder="베팅 금액" min="10" oninput="refreshBtn()"/>
+      <span style="font-size:13px;color:var(--sub)">P</span>
+    </div>
+    <button class="roll-btn off" id="roll-btn" onclick="doRoll()">최소 10P 이상 입력해주세요</button>
+  </div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;">
+    <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold3);letter-spacing:2px;margin-bottom:10px;">RECENT ROLLS</div>
+    <div class="history-row" id="history-row">
+      <div style="font-size:11px;color:var(--sub)">기록 없음</div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="ov-dice" id="ov-dice">🎲 🎲</div>
+  <div class="ov-title" id="ov-title"></div>
+  <div style="font-size:13px;color:var(--sub)" id="ov-sub"></div>
+  <div class="ov-payout" id="ov-payout"></div>
+  <button class="ov-close" onclick="closeOverlay()">다시 베팅</button>
+</div>
+<div class="toast" id="toast"></div>
+<button class="home-btn" onclick="goHome()">🏠 홈</button>
+
+<script>
+
+// ── INLINE CORE ──
+function getParam(key) {
+  const sp = new URLSearchParams(location.search);
+  if (sp.get(key)) return sp.get(key);
+  const hp = new URLSearchParams(location.hash.replace(/^#/,''));
+  if (hp.get(key)) return hp.get(key);
+  const start = sp.get('tgWebAppStartParam')||hp.get('tgWebAppStartParam')||sp.get('start')||hp.get('start')||'';
+  if (start) {
+    const parts = start.split('_');
+    if (key==='userId'  && parts[0]) return parts[0];
+    if (key==='groupId' && parts[1]) return parts[1];
+  }
+  return null;
+}
+function _ptKey(g,u){return 'casino_pt_'+g+'_'+u;}
+function getPoint(g,u){const v=localStorage.getItem(_ptKey(g,u));return v!==null?parseInt(v):5000;}
+function setPoint(g,u,pt){localStorage.setItem(_ptKey(g,u),Math.max(0,Math.floor(pt)));}
+function addPoint(g,u,delta){const n=Math.max(0,getPoint(g,u)+Math.floor(delta));setPoint(g,u,n);return n;}
+function fmt(n){return Number(n||0).toLocaleString();}
+function goHome(uid,gid){location.href='/casino?userId='+uid+'&groupId='+gid;}
+
+const userId  = getParam('userId');
+const groupId = getParam('groupId');
+let myPt = getPoint(groupId, userId);
+let rolling = false, history = [];
+
+const DICE_FACES = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
+
+document.getElementById('my-point').textContent = fmt(myPt) + ' P';
+
+function setAmt(v) { document.getElementById('amt').value = v; refreshBtn(); }
+function setMax() { setAmt(Math.min(myPt, 10000)); }
+
+function refreshBtn() {
+  const btn = document.getElementById('roll-btn');
+  const amt = parseInt(document.getElementById('amt').value) || 0;
+  if (rolling) { btn.className = 'roll-btn off'; btn.textContent = '🎲 굴리는 중...'; return; }
+  if (amt < 10) { btn.className = 'roll-btn off'; btn.textContent = '최소 10P 이상 입력해주세요'; return; }
+  if (amt > myPt) { btn.className = 'roll-btn off'; btn.textContent = '포인트 부족'; return; }
+  btn.className = 'roll-btn';
+  btn.textContent = `🎲 ${fmt(amt)}P 베팅하고 굴리기`;
+}
+
+function shakeDice(el, duration) {
+  return new Promise(resolve => {
+    el.classList.add('rolling');
+    const startTime = performance.now();
+    const interval = setInterval(() => {
+      el.textContent = DICE_FACES[1 + Math.floor(Math.random()*6)];
+    }, 60);
+    setTimeout(() => {
+      clearInterval(interval);
+      el.classList.remove('rolling');
+      resolve();
+    }, duration);
+  });
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-row');
+  if (!history.length) { el.innerHTML = '<div style="font-size:11px;color:var(--sub)">기록 없음</div>'; return; }
+  el.innerHTML = history.slice(0,15).map(h => {
+    const styles = {
+      win:  {bg:'rgba(68,238,136,0.15)', border:'#44ee88', color:'#44ee88', label:'WIN'},
+      lose: {bg:'rgba(238,68,68,0.15)',  border:'#ee4444', color:'#ee4444', label:'LOSE'},
+      draw: {bg:'rgba(255,209,102,0.15)',border:'#ffd166', color:'#ffd166', label:'DRAW'},
+    };
+    const s = styles[h];
+    return `<div class="hist-item" style="background:${s.bg};border:1px solid ${s.border};color:${s.color}">${s.label}</div>`;
+  }).join('');
+}
+
+async function doRoll() {
+  if (rolling) return;
+  const amt = parseInt(document.getElementById('amt').value) || 0;
+  if (amt < 10) { toast('최소 10P 이상', true); return; }
+  if (amt > myPt) { toast('포인트 부족', true); return; }
+
+  rolling = true; refreshBtn();
+  document.getElementById('result-display').textContent = '🎲 주사위를 굴리는 중...';
+
+  try {
+    const res = await fetch('/casino/dice/instant', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({groupId:parseInt(groupId), userId:parseInt(userId), amount:amt})
+    });
+    const data = await res.json();
+    if (!data.ok) { toast(data.error||'오류', true); rolling=false; refreshBtn(); return; }
+
+    const playerRoll = data.playerRoll;
+    const botRoll    = data.botRoll;
+    const result     = data.result;   // 'win' | 'lose' | 'draw'
+    const payout     = data.payout;
+
+    // 포인트 서버 기준 동기화
+    myPt = myPt - amt + (payout||0);
+    setPoint(groupId, userId, myPt);
+    document.getElementById('my-point').textContent = fmt(myPt) + ' P';
+
+    const pEl = document.getElementById('dice-player');
+    const bEl = document.getElementById('dice-bot');
+    pEl.classList.remove('win-glow'); bEl.classList.remove('win-glow');
+
+    await Promise.all([
+      shakeDice(pEl, 900),
+      shakeDice(bEl, 1100),
+    ]);
+
+    pEl.textContent = DICE_FACES[playerRoll];
+    bEl.textContent = DICE_FACES[botRoll];
+
+    if (result === 'win') pEl.classList.add('win-glow');
+    else if (result === 'lose') bEl.classList.add('win-glow');
+
+    const resultLabels = {
+      win:  `🎉 승리! ${playerRoll} > ${botRoll}`,
+      lose: `💸 패배... ${playerRoll} < ${botRoll}`,
+      draw: `🤝 무승부 ${playerRoll} = ${botRoll}`,
+    };
+    document.getElementById('result-display').textContent = resultLabels[result];
+
+    history.unshift(result);
+    if (history.length > 20) history.pop();
+    renderHistory();
+
+    setTimeout(() => {
+      document.getElementById('ov-dice').textContent = `${DICE_FACES[playerRoll]} ${DICE_FACES[botRoll]}`;
+      const ovTitles = { win:'🏆 YOU WIN!', lose:'💸 YOU LOSE', draw:'🤝 DRAW' };
+      document.getElementById('ov-title').textContent = ovTitles[result];
+      document.getElementById('ov-sub').textContent = `당신: ${playerRoll}  ·  봇: ${botRoll}`;
+      if (result === 'win') {
+        document.getElementById('ov-payout').textContent = `+${fmt(payout)} P 획득!`;
+        document.getElementById('ov-payout').style.color = '#44ee88';
+        vibrate([100,50,200]);
+      } else if (result === 'draw') {
+        document.getElementById('ov-payout').textContent = `±0 P (베팅 환불)`;
+        document.getElementById('ov-payout').style.color = '#ffd166';
+        vibrate([100]);
+      } else {
+        document.getElementById('ov-payout').textContent = `-${fmt(amt)} P`;
+        document.getElementById('ov-payout').style.color = '#ee4444';
+        vibrate([200]);
+      }
+      document.getElementById('overlay').classList.add('show');
+    }, 400);
+  } catch(e) { toast('서버 오류', true); }
+  rolling = false; refreshBtn();
+}
+
+function closeOverlay() {
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('result-display').textContent = '— BET & ROLL —';
+  document.getElementById('dice-player').textContent = '🎲';
+  document.getElementById('dice-bot').textContent = '🎲';
+  document.getElementById('dice-player').classList.remove('win-glow');
+  document.getElementById('dice-bot').classList.remove('win-glow');
+}
+
+function vibrate(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+function toast(msg, err=false) {
+  const t=document.getElementById('toast');t.textContent=msg;
+  t.className='toast show'+(err?' err':'');setTimeout(()=>t.className='toast',2500);
+}
+
+refreshBtn();
+</script>
+</body>
+</html>
