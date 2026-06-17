@@ -80,9 +80,7 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/64">대문팀</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/92">관짝</a>
 
-💼 <b>이체 알바</b>
 ──────────────────
-<b>[도파민]</b> · <a href="https://t.me/gamte59/87">창비팀 대면이체알바</a>
 
 ✨ <b>유심</b>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/104">친구유심</a>"""
