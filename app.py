@@ -927,6 +927,8 @@ def handle_all(message):
             bot.reply_to(message, AFFILIATE_TEXT, parse_mode='HTML', disable_web_page_preview=True)
 
         elif re.search(r'(\d+(\.\d+)?)\s*테더', text):
+            if user_id not in ADMIN_IDS:
+                return
             match = re.search(r'(\d+(\.\d+)?)\s*테더', text); amount = float(match.group(1))
             rate = get_usdt_rate()
             if rate is None: bot.reply_to(message, "⚠️ 환율 정보를 가져오지 못했어요."); return
