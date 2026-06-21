@@ -78,12 +78,7 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 <b>[평생]</b> · <a href="https://t.me/gamte59/42">저승사자</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/58">김여포</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/64">대문팀</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/92">관짝</a>
-
-──────────────────
-
-✨ <b>유심</b>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/104">친구유심</a>"""
+<b>[도파민]</b> · <a href="https://t.me/gamte59/92">관짝</a>"""
 
 KBO_TEAMS = ['KT', '삼성', 'LG', 'SSG', 'KIA', '한화', '두산', 'NC', '롯데', '키움']
 KBO_TEAMS_DISPLAY = {
