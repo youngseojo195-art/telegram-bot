@@ -246,10 +246,13 @@ def init_db():
         except: db.rollback()
 
         missing_cols = [
-            ("points",       "total_bet",    "BIGINT DEFAULT 0"),
-            ("points",       "last_attendance", "DATE"),
-            ("casino_games", "started_at",   "TIMESTAMP DEFAULT NOW()"),
-            ("casino_games", "settings",     "JSONB DEFAULT '{}'"),
+            ("points",         "total_bet",             "BIGINT DEFAULT 0"),
+            ("points",         "last_attendance",        "DATE"),
+            ("casino_games",   "started_at",            "TIMESTAMP DEFAULT NOW()"),
+            ("casino_games",   "settings",              "JSONB DEFAULT '{}'"),
+            # ★ 이벤트 신규 컬럼
+            ("keyword_events", "end_time",              "TIMESTAMP"),
+            ("keyword_events", "notify_interval_mins",  "INTEGER DEFAULT 0"),
         ]
         for tbl, col, typ in missing_cols:
             try:
@@ -302,8 +305,11 @@ def init_db():
             """CREATE TABLE IF NOT EXISTS keyword_events (
                 id SERIAL PRIMARY KEY, group_id BIGINT NOT NULL,
                 admin_id BIGINT NOT NULL, title TEXT NOT NULL,
-                keyword VARCHAR(100) NOT NULL, description TEXT DEFAULT '',
+                keyword VARCHAR(100) NOT NULL DEFAULT '이벤트참여',
+                description TEXT DEFAULT '',
                 max_participants INTEGER DEFAULT 0,
+                end_time TIMESTAMP,
+                notify_interval_mins INTEGER DEFAULT 0,
                 is_active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT NOW(), ended_at TIMESTAMP)""",
             """CREATE TABLE IF NOT EXISTS keyword_event_participants (
@@ -425,43 +431,21 @@ def get_usdt_rate():
     except: pass
     return None
 
-# ─────────────────────────────────────────────────────────
-# ★ FIX: 카지노 오픈 상태 조회 함수 (DB 중복 커넥션 방지)
-# ─────────────────────────────────────────────────────────
 def is_casino_open(group_id):
-    """카지노 오픈 여부 반환. DB 오류 시 True(열림) 반환해서 유저 차단 안 함"""
     db = get_db(); c = db.cursor()
     try:
         c.execute("SELECT is_open FROM casino_open_status WHERE group_id=%s", (group_id,))
         row = c.fetchone()
         return bool(row[0]) if row else False
     except:
-        return False  # 조회 실패 시 닫힘으로 처리
+        return False
     finally:
         try: c.close(); db.close()
         except: pass
 
-# ─────────────────────────────────────────────────────────
-# ★ FIX: 커맨드 분류 재설계
-#
-# CASINO_ONLY_COMMANDS  : 카지노가 열려있을 때만 허용 (일반 유저)
-# ALWAYS_ALLOWED        : 카지노 오픈 여부와 무관하게 항상 허용
-# ADMIN_ONLY_COMMANDS   : 관리자 전용 (카지노 상태 무관)
-# ─────────────────────────────────────────────────────────
-CASINO_ONLY_COMMANDS = [
-    '/슬롯', '/룰렛', '/카지노',
-    '/포인트', '/포인트랭킹',
-    '/선물',
-]
-
-ALWAYS_ALLOWED_COMMANDS = [
-    '/출석', '/리필',          # 항상 허용 (웹앱 안내)
-    '/승', '/수정', '/리스트',
-    '/채팅', '/채팅랭킹',
-    '/내전', '/이벤트', '/투표', '/게임',
-    '/제휴', '/노래',
-    '/test',
-]
+CASINO_ONLY_COMMANDS = ['/슬롯', '/룰렛', '/카지노', '/포인트', '/포인트랭킹', '/선물']
+ALWAYS_ALLOWED_COMMANDS = ['/출석', '/리필', '/승', '/수정', '/리스트', '/채팅', '/채팅랭킹',
+                           '/내전', '/이벤트', '/투표', '/게임', '/제휴', '/노래', '/test']
 
 # ─────────────────────────────────────────────────────────
 # 콜백 핸들러
@@ -616,20 +600,15 @@ def check_keyword_event(user_id, first_name, username, group_id, text):
         except: pass
 
 def send_dm_link(user_id, group_id, title, desc, markup):
-    """
-    ★ FIX: DM 전송 실패 시 그룹에 짧은 안내 메시지 (3초 후 자동 삭제)
-    """
     try:
         bot.send_message(user_id,
             f"{title}\n──────────────────\n{desc}\n──────────────────\n아래 버튼을 눌러 바로 이동하세요!",
             reply_markup=markup, parse_mode='HTML')
     except Exception as e:
         print(f"DM 전송 실패 (user_id:{user_id}): {e}")
-        # DM 차단 유저에게 그룹 알림
         if group_id:
             try:
-                sent = bot.send_message(group_id,
-                    "⚠️ DM이 차단되어 있어요. @dopamin_ranking_bot 을 먼저 시작해주세요!")
+                sent = bot.send_message(group_id, "⚠️ DM이 차단되어 있어요. @dopamin_ranking_bot 을 먼저 시작해주세요!")
                 time.sleep(4)
                 bot.delete_message(group_id, sent.message_id)
             except: pass
@@ -853,7 +832,70 @@ def start_scheduler():
     print("✅ 스케줄러 시작")
 
 # ─────────────────────────────────────────────────────────
-# ★ 핵심 메시지 핸들러 (완전 재작성)
+# ★ 이벤트 자동 마감 + 알림 스레드
+# ─────────────────────────────────────────────────────────
+def _event_runner(ev_id, group_id, title, end_time_utc, notify_mins):
+    """이벤트 자동 마감 및 주기 알림 스레드"""
+    notif_interval = notify_mins * 60 if notify_mins else None
+    last_notif = datetime.now(UTC)
+
+    while True:
+        time.sleep(30)
+        now_utc = datetime.now(UTC)
+
+        # DB 활성 여부 확인
+        try:
+            _db = get_db(); _c = _db.cursor()
+            _c.execute("SELECT is_active FROM keyword_events WHERE id=%s", (ev_id,))
+            row = _c.fetchone()
+            _c.close(); _db.close()
+            if not row or not row[0]: break
+        except: break
+
+        # 알림 주기 체크
+        if notif_interval and (now_utc - last_notif).total_seconds() >= notif_interval:
+            try:
+                _db = get_db(); _c = _db.cursor()
+                _c.execute("SELECT COUNT(*) FROM keyword_event_participants WHERE event_id=%s", (ev_id,))
+                cnt = _c.fetchone()[0]
+                _c.close(); _db.close()
+                remaining_str = ""
+                if end_time_utc:
+                    rem = int((end_time_utc - now_utc).total_seconds() / 60)
+                    if rem > 0:
+                        remaining_str = f"\n⏳ 마감까지 <b>{rem}분</b> 남았어요!"
+                bot.send_message(group_id,
+                    f"🔔 <b>{title}</b> 이벤트 진행 중!\n"
+                    f"👥 현재 참여자: <b>{cnt}명</b>{remaining_str}\n"
+                    f"💬 <b>이벤트참여</b> 를 입력해서 참여하세요!",
+                    parse_mode='HTML')
+                last_notif = now_utc
+            except Exception as e:
+                print(f"notify error: {e}")
+
+        # 마감 시간 체크
+        if end_time_utc and now_utc >= end_time_utc:
+            try:
+                _db = get_db(); _c = _db.cursor()
+                _c.execute("SELECT is_active FROM keyword_events WHERE id=%s", (ev_id,))
+                row = _c.fetchone()
+                if row and row[0]:
+                    _c.execute("UPDATE keyword_events SET is_active=FALSE, ended_at=NOW() WHERE id=%s", (ev_id,))
+                    _c.execute("SELECT user_name FROM keyword_event_participants WHERE event_id=%s ORDER BY joined_at", (ev_id,))
+                    parts = _c.fetchall(); _db.commit()
+                    p_lines = "\n".join([f"  {i+1}. {p[0]}" for i, p in enumerate(parts)]) or "  참여자 없음"
+                    bot.send_message(group_id,
+                        f"🏁 <b>{title}</b> 이벤트 마감!\n"
+                        f"──────────────────\n"
+                        f"👥 최종 참여자 {len(parts)}명\n{p_lines}",
+                        parse_mode='HTML')
+                _c.close(); _db.close()
+            except Exception as e:
+                print(f"auto_end error: {e}")
+            break
+
+# ─────────────────────────────────────────────────────────
+# ★ 핵심 메시지 핸들러
 # ─────────────────────────────────────────────────────────
 @bot.message_handler(func=lambda m: True)
 def handle_all(message):
@@ -862,7 +904,6 @@ def handle_all(message):
         group_id = message.chat.id; first_name = message.from_user.first_name or '사용자'
         username = message.from_user.username or ''; now_kst = datetime.now(KST); today = now_kst.date()
 
-        # ── 커맨드 처리 ──
         if '/test' in text:
             bot.reply_to(message, f"봇 작동 중! ✅\n내 user_id: {user_id}")
 
@@ -922,53 +963,36 @@ def handle_all(message):
             bot.reply_to(message, AFFILIATE_TEXT, parse_mode='HTML', disable_web_page_preview=True)
 
         elif re.search(r'(\d+(\.\d+)?)\s*테더', text):
-            if user_id not in ADMIN_IDS:
-                return
+            if user_id not in ADMIN_IDS: return
             match = re.search(r'(\d+(\.\d+)?)\s*테더', text); amount = float(match.group(1))
             rate = get_usdt_rate()
             if rate is None: bot.reply_to(message, "⚠️ 환율 정보를 가져오지 못했어요."); return
             bot.reply_to(message, f"💰 USDT 환율 계산\n\n📈 현재 환율: {rate:,.0f}원\n💵 {amount:,.0f} USDT: {amount * rate:,.0f}원")
 
-        # ── ★ FIX: /출석 — 채팅방은 깔끔하게, 웹앱으로 안내 ──
         elif '/출석' in text:
             if message.chat.type == 'private': return
             casino_url = f"{WEBAPP_BASE_URL}/casino?userId={user_id}&groupId={group_id}"
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("📅 출석 체크하기", url=casino_url))
-            try:
-                # 그룹 메시지 즉시 삭제
-                bot.delete_message(group_id, message.message_id)
+            try: bot.delete_message(group_id, message.message_id)
             except: pass
-            # 그룹에 버튼만 표시 (텍스트 최소화)
-            sent = bot.send_message(group_id,
-                f"📅 <b>{first_name}</b>님 출석 체크!",
-                reply_markup=markup, parse_mode='HTML')
-            # DM으로도 전송 (조용히)
-            send_dm_link(user_id, None,
-                "📅 <b>출석 체크</b>",
-                "카지노 홈에서 출석 체크 & 리필을 할 수 있어요!\n매일 +100P 출석 보너스!", markup)
-            # 3초 후 그룹 메시지 삭제
+            sent = bot.send_message(group_id, f"📅 <b>{first_name}</b>님 출석 체크!", reply_markup=markup, parse_mode='HTML')
+            send_dm_link(user_id, None, "📅 <b>출석 체크</b>", "카지노 홈에서 출석 체크 & 리필을 할 수 있어요!\n매일 +100P 출석 보너스!", markup)
             def _del():
                 time.sleep(5)
                 try: bot.delete_message(group_id, sent.message_id)
                 except: pass
             threading.Thread(target=_del, daemon=True).start()
 
-        # ── ★ FIX: /리필 — 채팅방은 깔끔하게, 웹앱으로 안내 ──
         elif '/리필' in text:
             if message.chat.type == 'private': return
             casino_url = f"{WEBAPP_BASE_URL}/casino?userId={user_id}&groupId={group_id}"
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("💧 리필하기", url=casino_url))
-            try:
-                bot.delete_message(group_id, message.message_id)
+            try: bot.delete_message(group_id, message.message_id)
             except: pass
-            sent = bot.send_message(group_id,
-                f"💧 <b>{first_name}</b>님 포인트 리필!",
-                reply_markup=markup, parse_mode='HTML')
-            send_dm_link(user_id, None,
-                "💧 <b>포인트 리필</b>",
-                "카지노 홈에서 하루 5회 리필 가능해요!\n회당 +100P!", markup)
+            sent = bot.send_message(group_id, f"💧 <b>{first_name}</b>님 포인트 리필!", reply_markup=markup, parse_mode='HTML')
+            send_dm_link(user_id, None, "💧 <b>포인트 리필</b>", "카지노 홈에서 하루 5회 리필 가능해요!\n회당 +100P!", markup)
             def _del():
                 time.sleep(5)
                 try: bot.delete_message(group_id, sent.message_id)
@@ -1012,7 +1036,6 @@ def handle_all(message):
         elif text.strip() in ['/게임', '/게임@dopamin_ranking_bot']:
             bot.reply_to(message, "🎮 게임 목록\n\n🎰 /슬롯 - 슬롯머신\n🎲 /다이스 - 다이스 배틀\n⚠️ 최소 배팅: 10포인트")
 
-        # ── ★ FIX: /슬롯 /다이스 /카지노 — 중복 제거, url= 방식 통일 ──
         elif '/슬롯' in text:
             if message.chat.type == 'private': return
             slots_url = f"{WEBAPP_BASE_URL}/casino/slots?userId={user_id}&groupId={group_id}"
@@ -1029,7 +1052,6 @@ def handle_all(message):
             bot.reply_to(message, "🎲", reply_markup=markup)
             send_dm_link(user_id, group_id, "🎲 <b>다이스 배틀</b>", "봇과 주사위 대결! 승리시 1.95배!", markup)
 
-        # ── ★ FIX: /카지노 중복 제거 — 하나로 통합 ──
         elif text.strip().startswith('/카지노') and not text.strip().startswith('/카지노관리'):
             if message.chat.type == 'private': return
             casino_url = f"{WEBAPP_BASE_URL}/casino?userId={user_id}&groupId={group_id}"
@@ -1121,66 +1143,138 @@ def handle_all(message):
             markup.add(types.InlineKeyboardButton("👑 관리자 페이지", url=admin_url))
             bot.reply_to(message, "👑 카지노 관리자 페이지", reply_markup=markup)
 
+        # ─────────────────────────────────────────────────────────
+        # ★ 이벤트 커맨드 (신규 개선)
+        # ─────────────────────────────────────────────────────────
         elif text.strip().startswith('/이벤트종료'):
             if message.chat.type == 'private': return
-            if user_id not in ADMIN_IDS: bot.reply_to(message,"⚠️ 관리자 전용"); return
-            db=get_db();c=db.cursor()
+            if user_id not in ADMIN_IDS: bot.reply_to(message, "⚠️ 관리자 전용"); return
+            db = get_db(); c = db.cursor()
             try:
-                c.execute("UPDATE keyword_events SET is_active=FALSE,ended_at=NOW() WHERE group_id=%s AND is_active=TRUE",(group_id,))
-                affected=c.rowcount; db.commit()
-            finally: c.close();db.close()
-            if affected>0: bot.reply_to(message,"✅ 이벤트가 종료됐어요!")
-            else: bot.reply_to(message,"⚠️ 진행 중인 이벤트가 없어요.")
+                c.execute("SELECT id, title FROM keyword_events WHERE group_id=%s AND is_active=TRUE ORDER BY id DESC LIMIT 1", (group_id,))
+                ev = c.fetchone()
+                if not ev: bot.reply_to(message, "⚠️ 진행 중인 이벤트가 없어요."); return
+                c.execute("UPDATE keyword_events SET is_active=FALSE, ended_at=NOW() WHERE id=%s", (ev[0],))
+                c.execute("SELECT user_name FROM keyword_event_participants WHERE event_id=%s ORDER BY joined_at", (ev[0],))
+                parts = c.fetchall(); db.commit()
+            finally: c.close(); db.close()
+            p_lines = "\n".join([f"  {i+1}. {p[0]}" for i, p in enumerate(parts)]) or "  참여자 없음"
+            bot.send_message(group_id,
+                f"🏁 <b>{ev[1]}</b> 이벤트 종료!\n──────────────────\n"
+                f"👥 최종 참여자 {len(parts)}명\n{p_lines}", parse_mode='HTML')
 
         elif text.strip().startswith('/이벤트참여자'):
             if message.chat.type == 'private': return
-            if user_id not in ADMIN_IDS: bot.reply_to(message,"⚠️ 관리자 전용"); return
-            db=get_db();c=db.cursor()
+            db = get_db(); c = db.cursor()
             try:
-                c.execute("SELECT id,title,keyword FROM keyword_events WHERE group_id=%s AND is_active=TRUE ORDER BY id DESC LIMIT 1",(group_id,))
-                ev=c.fetchone()
-                if not ev: bot.reply_to(message,"⚠️ 진행 중인 이벤트가 없어요."); return
-                c.execute("SELECT user_name,joined_at FROM keyword_event_participants WHERE event_id=%s ORDER BY joined_at",(ev[0],))
-                parts=c.fetchall()
-            finally: c.close();db.close()
+                c.execute("""SELECT id, title, keyword, max_participants, end_time, is_active
+                             FROM keyword_events WHERE group_id=%s
+                             ORDER BY id DESC LIMIT 1""", (group_id,))
+                ev = c.fetchone()
+                if not ev: bot.reply_to(message, "⚠️ 이벤트 기록이 없어요."); return
+                ev_id, title, keyword, max_part, end_time, is_active = ev
+                c.execute("SELECT user_name, joined_at FROM keyword_event_participants WHERE event_id=%s ORDER BY joined_at", (ev_id,))
+                parts = c.fetchall()
+            finally: c.close(); db.close()
+
+            status_label = "🟢 진행 중" if is_active else "🔴 종료됨"
+            end_str = f"\n⏰ 마감: {end_time.astimezone(KST).strftime('%m/%d %H:%M')}" if end_time else ""
+
             if not parts:
-                bot.reply_to(message,f"📋 <b>{ev[1]}</b>\n참여자가 없어요.",parse_mode='HTML')
-                return
-            lines=[f"📋 <b>{ev[1]}</b> 참여자 목록 ({len(parts)}명)\n──────────────────"]
-            for i,p in enumerate(parts,1):
-                lines.append(f"   {i}. {p[0]}")
-            bot.reply_to(message,"\n".join(lines),parse_mode='HTML')
+                bot.reply_to(message, f"📋 <b>{title}</b> {status_label}{end_str}\n\n참여자가 없어요.", parse_mode='HTML'); return
+
+            max_str = f" / {max_part}명" if max_part > 0 else ""
+            lines = [
+                f"📋 <b>{title}</b> {status_label}{end_str}",
+                f"💬 키워드: <b>{keyword}</b>",
+                f"👥 참여자 {len(parts)}명{max_str}",
+                "──────────────────"
+            ]
+            for i, p in enumerate(parts, 1):
+                t = p[1].astimezone(KST).strftime('%H:%M') if p[1] else ''
+                lines.append(f"  {i}. {p[0]}  <i>{t}</i>")
+            bot.reply_to(message, "\n".join(lines), parse_mode='HTML')
 
         elif text.strip().startswith('/이벤트'):
             if message.chat.type == 'private': return
-            if user_id not in ADMIN_IDS: bot.reply_to(message,"⚠️ 관리자 전용"); return
-            args=text.strip().replace('/이벤트','').strip()
+            if user_id not in ADMIN_IDS: bot.reply_to(message, "⚠️ 관리자 전용"); return
+
+            args = text.strip().replace('/이벤트', '').strip()
             if not args:
                 bot.reply_to(message,
-                    "📌 <b>이벤트 사용법</b>\n/이벤트 제목 | 키워드 | 설명 | 최대인원\n\n"
-                    "<b>예시:</b>\n/이벤트 출석이벤트 | 참여 | 먼저 '참여' 입력한 10명 추첨! | 10\n\n"
-                    "※ 참여자가 채팅창에 키워드를 입력하면 자동 참여돼요\n"
-                    "/이벤트종료 — 이벤트 종료\n/이벤트참여자 — 참여자 목록", parse_mode='HTML')
-                return
-            parts_ev=[p.strip() for p in args.split('|')]
-            title_ev   = parts_ev[0] if len(parts_ev)>0 else '이벤트'
-            keyword_ev = parts_ev[1] if len(parts_ev)>1 else '참여'
-            desc_ev    = parts_ev[2] if len(parts_ev)>2 else ''
-            max_ev     = int(parts_ev[3]) if len(parts_ev)>3 and parts_ev[3].isdigit() else 0
-            db=get_db();c=db.cursor()
+                    "📌 <b>이벤트 사용법</b>\n\n"
+                    "/이벤트 제목: XXX | 설명: YYY | 마감: 21:00 | 알림: 60\n\n"
+                    "• <b>제목</b> — 이벤트 이름 (필수)\n"
+                    "• <b>설명</b> — 이벤트 설명\n"
+                    "• <b>마감</b> — 오늘 종료 시각 (예: 21:00)\n"
+                    "• <b>알림</b> — 알림 주기 분 단위 (예: 60 = 1시간마다)\n\n"
+                    "💬 참여 키워드: <b>이벤트참여</b> (고정)\n"
+                    "/이벤트종료 — 수동 종료\n"
+                    "/이벤트참여자 — 참여자 목록",
+                    parse_mode='HTML'); return
+
+            def _parse(text, *keys):
+                for key in keys:
+                    m = re.search(rf'{key}\s*:\s*([^|]+)', text)
+                    if m: return m.group(1).strip()
+                return None
+
+            title_ev   = _parse(args, '제목') or args.split('|')[0].strip() or '이벤트'
+            desc_ev    = _parse(args, '설명') or ''
+            time_str   = _parse(args, '마감', '시간')
+            notif_str  = _parse(args, '알림', '알림주기')
+            keyword_ev = '이벤트참여'  # 고정
+
+            # 마감 시간 파싱 (오늘 날짜 기준 KST)
+            end_time = None
+            if time_str:
+                try:
+                    t = datetime.strptime(time_str.strip(), '%H:%M')
+                    end_dt_kst = datetime.now(KST).replace(
+                        hour=t.hour, minute=t.minute, second=0, microsecond=0)
+                    end_time = end_dt_kst.astimezone(UTC)
+                except:
+                    bot.reply_to(message, "⚠️ 마감 시간 형식이 잘못됐어요. 예: 21:00"); return
+
+            notify_mins = 0
+            if notif_str:
+                try: notify_mins = int(re.sub(r'[^0-9]', '', notif_str))
+                except: notify_mins = 0
+
+            db = get_db(); c = db.cursor()
             try:
-                c.execute("UPDATE keyword_events SET is_active=FALSE,ended_at=NOW() WHERE group_id=%s AND is_active=TRUE",(group_id,))
-                c.execute("INSERT INTO keyword_events(group_id,admin_id,title,keyword,description,max_participants) VALUES(%s,%s,%s,%s,%s,%s) RETURNING id",
-                          (group_id,user_id,title_ev,keyword_ev,desc_ev,max_ev))
-                ev_id=c.fetchone()[0]; db.commit()
-            finally: c.close();db.close()
-            max_str=f"\n👥 최대 인원: {max_ev}명" if max_ev>0 else ""
-            desc_str=f"\n📢 {desc_ev}" if desc_ev else ""
+                c.execute("UPDATE keyword_events SET is_active=FALSE, ended_at=NOW() WHERE group_id=%s AND is_active=TRUE", (group_id,))
+                c.execute("""INSERT INTO keyword_events
+                    (group_id, admin_id, title, keyword, description, max_participants, end_time, notify_interval_mins)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                    (group_id, user_id, title_ev, keyword_ev, desc_ev, 0, end_time, notify_mins))
+                ev_id = c.fetchone()[0]; db.commit()
+            finally: c.close(); db.close()
+
+            end_kst_str = end_time.astimezone(KST).strftime('%m/%d %H:%M') if end_time else "수동 종료"
+            notif_disp  = f"{notify_mins}분마다 알림" if notify_mins else "알림 없음"
+
             bot.send_message(group_id,
-                f"🎉 <b>이벤트 시작!</b>\n──────────────────\n"
-                f"🏷 <b>{title_ev}</b>{desc_str}{max_str}\n──────────────────\n"
-                f"💬 채팅창에 <b>{keyword_ev}</b> 를 입력하면 자동 참여돼요!\n"
-                f"📌 /이벤트참여자 — 참여자 확인\n📌 /이벤트종료 — 이벤트 종료", parse_mode='HTML')
+                f"🎉 <b>이벤트 시작!</b>\n"
+                f"──────────────────\n"
+                f"📌 <b>{title_ev}</b>\n"
+                f"📢 {desc_ev}\n"
+                f"──────────────────\n"
+                f"💬 채팅창에 <b>{keyword_ev}</b> 입력하면 자동 참여!\n"
+                f"⏰ 마감: {end_kst_str}\n"
+                f"🔔 알림: {notif_disp}\n"
+                f"──────────────────\n"
+                f"📋 /이벤트참여자 — 참여자 확인\n"
+                f"📋 /이벤트종료 — 수동 종료",
+                parse_mode='HTML')
+
+            # 자동 마감 + 알림 스레드 시작
+            if end_time or notify_mins:
+                threading.Thread(
+                    target=_event_runner,
+                    args=(ev_id, group_id, title_ev, end_time, notify_mins),
+                    daemon=True
+                ).start()
 
         elif text.strip().startswith('/투표'):
             if message.chat.type == 'private': return
@@ -1263,7 +1357,7 @@ def handle_all(message):
 
 
 # ─────────────────────────────────────────────────────────
-# Flask 라우트 (기존과 동일 — 변경 없음)
+# Flask 라우트
 # ─────────────────────────────────────────────────────────
 @app.route('/kbo')
 def serve_kbo(): return send_from_directory(BASE_DIR, 'kbo.html')
@@ -2201,7 +2295,6 @@ def serve_dice(): return send_from_directory(BASE_DIR,'dice.html')
 
 @app.route('/casino/dice/instant', methods=['POST'])
 def dice_instant():
-    """다이스 배틀 - 봇과 1:1 주사위 대결, 즉시 결과 처리"""
     db = get_db(); c = db.cursor()
     try:
         data = request.get_json(); group_id = int(data.get('groupId', 0)); user_id = int(data.get('userId', 0))
@@ -2216,22 +2309,19 @@ def dice_instant():
             db.commit(); current_pt=5000
         else: current_pt=pt[0]
         if current_pt < amount: return {'ok': False, 'error': '포인트가 부족해요.'}, 400
-
         player_roll = random.randint(1,6)
         bot_roll    = random.randint(1,6)
         if player_roll > bot_roll: result='win'
         elif player_roll < bot_roll: result='lose'
         else: result='draw'
-
         if result=='win':
             srv_payout = int(amount * 1.95)
             house_cut  = int(srv_payout * 0.05)
             payout = max(0, srv_payout - house_cut)
         elif result=='draw':
-            payout = amount  # 베팅 환불
+            payout = amount
         else:
             payout = 0
-
         c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s", (amount, user_id, group_id))
         if payout > 0: c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s", (payout, user_id, group_id))
         won = (result=='win')
@@ -2384,7 +2474,6 @@ def baccarat_instant():
 
 @app.route('/casino/race/instant', methods=['POST'])
 def race_instant():
-    """즉시 1인 경주 - 서버가 결과 결정 후 포인트 처리"""
     db=get_db();c=db.cursor()
     try:
         data=request.get_json()
@@ -2400,11 +2489,9 @@ def race_instant():
             db.commit(); current_pt=5000
         else: current_pt=pt[0]
         if current_pt<amount: return {'ok':False,'error':'포인트가 부족해요.'},400
-        # 서버에서 결과 결정 (50:50)
         winner = random.choice(['rabbit','turtle'])
         won = (bet_on == winner)
         payout = int(amount * 1.9) if won else 0
-        # 포인트 처리
         c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s",(amount,user_id,group_id))
         if payout>0: c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s",(payout,user_id,group_id))
         c.execute("INSERT INTO casino_bets(game_id,group_id,user_id,bet_on,amount,payout,won) VALUES('race',%s,%s,%s,%s,%s,%s)",
@@ -2418,7 +2505,6 @@ def race_instant():
 
 @app.route('/casino/horse/instant', methods=['POST'])
 def horse_instant():
-    """즉시 1인 경마 - 서버가 결과 결정 후 포인트 처리"""
     db=get_db();c=db.cursor()
     try:
         data=request.get_json()
@@ -2433,7 +2519,6 @@ def horse_instant():
             db.commit(); current_pt=5000
         else: current_pt=pt[0]
         if current_pt<amount: return {'ok':False,'error':'포인트가 부족해요.'},400
-        # 서버에서 결과 결정 (가중 랜덤)
         DEFAULT_HORSES=[
             {'id':1,'weight':30,'odds':2.2},{'id':2,'weight':22,'odds':3.0},
             {'id':3,'weight':16,'odds':4.0},{'id':4,'weight':10,'odds':7.0},{'id':5,'weight':22,'odds':3.0}
@@ -2446,7 +2531,6 @@ def horse_instant():
         winner_id=winner_h['id']
         won=(bet_on==winner_id)
         payout=int(amount*winner_h['odds']) if won else 0
-        # 포인트 처리
         c.execute("UPDATE points SET point=point-%s WHERE user_id=%s AND group_id=%s",(amount,user_id,group_id))
         if payout>0: c.execute("UPDATE points SET point=point+%s WHERE user_id=%s AND group_id=%s",(payout,user_id,group_id))
         c.execute("INSERT INTO casino_bets(game_id,group_id,user_id,bet_on,amount,payout,won) VALUES('horse',%s,%s,%s,%s,%s,%s)",
@@ -2852,7 +2936,6 @@ def trigger_init_db():
     except Exception as e:
         return f'❌ 실패: {e}', 500
 
-# Gunicorn/Render 환경에서도 반드시 실행
 try:
     init_db()
     print("✅ DB 초기화 성공!")
