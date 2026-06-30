@@ -49,15 +49,15 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 <b>[평생]</b> · <a href="https://t.me/gamte59/31">렛츠뱃</a>
 <b>[평생]</b> · <a href="https://t.me/gamte59/127">띵벳</a>
 <b>[평생]</b> · <a href="https://t.me/gamte59/123">스피드벳</a>
+<b>[평생]</b> · <a href="https://t.me/gamte59/153">로얄클럽</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/44">지엑스뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/60">우루스뱃</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/72">그랜드파리</a>
+<b>[도파민]</b> · <a href="https://t.me/gamte59/72">1x CASINO</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/74">룰라뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/78">소울카지노</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/133">토지노인사이드</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/147">뱃이즈</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/100">부자뱃</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/153">로얄클럽</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/121">벳클라우드</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/125">라엘뱃</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/128">부엉이뱃</a>
@@ -77,7 +77,6 @@ AFFILIATE_TEXT = """🎰 <b>카지노</b>
 💳 <b>충전 계좌매입</b>
 ──────────────────
 <b>[평생]</b> · <a href="https://t.me/gamte59/42">저승사자</a>
-<b>[도파민]</b> · <a href="https://t.me/gamte59/58">김여포</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/64">대문팀</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/92">관짝</a>
 <b>[도파민]</b> · <a href="https://t.me/gamte59/141">필사</a>
